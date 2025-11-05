@@ -3,6 +3,9 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
+from core.enums.log_level import LogLevel
+from core.util.logger import Logger
+
 # TOML: built-in in Python 3.11+, fallback to tomli for older versions
 try:
     import tomllib
@@ -39,8 +42,9 @@ class ConfigLoader:
         if self.is_dev and self.env_path.exists():
             load_dotenv(dotenv_path=self.env_path)
             self.env_loaded = True
+            Logger.configure_from_env()
         elif self.is_dev:
-            print(f"[WARN] .env not found at {self.env_path}, skipping...")
+            Logger.log(f".env not found at {self.env_path}, skipping...", LogLevel.WARNING)
 
     def _load_toml(self) -> dict:
         if not self.toml_path.exists():
