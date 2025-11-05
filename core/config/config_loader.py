@@ -1,35 +1,57 @@
+import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+
+# TOML: built-in in Python 3.11+, fallback to tomli for older versions
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 from core.util.validator import ConfigValidator
-import os
+
 
 class ConfigLoader:
-    """Load and validate environment variables into a normal dictionary."""
+    """Load and merge config.toml and .env (only in dev mode)."""
 
-    def __init__(self, env_path: str = ".env"):
-        # Check multiple possible locations
-        possible_paths = [Path(env_path)]
-
-        # If running as a PyInstaller bundle
-        if hasattr(sys, "_MEIPASS"):
-            possible_paths.append(Path(sys._MEIPASS) / env_path)
-
-        # Find first existing
-        for path in possible_paths:
-            if path.exists():
-                self.env_path = path
-                break
-        else:
-            self.env_path = possible_paths[0]
-            print(f"[WARN] .env file not found at {self.env_path}, continuing without it.")
-            return
-
-        load_dotenv(dotenv_path=self.env_path)
+    def __init__(self, env_path: str = ".env", toml_path: str = "config.toml"):
         self.validator = ConfigValidator()
 
+        # Determine project root (works in both PyInstaller & dev)
+        if hasattr(sys, "_MEIPASS"):
+            # PyInstaller bundle
+            self.project_root = Path(sys._MEIPASS)
+            self.is_dev = False
+        else:
+            # Normal dev run
+            self.project_root = Path.cwd()
+            self.is_dev = True
+
+        self.toml_path = self.project_root / toml_path
+        self.env_path = self.project_root / env_path
+
+        # Load TOML (always)
+        self.toml_data = self._load_toml()
+
+        # Load .env only if running in dev mode
+        self.env_loaded = False
+        if self.is_dev and self.env_path.exists():
+            load_dotenv(dotenv_path=self.env_path)
+            self.env_loaded = True
+        elif self.is_dev:
+            print(f"[WARN] .env not found at {self.env_path}, skipping...")
+
+    def _load_toml(self) -> dict:
+        if not self.toml_path.exists():
+            raise FileNotFoundError(f"config.toml not found at {self.toml_path}")
+        with open(self.toml_path, "rb") as f:
+            return tomllib.load(f)
+
     def _auto_cast(self, key: str, value: str):
+        """Validate and cast types using ConfigValidator."""
         v = self.validator
+
         if key == "LOG_LEVEL":
             return v.parse_log_level(value)
         if key == "THEME_MODE":
@@ -43,6 +65,7 @@ class ConfigLoader:
             return v.ensure_positive_int(value, 0, key)
         except ValueError:
             pass
+
         if any(x in key for x in ("PATH", "DIR", "FILE")):
             p = Path(value).expanduser().resolve()
             if p.suffix:
@@ -52,11 +75,23 @@ class ConfigLoader:
         return v.ensure_string(value, "", key)
 
     def load(self) -> dict:
+        """Merge TOML and (optionally) .env into a flat dict."""
         config = {}
-        for key, value in os.environ.items():
-            if key.isupper():
-                try:
-                    config[key] = self._auto_cast(key, value)
-                except Exception:
-                    config[key] = value
+
+        # Flatten TOML sections
+        for section, values in self.toml_data.items():
+            for key, value in values.items():
+                config[f"{section.upper()}_{key.upper()}"] = value
+
+        # Merge .env values (only in dev mode)
+        if self.env_loaded:
+            for key, value in os.environ.items():
+                if key.isupper():
+                    try:
+                        config[key] = self._auto_cast(key, value)
+                    except Exception:
+                        config[key] = value
+
+        # Add meta flag
+        config["IS_DEV_MODE"] = self.is_dev
         return config

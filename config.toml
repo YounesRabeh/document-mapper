@@ -1,0 +1,25 @@
+[app]
+name = "Document Mapper"
+version = "1.0.0"
+description = "An application for mapping documents."
+author = "Younes Rabeh"
+organization = "YOUNIDEV"
+domain = "younidev.com"
+
+[window]
+width = 800
+height = 500
+min_width = 400
+min_height = 300
+title = "Document Mapper"
+theme_mode = "LIGHT"
+
+[resources]
+base = "resources"
+qss = "resources/qss"
+icons = "resources/icons"
+images = "resources/images"
+fonts = "resources/fonts"
+data = "resources/data"
+temp = "resources/temp"
+logs = "resources/logs"
