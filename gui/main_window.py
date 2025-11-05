@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import Qt
 
+from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from gui.stages.stage1 import Stage1
 from gui.stages.stage2 import Stage2
@@ -13,7 +14,7 @@ class MainWindow(QMainWindow):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-
+        ThemeManager(config)
         # Window setup
         self.setWindowTitle(self.config.get("WINDOW_TITLE", "Document Mapper"))
         self.resize(self.config.get("WINDOW_WIDTH", 800), self.config.get("WINDOW_HEIGHT", 500))
