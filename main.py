@@ -11,8 +11,6 @@ def main():
     config = Config.get()
     # 2️ Initialize the QApplication
     app = QApplication(sys.argv)
-    # 3️ Load Themes
-    ThemeManager(config)
     # 4️ Create and show the main window
     window = MainWindow(config)
     window.show()

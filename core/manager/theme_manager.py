@@ -1,19 +1,33 @@
 from PySide6.QtGui import QPalette, QColor
-from PySide6.QtCore import Qt, Signal, QObject
-from core.enums.app_themes import AppTheme
+from PySide6.QtCore import Qt, Signal, QObject, QTimer
 import platform
 import subprocess
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QPalette
-from PySide6.QtCore import Qt
 
+from core.enums.app_themes import AppTheme
+from core.enums.log_level import LogLevel
+from core.util.logger import Logger
+
+
+def _check_system_theme_change():
+    """Check if system theme has changed and update if in AUTO mode."""
+    if ThemeManager.current_theme != AppTheme.AUTO:
+        return
+
+    current_system_theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
+
+    # If system theme changed, we're in AUTO mode, update the theme
+    if current_system_theme != ThemeManager.last_system_theme:
+        ThemeManager._last_system_theme = current_system_theme
+        ThemeManager.set_theme(AppTheme.AUTO)
 
 
 class ThemeManager(QObject):
-    """Singleton-style Theme Manager for handling light/dark/auto themes."""
-
     theme_changed = Signal(AppTheme)
     _instance = None
+    _current_theme: AppTheme = AppTheme.AUTO
+    _config: dict = {}
+    _last_system_theme: AppTheme = None  # Track last detected system theme
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -24,64 +38,109 @@ class ThemeManager(QObject):
         if getattr(self, "_initialized", False):
             return
         super().__init__()
-
         self._initialized = True
-        self.config = config or {}
-        theme_mode = self.config.get("THEME_MODE", "AUTO")
+        ThemeManager._config = config or {}
+        mode = ThemeManager._config.get("WINDOW_THEME_MODE", "AUTO").upper()
+        try:
+            ThemeManager._current_theme = AppTheme(mode) if not isinstance(mode, AppTheme) else mode
+        except ValueError:
+            Logger.log(f"Unmappable [WINDOW_THEME_MODE] == '{mode}' in config.", LogLevel.ERROR)
+            Logger.log("Falling back to LIGHT theme mode.", LogLevel.DEBUG)
+            ThemeManager._current_theme = AppTheme.LIGHT
 
-        if isinstance(theme_mode, AppTheme):
-            self.current_theme = theme_mode
-        else:
-            self.current_theme = AppTheme(theme_mode)
+        # Detect initial system theme
+        ThemeManager._last_system_theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
 
-        self.apply_theme()
+        ThemeManager.apply_theme()
+
+        # Set up periodic system theme checking for AUTO mode
+        self._system_theme_timer = QTimer()
+        self._system_theme_timer.timeout.connect(_check_system_theme_change)
+        self._system_theme_timer.start(1000)  # Check every second
 
     # -----------------------
-    # Public API
+    # Theme Control
     # -----------------------
+    @staticmethod
+    def toggle_theme():
+        """Switches between light and dark modes."""
+        theme = ThemeManager._current_theme
 
-    def apply_theme(self):
-        """Applies the current theme to the QApplication."""
-        theme = self.current_theme
-
+        # If current theme is AUTO, toggle manually ignoring OS changes
         if theme == AppTheme.AUTO:
-            theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
+            # Use the current system theme as base for toggling
+            current_effective_theme = ThemeManager._last_system_theme
+            theme = AppTheme.DARK if current_effective_theme == AppTheme.LIGHT else AppTheme.LIGHT
+        else:
+            theme = AppTheme.LIGHT if theme == AppTheme.DARK else AppTheme.DARK
+
+        ThemeManager.set_theme(theme)
+
+    @staticmethod
+    def set_theme(theme: AppTheme):
+        """Sets the theme and updates the palette."""
+        if theme != ThemeManager._current_theme or theme == AppTheme.AUTO:
+            ThemeManager._current_theme = theme
+            ThemeManager._config["WINDOW_THEME_MODE"] = theme.name
+
+            # Update system theme reference when switching to AUTO
+            if theme == AppTheme.AUTO:
+                ThemeManager._last_system_theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
+
+            ThemeManager.apply_theme()
+            # Emit signal through singleton instance
+            if ThemeManager._instance:
+                ThemeManager._instance.theme_changed.emit(theme)
+
+    @staticmethod
+    def apply_theme():
+        """Applies the current theme to the QApplication."""
+        theme = ThemeManager._current_theme
+
+        # For AUTO mode, use the current system theme
+        if theme == AppTheme.AUTO:
+            theme = ThemeManager._last_system_theme
+
+        app = QApplication.instance()
+        if not app:
+            return
 
         if theme == AppTheme.DARK:
-            self._apply_dark_palette()
+            ThemeManager._apply_dark_palette()
         else:
-            self._apply_light_palette()
+            ThemeManager._apply_light_palette()
 
-        # Emit signal for components that want to react (e.g., reload icons)
-        self.theme_changed.emit(theme)
-
-    def toggle_theme(self):
-        """Switches between light and dark modes."""
-        if self.current_theme == AppTheme.AUTO:
-            # Toggle the *actual* system theme instead
-            theme = AppTheme.DARK if not is_system_dark_mode() else AppTheme.LIGHT
-        else:
-            theme = AppTheme.LIGHT if self.current_theme == AppTheme.DARK else AppTheme.DARK
-
-        self.set_theme(theme)
-
-    def set_theme(self, theme: AppTheme):
-        """Sets and applies a specific theme."""
-        if theme != self.current_theme:
-            self.current_theme = theme
-            if self.config is not None:
-                self.config["THEME_MODE"] = theme.name
-            self.apply_theme()
+        # Force UI refresh
+        app.setStyle(app.style().objectName())
 
     # -----------------------
     # Palette Definitions
     # -----------------------
-
-    def _apply_light_palette(self):
+    @staticmethod
+    def _apply_light_palette():
         app = QApplication.instance()
-        app.setPalette(QApplication.style().standardPalette())
+        if not app:
+            return
 
-    def _apply_dark_palette(self):
+        light_palette = QPalette()
+        light_palette.setColor(QPalette.Window, QColor(255, 255, 255))
+        light_palette.setColor(QPalette.WindowText, Qt.black)
+        light_palette.setColor(QPalette.Base, QColor(245, 245, 245))
+        light_palette.setColor(QPalette.AlternateBase, QColor(240, 240, 240))
+        light_palette.setColor(QPalette.ToolTipBase, Qt.black)
+        light_palette.setColor(QPalette.ToolTipText, Qt.white)
+        light_palette.setColor(QPalette.Text, Qt.black)
+        light_palette.setColor(QPalette.Button, QColor(240, 240, 240))
+        light_palette.setColor(QPalette.ButtonText, Qt.black)
+        light_palette.setColor(QPalette.BrightText, Qt.red)
+        light_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+        light_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+        light_palette.setColor(QPalette.HighlightedText, Qt.white)
+
+        app.setPalette(light_palette)
+
+    @staticmethod
+    def _apply_dark_palette():
         dark_palette = QPalette()
         dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
         dark_palette.setColor(QPalette.WindowText, Qt.white)
@@ -98,10 +157,32 @@ class ThemeManager(QObject):
         dark_palette.setColor(QPalette.HighlightedText, Qt.black)
 
         app = QApplication.instance()
-        app.setPalette(dark_palette)
+        if app:
+            app.setPalette(dark_palette)
+
+    @staticmethod
+    def get_current_theme() -> AppTheme:
+        """Get the current theme (static)."""
+        return ThemeManager._current_theme
+
+    @staticmethod
+    def get_effective_theme() -> AppTheme:
+        """Get the effective theme (resolves AUTO to actual theme)."""
+        if ThemeManager._current_theme == AppTheme.AUTO:
+            return ThemeManager._last_system_theme
+        return ThemeManager._current_theme
+
+    @property
+    def last_system_theme(self):
+        return self._last_system_theme
+
+    @property
+    def current_theme(self):
+        return self._current_theme
+
 
 # -----------------------
-# System Theme Detection
+# System Theme Detection (unchanged)
 # -----------------------
 def is_system_dark_mode() -> bool:
     """Detects whether the OS theme is dark or light across platforms."""
@@ -163,7 +244,9 @@ def is_system_dark_mode() -> bool:
     # --- Fallback (Qt heuristic) ---
     else:
         app = QApplication.instance()
-        palette = app.palette()
-        window_color = palette.color(QPalette.Window)
-        text_color = palette.color(QPalette.WindowText)
-        return window_color.value() < text_color.value()
+        if app:
+            palette = app.palette()
+            window_color = palette.color(QPalette.Window)
+            text_color = palette.color(QPalette.WindowText)
+            return window_color.value() < text_color.value()
+        return False
