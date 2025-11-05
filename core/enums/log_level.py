@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class LogLevel(Enum):
     """Logging level enumeration"""
     DEBUG = "DEBUG"
@@ -7,10 +8,3 @@ class LogLevel(Enum):
     WARNING = "WARNING"
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
-
-
-class ThemeMode(Enum):
-    """Theme mode enumeration"""
-    LIGHT = "light"
-    DARK = "dark"
-    AUTO = "auto"

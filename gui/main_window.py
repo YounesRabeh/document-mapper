@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import Qt
 
+from core.util.logger import Logger
 from gui.stages.stage1 import Stage1
 from gui.stages.stage2 import Stage2
 from gui.stages.stage3 import Stage3
@@ -47,4 +48,4 @@ class MainWindow(QMainWindow):
     def goto_stage(self, index: int):
         """Switch to a specific stage (1-based index)."""
         self.stage_manager.setCurrentIndex(index - 1)
-        print(f"[STAGE] Moved to Stage {index}")
+        Logger.log(f"Switched to Stage {index}")
