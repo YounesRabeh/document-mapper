@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any, Union
-from core.config.enums import LogLevel, ThemeMode
+from core.enums.log_level import LogLevel
+from core.enums.app_themes import AppTheme
 
 
 class ConfigValidator:
@@ -46,10 +47,10 @@ class ConfigValidator:
             raise ValueError(f"Invalid log level: {level}")
 
     @staticmethod
-    def parse_theme_mode(mode: str) -> ThemeMode:
+    def parse_theme_mode(mode: str) -> AppTheme:
         """Parse theme mode string to enum"""
         try:
-            return ThemeMode(mode.lower())
+            return AppTheme(mode.upper())
         except ValueError:
             raise ValueError(f"Invalid theme mode: {mode}")
 
