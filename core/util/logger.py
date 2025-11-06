@@ -13,11 +13,11 @@ class Logger:
     Automatically configured from environment variables.
     """
 
-    ENABLE_CONSOLE_OUTPUT: bool = False
+    CONSOLE_OUTPUT_ENABLED: bool = False
     LEVEL: LogLevel = LogLevel.INFO
-    LOG_TO_FILE: bool = False
+    PERSISTANSE_LOGGING: bool = False
     LOG_FILE_PATH: Path = Path("logs/app.log")
-    FORCE_COLORED_OUTPUT: bool = False
+    CONSOLE_FORCE_COLORED: bool = False
 
     _COLORS = {
         LogLevel.DEBUG: "\033[38;5;213m",    # soft magenta
@@ -27,8 +27,6 @@ class Logger:
         LogLevel.CRITICAL: "\033[1;41m",     # red background (bold)
     }
     RESET = "\033[0m"
-
-
 
     _PRIORITY = {
         LogLevel.DEBUG: 10,
@@ -48,30 +46,30 @@ class Logger:
     @classmethod
     def configure_from_env(cls):
         """Configure logger behavior from environment variables."""
-        cls.ENABLE_CONSOLE_OUTPUT = cls._truthy(os.getenv("ENABLE_CONSOLE_OUTPUT", ""))
-        logging = cls._truthy(os.getenv("LOGGING", ""))
-        cls.FORCE_COLORED_OUTPUT = cls._truthy(os.getenv("FORCE_COLORED_OUTPUT", ""))
+        cls.CONSOLE_OUTPUT_ENABLED = cls._truthy(os.getenv("CONSOLE_OUTPUT_ENABLED", ""))
+        logging = cls._truthy(os.getenv("PERSISTENCE_LOGGING", ""))
+        cls.CONSOLE_FORCE_COLORED = cls._truthy(os.getenv("CONSOLE_FORCE_COLORED", ""))
 
         if logging:
             cls.LEVEL = LogLevel.DEBUG
-            cls.LOG_TO_FILE = True
+            cls.PERSISTANSE_LOGGING = True
         else:
-            log_level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+            log_level_name = os.getenv("CONSOLE_OUTPUT_LEVEL", "INFO").upper()
             cls.LEVEL = LogLevel.__members__.get(log_level_name, LogLevel.INFO)
-            cls.LOG_TO_FILE = False
+            cls.PERSISTANSE_LOGGING = False
 
         # Determine log file path
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         cls.LOG_FILE_PATH = Path(f"logs/app_{timestamp}.log")
 
         # Auto-create log directory
-        if cls.LOG_TO_FILE:
+        if cls.PERSISTANSE_LOGGING:
             cls.LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
             cls._write_file_header()
 
         # Disable colors if not a TTY and FORCE_COLOR not set
 
-        if not sys.stdout.isatty() and not cls.FORCE_COLORED_OUTPUT:
+        if not sys.stdout.isatty() and not cls.CONSOLE_FORCE_COLORED:
             cls._COLORS = {level: "" for level in cls._COLORS}
             cls.RESET = ""
 
@@ -83,7 +81,7 @@ class Logger:
     @classmethod
     def _write_file_header(cls):
         """Writes an informative header at the top of the log file."""
-        app_name = os.getenv("LOGGING_TARGET_NAME", "Unnamed Application")
+        app_name = os.getenv("PERSISTENCE_LOGGING_TARGET_NAME", "Unnamed Application")
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         header_lines = [
@@ -93,7 +91,7 @@ class Logger:
             "",
             "> CONFIGURATION: ",
             f"   Log Level ........... {cls.LEVEL.name}",
-            f"   Forced Colored Output {'Enabled' if cls.FORCE_COLORED_OUTPUT else 'Disabled'}",
+            f"   Forced Colored Output {'Enabled' if cls.CONSOLE_FORCE_COLORED else 'Disabled'}",
             "",
             "> SYSTEM INFO: ",
             f"   Python ............... {sys.version.split()[0]}",
@@ -107,7 +105,7 @@ class Logger:
             with open(cls.LOG_FILE_PATH, "w", encoding="utf-8") as f:
                 f.write("\n".join(header_lines) + "\n")
         except Exception as e:
-            if cls.ENABLE_CONSOLE_OUTPUT:
+            if cls.CONSOLE_OUTPUT_ENABLED:
                 print(f"[LoggerError] Failed to write header to log file: {e}")
 
     # ---------------------------
@@ -128,18 +126,18 @@ class Logger:
         plain_text = f"[{timestamp}] [{level.name}] {message}"
 
         # Console output (colored)
-        if cls.ENABLE_CONSOLE_OUTPUT:
+        if cls.CONSOLE_OUTPUT_ENABLED:
             color = cls._COLORS.get(level, "")
             reset = cls.RESET if color else ""
             print(f"{color}{plain_text}{reset}")
 
         # File output (no colors)
-        if cls.LOG_TO_FILE:
+        if cls.PERSISTANSE_LOGGING:
             try:
                 with open(cls.LOG_FILE_PATH, "a", encoding="utf-8") as f:
                     f.write(plain_text + "\n")
             except Exception as e:
-                if cls.ENABLE_CONSOLE_OUTPUT:
+                if cls.CONSOLE_OUTPUT_ENABLED:
                     print(f"[LoggerError] Failed to write to log file: {e}")
 
     # ---------------------------

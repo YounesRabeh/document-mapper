@@ -24,6 +24,7 @@ class ConfigLoader:
         # Determine project root (works in both PyInstaller & dev)
         if hasattr(sys, "_MEIPASS"):
             # PyInstaller bundle
+
             self.project_root = Path(sys._MEIPASS)
             self.is_dev = False
         else:
