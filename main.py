@@ -1,7 +1,6 @@
 import sys
 from PySide6.QtWidgets import QApplication
 from core.config.configuration import Config
-from core.manager.theme_manager import ThemeManager
 from gui.main_window import MainWindow
 
 

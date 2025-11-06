@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 from PySide6.QtCore import Qt
 
+from core.enums.log_level import LogLevel
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from gui.stages.stage1 import Stage1
@@ -10,6 +11,7 @@ from gui.stages.stage3 import Stage3
 
 class MainWindow(QMainWindow):
     """Main window that manages multiple stages (1–3)."""
+    initial_stage_index: int = 1
 
     def __init__(self, config: dict):
         super().__init__()
@@ -44,9 +46,9 @@ class MainWindow(QMainWindow):
         self.stage3.prev_stage.connect(lambda: self.goto_stage(2))
 
         # Start at Stage 1
-        self.goto_stage(1)
+        self.goto_stage(self.initial_stage_index)
 
     def goto_stage(self, index: int):
         """Switch to a specific stage (1-based index)."""
         self.stage_manager.setCurrentIndex(index - 1)
-        Logger.log(f"Switched to Stage {index}")
+        Logger.log(f"Switched to Stage {index}", LogLevel.DEBUG)
