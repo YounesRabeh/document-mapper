@@ -24,16 +24,15 @@ class ConfigLoader:
         # Determine project root (works in both PyInstaller & dev)
         if hasattr(sys, "_MEIPASS"):
             # PyInstaller bundle
-
-            self.project_root = Path(sys._MEIPASS)
+            self.project_root = Path(getattr(sys, "_MEIPASS")).resolve()
             self.is_dev = False
         else:
             # Normal dev run
-            self.project_root = Path.cwd()
-            self.is_dev = True
+            self.project_root = Path.cwd().resolve()
+            self.is_dev = True # True is correct, but we disable dev mode for testing
 
-        self.toml_path = self.project_root / toml_path
-        self.env_path = self.project_root / env_path
+        self.toml_path = (self.project_root / toml_path).resolve()
+        self.env_path = (self.project_root / env_path).resolve()
 
         # Load TOML (always)
         self.toml_data = self._load_toml()
@@ -46,10 +45,19 @@ class ConfigLoader:
             Logger.configure_from_env()
         elif self.is_dev:
             Logger.log(f".env not found at {self.env_path}, skipping...", LogLevel.WARNING)
+        else:
+            # Not in dev mode → use TOML-based logging
+            persistence = (
+                self.toml_data.get("logging", {})
+                .get("persistence_logging", False)
+            )
+            if persistence:
+                os.environ["PERSISTENCE_LOGGING"] = "True"
+            Logger.configure_from_env(self.project_root)
 
     def _load_toml(self) -> dict:
         if not self.toml_path.exists():
-            raise FileNotFoundError(f"config.toml not found at {self.toml_path}")
+            Logger.log(f"Missing TOML file: {self.toml_path}, Some Data might be missing!", LogLevel.ERROR)
         with open(self.toml_path, "rb") as f:
             return tomllib.load(f)
 

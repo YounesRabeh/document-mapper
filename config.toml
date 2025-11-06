@@ -1,10 +1,13 @@
 [app]
 name = "Document Mapper"
-version = "1.0.0"
+version = "0.3"
 description = "An application for mapping documents."
 author = "Younes Rabeh"
 organization = "YOUNIDEV"
 domain = "younidev.com"
+
+[logging]
+persistence_logging = true
 
 [window]
 width = 800

@@ -15,7 +15,7 @@ class Logger:
 
     CONSOLE_OUTPUT_ENABLED: bool = False
     LEVEL: LogLevel = LogLevel.INFO
-    PERSISTANSE_LOGGING: bool = False
+    PERSISTENCE_LOGGING: bool = False
     LOG_FILE_PATH: Path = Path("logs/app.log")
     CONSOLE_FORCE_COLORED: bool = False
 
@@ -37,6 +37,16 @@ class Logger:
     }
 
     @classmethod
+    def _get_app_root(cls) -> Path:
+        """Get the application root directory consistently."""
+        if hasattr(sys, "_MEIPASS"):
+            # PyInstaller bundle - use the directory where the executable is located
+            return Path(sys.executable).parent.resolve()
+        else:
+            # Normal dev run - use the script's directory
+            return Path(__file__).parent.parent.resolve()
+
+    @classmethod
     def _truthy(cls, val: str) -> bool:
         return str(val).strip().lower() in ("1", "true", "yes", "on")
 
@@ -44,7 +54,7 @@ class Logger:
     # Initialization
     # ---------------------------
     @classmethod
-    def configure_from_env(cls):
+    def configure_from_env(cls, project_root:Path = Path.cwd()):
         """Configure logger behavior from environment variables."""
         cls.CONSOLE_OUTPUT_ENABLED = cls._truthy(os.getenv("CONSOLE_OUTPUT_ENABLED", ""))
         logging = cls._truthy(os.getenv("PERSISTENCE_LOGGING", ""))
@@ -52,23 +62,21 @@ class Logger:
 
         if logging:
             cls.LEVEL = LogLevel.DEBUG
-            cls.PERSISTANSE_LOGGING = True
+            cls.PERSISTENCE_LOGGING = True
         else:
             log_level_name = os.getenv("CONSOLE_OUTPUT_LEVEL", "INFO").upper()
             cls.LEVEL = LogLevel.__members__.get(log_level_name, LogLevel.INFO)
-            cls.PERSISTANSE_LOGGING = False
+            cls.PERSISTENCE_LOGGING = False
 
         # Determine log file path
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        cls.LOG_FILE_PATH = Path(f"logs/app_{timestamp}.log")
+        cls.LOG_FILE_PATH = (project_root / f"__app.log").resolve()
 
         # Auto-create log directory
-        if cls.PERSISTANSE_LOGGING:
+        if cls.PERSISTENCE_LOGGING:
             cls.LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
             cls._write_file_header()
 
         # Disable colors if not a TTY and FORCE_COLOR not set
-
         if not sys.stdout.isatty() and not cls.CONSOLE_FORCE_COLORED:
             cls._COLORS = {level: "" for level in cls._COLORS}
             cls.RESET = ""
@@ -106,7 +114,7 @@ class Logger:
                 f.write("\n".join(header_lines) + "\n")
         except Exception as e:
             if cls.CONSOLE_OUTPUT_ENABLED:
-                print(f"[LoggerError] Failed to write header to log file: {e}")
+                Logger.log(f"[LoggerError] Failed to write log file header: {e}", LogLevel.ERROR)
 
     # ---------------------------
     # Core Logging
@@ -132,7 +140,7 @@ class Logger:
             print(f"{color}{plain_text}{reset}")
 
         # File output (no colors)
-        if cls.PERSISTANSE_LOGGING:
+        if cls.PERSISTENCE_LOGGING:
             try:
                 with open(cls.LOG_FILE_PATH, "a", encoding="utf-8") as f:
                     f.write(plain_text + "\n")
