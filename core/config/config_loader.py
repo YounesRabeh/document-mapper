@@ -47,12 +47,15 @@ class ConfigLoader:
             Logger.log(f".env not found at {self.env_path}, skipping...", LogLevel.WARNING)
         else:
             # Not in dev mode → use TOML-based logging
-            persistence = (
-                self.toml_data.get("logging", {})
-                .get("persistence_logging", False)
+            persistence_logging = (
+                self.toml_data.get("logging", {}).get("persistence_logging", False)
             )
-            if persistence:
+
+            if persistence_logging:
                 os.environ["PERSISTENCE_LOGGING"] = "True"
+                app_name = self.toml_data.get("app", {}).get("name")
+                os.environ["PERSISTENCE_LOGGING_TARGET_NAME"] = app_name
+
             Logger.configure_from_env(self.project_root)
 
     def _load_toml(self) -> dict:
