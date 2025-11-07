@@ -1,6 +1,7 @@
 import os
 import sys
 from pathlib import Path
+from typing import Any
 from dotenv import load_dotenv
 
 from core.enums.log_level import LogLevel
@@ -15,7 +16,7 @@ except ImportError:
 from core.util.validator import ConfigValidator
 
 
-class ConfigLoader:
+class EnvironmentSetup:
     """Load and merge config.toml and .env (only in dev mode)."""
 
     def __init__(self, env_path: str = ".env", toml_path: str = "config.toml"):
@@ -44,23 +45,24 @@ class ConfigLoader:
             self.env_loaded = True
             Logger.configure_from_env()
         elif self.is_dev:
-            Logger.log(f".env not found at {self.env_path}, skipping...", LogLevel.WARNING)
+            Logger.warning(f".env not found at {self.env_path}, skipping...")
         else:
             # Not in dev mode → use TOML-based logging
-            persistence_logging = (
-                self.toml_data.get("logging", {}).get("persistence_logging", False)
-            )
-
-            if persistence_logging:
+            if self.toml_data is not None:
+                persistence_logging = (
+                    self.toml_data.get("logging", {}).get("persistence_logging", False)
+                )
+                if persistence_logging:
+                    os.environ["PERSISTENCE_LOGGING"] = "True"
+                    app_name = self.toml_data.get("app", {}).get("name")
+                    os.environ["PERSISTENCE_LOGGING_TARGET_NAME"] = app_name
+            else:
                 os.environ["PERSISTENCE_LOGGING"] = "True"
-                app_name = self.toml_data.get("app", {}).get("name")
-                os.environ["PERSISTENCE_LOGGING_TARGET_NAME"] = app_name
-
             Logger.configure_from_env(self.project_root)
 
-    def _load_toml(self) -> dict:
+    def _load_toml(self) -> dict[str, Any] | None | Any:
         if not self.toml_path.exists():
-            Logger.log(f"Missing TOML file: {self.toml_path}, Some Data might be missing!", LogLevel.ERROR)
+            return None
         with open(self.toml_path, "rb") as f:
             return tomllib.load(f)
 
@@ -93,6 +95,10 @@ class ConfigLoader:
     def load(self) -> dict:
         """Merge TOML and (optionally) .env into a flat dict."""
         config = {}
+
+        if self.toml_data is None:
+            Logger.error(f"Failed to load TOML configuration from {self.toml_path}")
+            return config
 
         # Flatten TOML sections
         for section, values in self.toml_data.items():
