@@ -44,8 +44,8 @@ class ThemeManager(QObject):
         try:
             ThemeManager._current_theme = AppTheme(mode) if not isinstance(mode, AppTheme) else mode
         except ValueError:
-            Logger.log(f"Unmappable [WINDOW_THEME_MODE] == '{mode}' in config.", LogLevel.ERROR)
-            Logger.log("Falling back to LIGHT theme mode.", LogLevel.DEBUG)
+            Logger.error(f"Unmappable 'WINDOW_THEME_MODE' == '{mode}' in config.")
+            Logger.debug("Falling back to LIGHT theme mode.")
             ThemeManager._current_theme = AppTheme.LIGHT
 
         # Detect initial system theme
@@ -103,15 +103,15 @@ class ThemeManager(QObject):
 
         app = QApplication.instance()
         if not app:
-            Logger.log("QApplication instance not found. Cannot apply theme.", LogLevel.ERROR)
+            Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
         if theme == AppTheme.DARK:
             ThemeManager._apply_dark_palette()
-            Logger.log("Applied DARK theme.", LogLevel.DEBUG)
+            Logger.debug("Applied DARK theme.")
         else:
             ThemeManager._apply_light_palette()
-            Logger.log("Applied LIGHT theme.", LogLevel.DEBUG)
+            Logger.debug("Applied LIGHT theme.")
 
         # Force UI refresh
         app.setStyle(app.style().objectName())
@@ -123,7 +123,7 @@ class ThemeManager(QObject):
     def _apply_light_palette():
         app = QApplication.instance()
         if not app:
-            Logger.log("QApplication instance not found. Cannot apply theme.", LogLevel.ERROR)
+            Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
         light_palette = QPalette()
@@ -147,7 +147,7 @@ class ThemeManager(QObject):
     def _apply_dark_palette():
         app = QApplication.instance()
         if not app:
-            Logger.log("QApplication instance not found. Cannot apply theme.", LogLevel.ERROR)
+            Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
         dark_palette = QPalette()
@@ -204,10 +204,10 @@ def is_system_dark_mode() -> bool:
                 text=True
             )
             is_theme_dark:bool = "Dark" in result.stdout
-            Logger.log(f"macOS theme detected: {'Dark' if is_theme_dark else 'Light'}", LogLevel.DEBUG)
+            Logger.debug(f"macOS theme detected: {'Dark' if is_theme_dark else 'Light'}")
             return is_theme_dark
         except Exception as e:
-            Logger.log(f"Failed to detect macOS theme: {e}, defaulting to light.", LogLevel.WARNING)
+            Logger.warning(f"Failed to detect macOS theme: {e}, defaulting to light.")
             return False
 
     # --- Windows ---
@@ -221,10 +221,10 @@ def is_system_dark_mode() -> bool:
             # 0 = dark, 1 = light
             value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
             winreg.CloseKey(key)
-            Logger.log(f"Windows theme detected: {'Dark' if value == 0 else 'Light'}", LogLevel.DEBUG)
+            Logger.debug(f"Windows theme detected: {'Dark' if value == 0 else 'Light'}")
             return value == 0
         except Exception as e:
-            Logger.log(f"Failed to detect Windows theme: {e}, defaulting to light.", LogLevel.WARNING)
+            Logger.warning(f"Failed to detect Windows theme: {e}, defaulting to light.")
             return False
 
     # --- Linux (try GTK or KDE settings) ---
@@ -236,10 +236,10 @@ def is_system_dark_mode() -> bool:
                 capture_output=True, text=True
             )
             if "dark" in result.stdout.lower():
-                Logger.log("Linux GTK theme detected: Dark", LogLevel.DEBUG)
+                Logger.debug("Linux GTK theme detected: Dark")
                 return True
         except Exception as e:
-            Logger.log(f"Failed to detect GTK theme: {e}, continuing to KDE check.", LogLevel.DEBUG)
+            Logger.debug(f"Failed to detect GTK theme: {e}, continuing to KDE check.")
             pass
 
         try:
@@ -249,13 +249,13 @@ def is_system_dark_mode() -> bool:
                 capture_output=True, text=True
             )
             if "dark" in result.stdout.lower():
-                Logger.log("Linux KDE theme detected: Dark", LogLevel.DEBUG)
+                Logger.debug("Linux KDE theme detected: Dark")
                 return True
         except Exception as e:
-            Logger.log(f"Failed to detect KDE theme: {e}, defaulting to light.", LogLevel.WARNING)
+            Logger.warning(f"Failed to detect KDE theme: {e}, defaulting to light.")
             pass
 
-        Logger.log("Linux theme defaulting to Light.", LogLevel.DEBUG)
+        Logger.debug("Linux theme defaulting to Light.")
         return False
 
     # --- Fallback (Qt heuristic) ---
