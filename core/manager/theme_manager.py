@@ -5,7 +5,6 @@ import subprocess
 from PySide6.QtWidgets import QApplication
 
 from core.enums.app_themes import AppTheme
-from core.enums.log_level import LogLevel
 from core.util.logger import Logger
 
 

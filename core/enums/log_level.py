@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class LogLevel(Enum):
     """Logging level enumeration"""
     DEBUG = "DEBUG"
