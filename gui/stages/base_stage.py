@@ -1,26 +1,10 @@
+
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMenuBar, QMenu
 )
 from PySide6.QtCore import Qt, Signal
 
-
-class UIFactory:
-    """Reusable factory for building common UI elements."""
-
-    @staticmethod
-    def create_label(text: str, align=Qt.AlignCenter) -> QLabel:
-        label = QLabel(text)
-        label.setAlignment(align)
-        return label
-
-    @staticmethod
-    def create_button(text: str, on_click=None) -> QPushButton:
-        """Creates a styled QPushButton."""
-        btn = QPushButton(text)
-        if on_click:
-            btn.clicked.connect(on_click)
-        btn.setMinimumWidth(120)
-        return btn
+from gui.ui.ui_factory import UIFactory
 
 
 class BaseStage(QWidget):
@@ -31,6 +15,7 @@ class BaseStage(QWidget):
 
     def __init__(self, config: dict, title: str):
         super().__init__()
+        self.menubar = None
         self.config = config
         self.title = title
 
@@ -56,6 +41,12 @@ class BaseStage(QWidget):
         self.nav_layout.setSpacing(20)
         self.main_layout.addLayout(self.nav_layout)
 
+    def add_menu(self, menu_structure: dict):
+        """Adds a menu bar at the top of the layout."""
+        menubar = UIFactory.create_menu_bar(menu_structure, self)
+        self.main_layout.insertWidget(0, menubar)  # add at top before title
+        self.menubar = menubar
+
     def add_nav_buttons(self, back_text=None, next_text=None):
         """Adds bottom navigation buttons side by side."""
         if back_text:
@@ -68,3 +59,11 @@ class BaseStage(QWidget):
         if next_text:
             next_btn = UIFactory.create_button(next_text, self.next_stage.emit)
             self.nav_layout.addWidget(next_btn)
+
+
+    def add_file_drag_drop(self, width, height, allowed_extensions=None, on_files_selected=None):
+        """Adds a drag-drop area to the content layout."""
+        drag_drop_area = UIFactory.create_drag_drop_area(
+            width, height, allowed_extensions, on_files_selected
+        )
+        self.content_layout.addWidget(drag_drop_area)
