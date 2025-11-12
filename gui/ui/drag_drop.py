@@ -6,13 +6,19 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent
 import os
 import mimetypes
 
+from core.manager.theme_manager import ThemeManager
+from core.util.logger import Logger
+from core.util.resources import Resources
+
 
 class DragDrop:
     def create_drag_drop_area(self, width, height, allowed_extensions=None, on_files_selected=None):
         if allowed_extensions is None:
             allowed_extensions = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg']
+            Logger.warning("No allowed_extensions specified; defaulting to common file types.")
 
         widget = QWidget()
+        widget.setObjectName("dragDropArea")
         widget.setMinimumSize(width, height)
         widget.setAcceptDrops(True)
 
@@ -30,21 +36,7 @@ class DragDrop:
         layout.addWidget(label)
         layout.setAlignment(Qt.AlignCenter)
 
-        widget.setStyleSheet("""
-            QWidget {
-                border: 2px dashed #ccc;
-                border-radius: 10px;
-                background-color: #f8f9fa;
-            }
-            QWidget:hover {
-                border-color: #007bff;
-                background-color: #e9ecef;
-            }
-            QLabel {
-                color: #333;
-                font-size: 13px;
-            }
-        """)
+        ThemeManager.apply_theme_to_widget(widget, Resources.get_qss("drag_drop/drag_area.qss"))
 
         # Mouse press event (open file dialog)
         def mouse_press_event(event):
@@ -76,7 +68,6 @@ class DragDrop:
                 self._show_error_dialog(widget, "No valid files selected")
 
     def _drag_enter_event(self, widget, event: QDragEnterEvent):
-        """Handle drag enter event"""
         if event.mimeData().hasUrls():
             urls = event.mimeData().urls()
             valid_files = [
@@ -85,55 +76,17 @@ class DragDrop:
             ]
             if valid_files:
                 event.acceptProposedAction()
-                widget.setStyleSheet("""
-                    QWidget {
-                        border: 2px dashed #28a745;
-                        border-radius: 10px;
-                        background-color: #d4edda;
-                    }
-                    QLabel {
-                        color: #155724;
-                        font-size: 13px;
-                    }
-                """)
+                widget.setProperty("dragState", "valid")
             else:
                 event.ignore()
-                widget.setStyleSheet("""
-                    QWidget {
-                        border: 2px dashed #dc3545;
-                        border-radius: 10px;
-                        background-color: #f8d7da;
-                    }
-                    QLabel {
-                        color: #721c24;
-                        font-size: 13px;
-                    }
-                """)
+                widget.setProperty("dragState", "invalid")
+            widget.style().polish(widget)  # Refresh QSS
         else:
             event.ignore()
 
-    def _drag_move_event(self, widget, event):
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
     def _drop_event(self, widget, event: QDropEvent):
-        """Handle file drop"""
-        # Reset style
-        widget.setStyleSheet("""
-            QWidget {
-                border: 2px dashed #ccc;
-                border-radius: 10px;
-                background-color: #f8f9fa;
-            }
-            QWidget:hover {
-                border-color: #007bff;
-                background-color: #e9ecef;
-            }
-            QLabel {
-                color: #333;
-                font-size: 13px;
-            }
-        """)
+        widget.setProperty("dragState", "")  # Reset to normal
+        widget.style().polish(widget)
 
         if event.mimeData().hasUrls():
             files = [
@@ -147,6 +100,10 @@ class DragDrop:
                 else:
                     self._show_error_dialog(widget, "No files with allowed extensions were dropped")
 
+            event.acceptProposedAction()
+
+    def _drag_move_event(self, widget, event):
+        if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
     def _filter_files_by_extension(self, files, allowed_extensions):

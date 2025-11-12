@@ -1,0 +1,32 @@
+/* Default / normal state */
+#dragDropArea {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+}
+#dragDropArea:hover {
+    border-color: #007bff;
+    background-color: #e9ecef;
+}
+#dragDropArea QLabel {
+    color: #333;
+    font-size: 13px;
+}
+
+/* Valid drag state */
+#dragDropArea[dragState="valid"] {
+    border: 2px dashed #28a745;
+    background-color: #d4edda;
+}
+#dragDropArea[dragState="valid"] QLabel {
+    color: #155724;
+}
+
+/* Invalid drag state */
+#dragDropArea[dragState="invalid"] {
+    border: 2px dashed #dc3545;
+    background-color: #f8d7da;
+}
+#dragDropArea[dragState="invalid"] QLabel {
+    color: #721c24;
+}
