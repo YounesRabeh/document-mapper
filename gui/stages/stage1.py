@@ -1,6 +1,5 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMessageBox, QHBoxLayout, QSizePolicy
-from core.util.logger import Logger
+from PySide6.QtWidgets import QMessageBox, QHBoxLayout
 from gui.stages.base_stage import BaseStage, UIFactory
 from gui.ui.custom_menu_bar import CustomMenuBar
 
@@ -30,8 +29,8 @@ class Stage1(BaseStage):
         )
 
         # Add to split layout with stretch factors
-        split_layout.addWidget(xlsx_area, stretch=1, alignment=Qt.AlignCenter)
-        split_layout.addWidget(docx_area, stretch=1, alignment=Qt.AlignCenter)
+        split_layout.addWidget(xlsx_area, alignment=Qt.AlignCenter)
+        split_layout.addWidget(docx_area, alignment=Qt.AlignCenter)
 
         # Add the split layout to the main layout
         self.main_layout.addLayout(split_layout, stretch=1)
