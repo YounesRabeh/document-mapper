@@ -1,6 +1,7 @@
 from typing import Optional
 from core.config.environment_setup import EnvironmentSetup
 from core.util.logger import Logger
+from core.util.resources import Resources
 
 """
 Configuration helpers for the application.
@@ -74,9 +75,10 @@ class Config:
         if cls._instance is None:
             environment = EnvironmentSetup()
             loaded = environment.load()
-            Logger.debug("Loaded configuration")
 
             # Ensure we return a SafeConfig
             cls._instance = _SafeConfig(loaded) if not isinstance(loaded, _SafeConfig) else loaded
+            Resources.initialize(cls._instance)
+            Logger.debug("Loaded configuration")
 
         return cls._instance
