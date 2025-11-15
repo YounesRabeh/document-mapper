@@ -6,7 +6,7 @@ from gui.ui.custom_menu_bar import CustomMenuBar
 
 class Stage1(BaseStage):
     def __init__(self, config: dict):
-        super().__init__(config, "🟢 Stage 1: Start")
+        super().__init__(config, "🟢 Stage 1: Select Files")
         self.add_menu(CustomMenuBar.default(self))
 
         # --- Split Layout (horizontal) ---
@@ -24,7 +24,7 @@ class Stage1(BaseStage):
         # Right: Word files (.docx)
         docx_area = UIFactory.create_drag_drop_area(
             width=300, height=300,
-            allowed_extensions=['.docx'],
+            allowed_extensions=['.docx', '.doc'],
             on_files_selected=lambda files: print("Word files:", files)
         )
 
@@ -36,6 +36,6 @@ class Stage1(BaseStage):
         self.main_layout.addLayout(split_layout, stretch=1)
 
         # --- Bottom Button ---
-        next_btn = UIFactory.create_button("Next → Stage 2", self.next_stage.emit)
+        next_btn = UIFactory.create_button("Next", self.next_stage.emit)
         next_btn.setFixedWidth(160)
         self.main_layout.addWidget(next_btn, alignment=Qt.AlignCenter)
