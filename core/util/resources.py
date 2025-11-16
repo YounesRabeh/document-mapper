@@ -22,8 +22,8 @@ class Resources:
     - Resolves base paths depending on environment (dev vs bundled).
     - Indexes all files in resource directories for fast access.
     - Provides dynamic getter methods:
-        - get_<resource>(filename_or_path): returns the absolute path to a resource.
-        - get_all_<resource>(): returns all files for a given resource type.
+        - get_in<resource>(filename_or_path): returns the absolute path to a resource.
+        - get_all_in<resource>(): returns all files for a given resource type.
     - Automatically creates required directories in development mode.
     - Logs errors and warnings when resources are missing or misconfigured.
 
@@ -92,7 +92,7 @@ class Resources:
     def _create_get_method(cls, name: str):
         """Create get_<name>(filename_or_path)"""
 
-        def method(self_or_cls, path: str):
+        def method(self_or_cls, path: str, suppress: bool = False):
             base_path = getattr(cls, name)
 
             # Try direct path first
@@ -111,7 +111,9 @@ class Resources:
                     return os.path.abspath(bundled_candidate)
 
             Logger.error(f"Resource not found: {path}")
-            raise FileNotFoundError(f"Resource not found: {path}")
+            if not suppress:
+                raise FileNotFoundError(f"Resource not found: {path}")
+            return None  # Return None if suppression is active
 
         method.__name__ = f"get_in_{name}"
         setattr(cls, method.__name__, MethodType(method, cls))

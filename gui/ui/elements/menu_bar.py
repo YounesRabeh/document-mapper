@@ -1,6 +1,6 @@
 from core.manager.theme_manager import ThemeManager
 
-class CustomMenuBar:
+class MenuBar:
     """Centralized reusable menu bar definitions."""
 
     @staticmethod

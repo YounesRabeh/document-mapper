@@ -39,7 +39,7 @@ class DragDrop:
         layout.addWidget(label)
         layout.setAlignment(Qt.AlignCenter)
 
-        ThemeManager.apply_theme_to_widget(widget, Resources.get_in_qss("drag_drop/drag_area.qss"))
+        ThemeManager.apply_theme_to_widget(widget, Resources.get_in_qss("drag_drop/default.qss"))
 
         # Mouse press event (open file dialog)
         def mouse_press_event(event):

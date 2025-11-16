@@ -1,13 +1,13 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QMessageBox, QHBoxLayout
+from PySide6.QtWidgets import QHBoxLayout
 from gui.stages.base_stage import BaseStage, UIFactory
-from gui.ui.custom_menu_bar import CustomMenuBar
+from gui.ui.elements.menu_bar import MenuBar
 
 
 class Stage1(BaseStage):
     def __init__(self, config: dict):
         super().__init__(config, "🟢 Stage 1: Select Files")
-        self.add_menu(CustomMenuBar.default(self))
+        self.add_menu(MenuBar.default(self))
 
         # --- Split Layout (horizontal) ---
         split_layout = QHBoxLayout()
