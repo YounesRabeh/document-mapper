@@ -8,7 +8,6 @@ class Stage2(BaseStage):
 
         entry = UIFactory.create_file_entry(
             Resources.get_in_templates("docx_template_test.docx"),
-
         )
         entry2 = UIFactory.create_file_entry(
             Resources.get_in_data("xlsx_test.xlsx")

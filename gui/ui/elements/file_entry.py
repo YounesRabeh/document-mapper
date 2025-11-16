@@ -4,9 +4,16 @@ from PySide6.QtGui import QPixmap, QAction, QFontMetrics
 from PySide6.QtCore import Qt
 
 from core.config.configuration import Config
+from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from core.util.resources import Resources
 
+
+FILE_TYPES_DIR_NAME = "file_types"
+FILE_TYPES_ICON_SIZE = 64
+FILE_TYPES_ICON_BG_COLOR = Qt.darkGray
+FILE_TYPES_ICONS_EXTENSIONS = (".png", ".jpg", ".svg")
+ICON_EXTENSION_SEPARATOR = "_"
 
 def build_file_icon_map() -> dict[str, str]:
     """
@@ -14,7 +21,7 @@ def build_file_icon_map() -> dict[str, str]:
     Each icon file can define multiple extensions separated by underscores.
     Example: 'docx_doc.png' -> maps both 'docx' and 'doc' to the same icon.
     """
-    file_types_dir = Resources.get_in_icons("file_types")
+    file_types_dir = Resources.get_in_icons(FILE_TYPES_DIR_NAME)
 
     if not os.path.exists(file_types_dir):
         Logger.warning(f"File types icon directory not found: {file_types_dir}")
@@ -22,12 +29,12 @@ def build_file_icon_map() -> dict[str, str]:
 
     file_map = {}
     for filename in os.listdir(file_types_dir):
-        if not filename.lower().endswith((".png", ".jpg", ".svg")):
+        if not filename.lower().endswith(FILE_TYPES_ICONS_EXTENSIONS):
             continue
 
         # Remove extension, split by underscores
         name_part = os.path.splitext(filename)[0]  # e.g., "docx_doc"
-        extensions = name_part.split("_")           # ['docx', 'doc']
+        extensions = name_part.split(ICON_EXTENSION_SEPARATOR)    # ['docx', 'doc']
 
         icon_path = os.path.join(file_types_dir, filename)
         for ext in extensions:
@@ -45,12 +52,24 @@ class FileEntry(QWidget):
     A file-entry row that looks good in both dark and light themes,
     automatically displaying an icon based on the file extension.
     """
-
+    DEFAULT_ICON, ERROR_ICON = None, None
 
     def __init__(self, file_path: str, on_edit=None, on_delete=None, parent=None):
         super().__init__(parent)
+        # Lazy-load class-level icons if not already loaded
+        if self.__class__.DEFAULT_ICON is None:
+            self.__class__.DEFAULT_ICON = Resources.get_in_icons("sys/default_file_entry.png")
+        if self.__class__.ERROR_ICON is None:
+            self.__class__.ERROR_ICON = Resources.get_in_icons("sys/error.png")
+
         self.file_path = file_path
-        self.file_name = os.path.basename(file_path)
+        self.file_exists = self.file_path is not None and os.path.exists(file_path)
+
+        if not self.file_exists:
+            self.file_name = "File not found !"
+            Logger.error(f"File not found for path: '{self.file_path}'")
+        else:
+            self.file_name = os.path.basename(file_path)
         self.extension = self.file_name.split(".")[-1].lower()
 
         self.on_edit = on_edit
@@ -65,13 +84,25 @@ class FileEntry(QWidget):
 
         # ========== ICON ==========
         icon_label = QLabel()
-        icon_label.setFixedSize(64, 64)
-        pix = QPixmap(64, 64)
-        pix.fill(Qt.darkGray)  # dark background for white icons
-        icon_path = ICON_MAP.get(self.extension)
+        icon_label.setFixedSize(FILE_TYPES_ICON_SIZE, FILE_TYPES_ICON_SIZE)
+
+        # Determine which icon path to use
+        icon_path = self.ERROR_ICON if not self.file_exists else ICON_MAP.get(self.extension)
+
+        # Start with a blank pixmap with background color
+        pix = QPixmap(FILE_TYPES_ICON_SIZE, FILE_TYPES_ICON_SIZE)
+        pix.fill(FILE_TYPES_ICON_BG_COLOR)
+
+        # If valid icon exists, load and scale it
         if icon_path and os.path.exists(icon_path):
-            icon_pix = QPixmap(icon_path).scaled(64, 64, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            pix = icon_pix
+            icon_pix = QPixmap(icon_path)
+            if not icon_pix.isNull():
+                pix = icon_pix.scaled(
+                    FILE_TYPES_ICON_SIZE,
+                    FILE_TYPES_ICON_SIZE,
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation
+                )
         icon_label.setPixmap(pix)
 
         # ========== TEXT ==========
@@ -79,36 +110,28 @@ class FileEntry(QWidget):
         text_container.setSpacing(2)
 
         name_label = QLabel(self.file_name)
-        name_label.setStyleSheet("font-size: 14px;")
+        name_label.setObjectName("fileNameLabel")
         name_label.setToolTip(self.file_name)
         # Stretch the name to take max space
         name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         # File size
-        size_bytes = os.path.getsize(self.file_path)
-        size_str = self._format_size(size_bytes)
-        info_label = QLabel(size_str)
-        info_label.setStyleSheet("font-size: 11px; opacity: 0.6;")
+        size_bytes = 0
+        if self.file_exists:
+            try:
+                size_bytes = os.path.getsize(self.file_path)
+            except Exception:
+                Logger.warning(f"Could not get size for: {self.file_path}")
+        size_label = QLabel(self._format_size(size_bytes))
+        size_label.setObjectName("sizeLabel")
 
         text_container.addWidget(name_label)
-        text_container.addWidget(info_label)
+        text_container.addWidget(size_label)
 
         # ========== MENU BUTTON (▼) ==========
         menu_button = QPushButton("▼")  # single down arrow
         menu_button.setFixedSize(28, 28)
         menu_button.setCursor(Qt.PointingHandCursor)
-        menu_button.setStyleSheet("""
-            QPushButton {
-                font-size: 14px;
-                border: none;
-                background: transparent;
-                color: palette(window-text);
-            }
-            QPushButton:hover {
-                color: palette(highlight);
-            }
-        """)
-
         menu = QMenu(self)
         action_edit = QAction("✏️ Edit", self)
         action_delete = QAction("⛔ Hide", self)
@@ -130,17 +153,7 @@ class FileEntry(QWidget):
         layout.addWidget(menu_button)
 
         # ========== UNIVERSAL STYLE ==========
-        self.setStyleSheet("""
-            FileEntry {
-                background: rgba(255,255,255,0.03);
-                border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 6px;
-            }
-            FileEntry:hover {
-                background: rgba(255,255,255,0.07);
-                border: 1px solid rgba(255,255,255,0.18);
-            }
-        """)
+        ThemeManager.apply_theme_to_widget(self, Resources.get_in_qss("file_entry/default.qss"))
 
     def _format_size(self, size_bytes):
         for unit in ["B", "KB", "MB", "GB"]:

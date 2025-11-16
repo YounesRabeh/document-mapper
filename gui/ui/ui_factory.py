@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 
-from gui.ui.drag_drop import DragDrop
+from gui.ui.elements.drag_drop import DragDrop
 
 
 class UIFactory:
@@ -57,5 +57,5 @@ class UIFactory:
 
     @staticmethod
     def create_file_entry(file_path, on_edit=None, on_delete=None, parent=None):
-        from gui.ui.FileEntry import FileEntry
+        from gui.ui.elements.file_entry import FileEntry
         return FileEntry(file_path, on_edit, on_delete, parent)

@@ -1,0 +1,40 @@
+/* FileEntry container */
+FileEntry {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+}
+
+FileEntry:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* Menu button styling */
+FileEntry QPushButton {
+    font-size: 14px;
+    border: none;
+    background: transparent;
+    color: palette(window-text);
+}
+
+FileEntry QPushButton:hover {
+    color: palette(highlight);
+}
+
+/* File name label */
+FileEntry QLabel {
+    font-size: 14px;
+}
+
+FileEntry QLabel#fileNameLabel {
+    font-size: 17px;   /* bigger name */
+    font-weight: 400;
+}
+
+
+/* File size label */
+FileEntry QLabel#sizeLabel {
+    font-size: 11px;
+    opacity: 0.6;
+}
