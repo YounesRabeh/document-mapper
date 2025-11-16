@@ -12,6 +12,9 @@ from core.util.resources import Resources
 
 
 class DragDrop:
+    """
+    Creates a drag-drop area that supports click and drag-drop operations.
+    """
     def create_drag_drop_area(self, width, height, allowed_extensions=None, on_files_selected=None):
         if allowed_extensions is None:
             allowed_extensions = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg']
@@ -36,7 +39,7 @@ class DragDrop:
         layout.addWidget(label)
         layout.setAlignment(Qt.AlignCenter)
 
-        ThemeManager.apply_theme_to_widget(widget, Resources.get_qss("drag_drop/drag_area.qss"))
+        ThemeManager.apply_theme_to_widget(widget, Resources.get_in_qss("drag_drop/drag_area.qss"))
 
         # Mouse press event (open file dialog)
         def mouse_press_event(event):

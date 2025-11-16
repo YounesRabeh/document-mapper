@@ -9,7 +9,48 @@ from core.util.logger import Logger
 
 class Resources:
     """
-    Dynamic resource manager that works in both development and bundled environments.
+    Dynamic resource manager for handling application assets in both development
+    and bundled environments (e.g., PyInstaller).
+
+    This class provides a centralized way to access and manage application
+    resources such as icons, images, fonts, QSS files, or data. It automatically
+    handles differences between development (source files on disk) and bundled
+    environments (resources embedded by tools like PyInstaller).
+
+    Features:
+    -----------
+    - Resolves base paths depending on environment (dev vs bundled).
+    - Indexes all files in resource directories for fast access.
+    - Provides dynamic getter methods:
+        - get_<resource>(filename_or_path): returns the absolute path to a resource.
+        - get_all_<resource>(): returns all files for a given resource type.
+    - Automatically creates required directories in development mode.
+    - Logs errors and warnings when resources are missing or misconfigured.
+
+    Attributes:
+    -----------
+    _cfg : dict
+        Stores the normalized resource configuration loaded from application config.
+    _resources : dict
+        Indexed list of all files for each resource type.
+    _is_bundled : bool
+        True if the application is running as a frozen/bundled executable.
+
+    Methods:
+    --------
+    _get_base_path() -> Path
+        Returns the base path for resources depending on environment.
+    _list_files(directory: str) -> list[str]
+        Recursively lists all files in the given directory.
+    _create_get_all_method(name: str)
+        Dynamically creates get_all_<name>() method for accessing all files.
+    _create_get_method(name: str)
+        Dynamically creates get_<name>(filename_or_path) method for accessing a single file.
+    initialize(cfg: Optional[dict] = None)
+        Initializes the resource manager with configuration, indexes all files,
+        creates getter methods, and prepares directories if needed.
+    get_all() -> dict[str, list[str]]
+        Returns the dictionary of all indexed resources.
     """
 
     _cfg = {}
@@ -44,7 +85,7 @@ class Resources:
         def method(self_or_cls):
             return cls._resources.get(name, [])
 
-        method.__name__ = f"get_all_{name}"
+        method.__name__ = f"get_all_in_{name}"
         setattr(cls, method.__name__, MethodType(method, cls))
 
     @classmethod
@@ -72,7 +113,7 @@ class Resources:
             Logger.error(f"Resource not found: {path}")
             raise FileNotFoundError(f"Resource not found: {path}")
 
-        method.__name__ = f"get_{name}"
+        method.__name__ = f"get_in_{name}"
         setattr(cls, method.__name__, MethodType(method, cls))
 
     @classmethod
@@ -113,3 +154,4 @@ class Resources:
     def get_all(cls) -> dict[str, list[str]]:
         """Return the dict of all indexed resources."""
         return cls._resources
+

@@ -1,6 +1,6 @@
 [app]
 name = "Document Mapper"
-version = "0.3"
+version = "0.4"
 description = "An application for mapping documents."
 author = "Younes Rabeh"
 organization = "YOUNIDEV"
@@ -25,3 +25,4 @@ images = "resources/images"
 fonts = "resources/fonts"
 data = "resources/data"
 temp = "resources/temp"
+templates = "resources/templates"

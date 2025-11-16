@@ -1,8 +1,4 @@
-from PySide6.QtGui import QKeySequence, QIcon
-from PySide6.QtWidgets import QMessageBox
 from core.manager.theme_manager import ThemeManager
-from core.util.logger import Logger
-
 
 class CustomMenuBar:
     """Centralized reusable menu bar definitions."""
