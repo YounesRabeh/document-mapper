@@ -54,3 +54,8 @@ class UIFactory:
         """Creates a drag-drop area that supports click and drag-drop operations."""
         drag_drop = DragDrop()
         return drag_drop.create_drag_drop_area(width, height, allowed_extensions, on_files_selected)
+
+    @staticmethod
+    def create_file_entry(file_path, on_edit=None, on_delete=None, parent=None):
+        from gui.ui.FileEntry import FileEntry
+        return FileEntry(file_path, on_edit, on_delete, parent)
