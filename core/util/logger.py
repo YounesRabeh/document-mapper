@@ -247,3 +247,18 @@ class Logger:
         """
         cls.log(cls._format_message(msg, tag), LogLevel.CRITICAL)
 
+
+    @classmethod
+    def exception(cls, msg: str, tag=None):
+        """
+        Log an ERROR message including the full traceback of the current exception.
+        Should only be used inside an except block.
+        Args:
+            msg (str): The message to log.
+            tag (str, optional): Custom tag to prefix the log message.
+                If not provided, the tag defaults to the caller's class name
+                or module name.
+        """
+        import traceback
+        full_msg = f"{msg}\n{traceback.format_exc()}"
+        cls.error(full_msg, tag=tag)
