@@ -3,11 +3,10 @@ from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushBu
 from PySide6.QtGui import QPixmap, QAction, QFontMetrics
 from PySide6.QtCore import Qt
 
-from core.config.configuration import Config
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from core.util.resources import Resources
-
+from core.util.system_info import open_in_libreoffice
 
 FILE_TYPES_DIR_NAME = "file_types"
 FILE_TYPES_ICON_SIZE = 64
@@ -54,7 +53,7 @@ class FileEntry(QWidget):
     """
     DEFAULT_ICON, ERROR_ICON = None, None
 
-    def __init__(self, file_path: str, on_edit=None, on_delete=None, parent=None):
+    def __init__(self, file_path: str, on_edit=None, on_hide=None, parent=None):
         super().__init__(parent)
         # Lazy-load class-level icons if not already loaded
         if self.__class__.DEFAULT_ICON is None:
@@ -72,8 +71,8 @@ class FileEntry(QWidget):
             self.file_name = os.path.basename(file_path)
         self.extension = self.file_name.split(".")[-1].lower()
 
-        self.on_edit = on_edit
-        self.on_delete = on_delete
+        self.on_edit = on_edit if on_edit is not None else self.on_edit
+        self.on_hide = on_hide if on_hide is not None else self.on_hide
 
         self._build_ui()
 
@@ -122,7 +121,7 @@ class FileEntry(QWidget):
                 size_bytes = os.path.getsize(self.file_path)
             except Exception:
                 Logger.warning(f"Could not get size for: {self.file_path}")
-        size_label = QLabel(self._format_size(size_bytes))
+        size_label = QLabel(_format_size(size_bytes))
         size_label.setObjectName("sizeLabel")
 
         text_container.addWidget(name_label)
@@ -134,17 +133,17 @@ class FileEntry(QWidget):
         menu_button.setCursor(Qt.PointingHandCursor)
         menu = QMenu(self)
         action_edit = QAction("✏️ Edit", self)
-        action_delete = QAction("⛔ Hide", self)
+        action_hide = QAction("⛔ Hide", self)
         menu.addAction(action_edit)
-        menu.addAction(action_delete)
+        menu.addAction(action_hide)
         menu_button.clicked.connect(
             lambda: menu.exec_(menu_button.mapToGlobal(menu_button.rect().bottomLeft()))
         )
 
         if self.on_edit:
             action_edit.triggered.connect(lambda: self.on_edit(self.file_path))
-        if self.on_delete:
-            action_delete.triggered.connect(lambda: self.on_delete(self.file_path))
+        if self.on_hide:
+            action_hide.triggered.connect(lambda: self.on_hide(self.file_path))
 
         # ========== ASSEMBLE ==========
         layout.addWidget(icon_label)
@@ -155,12 +154,20 @@ class FileEntry(QWidget):
         # ========== UNIVERSAL STYLE ==========
         ThemeManager.apply_theme_to_widget(self, Resources.get_in_qss("file_entry/default.qss"))
 
-    def _format_size(self, size_bytes):
-        for unit in ["B", "KB", "MB", "GB"]:
-            if size_bytes < 1024:
-                return f"{size_bytes:.1f} {unit}"
-            size_bytes /= 1024
-        return f"{size_bytes:.1f} TB"
-
     def paintEvent(self, event):
         super().paintEvent(event)
+
+    def on_edit(self, file_path):
+        """Callback when Edit is selected."""
+        open_in_libreoffice(file_path + "dd")
+
+    def on_hide(self, file_path):
+        """Callback when hide is selected."""
+        pass
+
+def _format_size(size_bytes):
+    for unit in ["B", "KB", "MB", "GB"]:
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
