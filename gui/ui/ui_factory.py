@@ -3,7 +3,6 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QMenuBar, QMenu
 )
 from PySide6.QtCore import Qt
-
 from gui.ui.elements.drag_drop import DragDrop
 
 
@@ -12,6 +11,7 @@ class UIFactory:
 
     @staticmethod
     def create_label(text: str, align=Qt.AlignCenter) -> QLabel:
+        """Creates a styled QLabel."""
         label = QLabel(text)
         label.setAlignment(align)
         return label
@@ -27,6 +27,7 @@ class UIFactory:
 
     @staticmethod
     def create_menu_bar(menu_structure: dict, parent: QWidget) -> QMenuBar:
+        """Creates a QMenuBar from a nested dictionary structure."""
         menubar = QMenuBar(parent)
         for menu_name, actions in menu_structure.items():
             menu = QMenu(menu_name, parent)
@@ -57,5 +58,6 @@ class UIFactory:
 
     @staticmethod
     def create_file_entry(file_path, on_edit=None, on_hide=None, parent=None):
+        """Creates a FileEntry UI element."""
         from gui.ui.elements.file_entry import FileEntry
         return FileEntry(file_path, on_edit, on_hide, parent)
