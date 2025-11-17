@@ -1,8 +1,10 @@
+import os
 import platform
 import subprocess
 from core.util.logger import Logger
 
 def detect_os_name() -> str:
+    """Detect the current operating system name."""
     return platform.system()
 
 OS_NAME = detect_os_name()
@@ -71,12 +73,19 @@ def _detect_kde_dark() -> bool:
         return "dark" in result.stdout.lower()
     except:
         return False
+
+
 # ============================================================
 #  LibreOffice Integration
 # ============================================================
 
 def open_in_libreoffice(file_path: str) -> None:
     """Open a file in LibreOffice using OS-specific handlers."""
+    # Check file existence first
+    if not os.path.isfile(file_path):
+        Logger.error(f"File does not exist: {file_path}")
+        return
+
     try:
         if IS_LINUX:
             _open_libreoffice_linux(file_path)
@@ -100,6 +109,7 @@ def _open_libreoffice_linux(file_path: str) -> None:
     for cmd in commands:
         try:
             subprocess.Popen(cmd)
+            Logger.info(f"Opened {file_path}")
             return
         except FileNotFoundError:
             continue
@@ -117,6 +127,7 @@ def _open_libreoffice_windows(file_path: str) -> None:
     for soffice in possible_paths:
         try:
             subprocess.Popen([soffice, file_path])
+            Logger.info(f"Opened {file_path}")
             return
         except FileNotFoundError:
             continue
@@ -129,5 +140,6 @@ def _open_libreoffice_macos(file_path: str) -> None:
     soffice = "/Applications/LibreOffice.app/Contents/MacOS/soffice"
     try:
         subprocess.Popen([soffice, file_path])
+        Logger.info(f"Opened {file_path}")
     except FileNotFoundError:
         Logger.warning("LibreOffice not found on macOS.")

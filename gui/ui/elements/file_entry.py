@@ -159,7 +159,7 @@ class FileEntry(QWidget):
 
     def on_edit(self, file_path):
         """Callback when Edit is selected."""
-        open_in_libreoffice(file_path + "dd")
+        open_in_libreoffice(file_path)
 
     def on_hide(self, file_path):
         """Callback when hide is selected."""
