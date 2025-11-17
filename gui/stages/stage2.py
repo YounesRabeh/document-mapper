@@ -24,4 +24,3 @@ class Stage2(BaseStage):
         self.main_layout.addWidget(entry2)
         self.main_layout.addWidget(nav_layout)
         self.main_layout.addWidget(next_btn)
-

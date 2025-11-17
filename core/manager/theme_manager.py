@@ -2,25 +2,10 @@ import os
 
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtCore import Qt, Signal, QObject, QTimer
-import platform
-import subprocess
 from PySide6.QtWidgets import QApplication, QWidget
 
 from core.enums.app_themes import AppTheme
-from core.util.logger import Logger
-
-
-def _check_system_theme_change():
-    """Check if system theme has changed and update if in AUTO mode."""
-    if ThemeManager.current_theme != AppTheme.AUTO:
-        return
-
-    current_system_theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
-
-    # If system theme changed, we're in AUTO mode, update the theme
-    if current_system_theme != ThemeManager.last_system_theme:
-        ThemeManager._last_system_theme = current_system_theme
-        ThemeManager.set_canonical_theme(AppTheme.AUTO)
+from core.util.system_info import *
 
 
 class ThemeManager(QObject):
@@ -61,11 +46,6 @@ class ThemeManager(QObject):
         ThemeManager._last_system_theme = AppTheme.DARK if is_system_dark_mode() else AppTheme.LIGHT
 
         ThemeManager._apply_current_theme()
-
-        # Set up periodic system theme checking for AUTO mode
-        self._system_theme_timer = QTimer()
-        self._system_theme_timer.timeout.connect(_check_system_theme_change)
-        self._system_theme_timer.start(1000)  # Check every second
 
     # -----------------------
     # Theme Control
@@ -219,98 +199,17 @@ class ThemeManager(QObject):
     def current_theme(self):
         return self._current_theme
 
-
 # -----------------------
-# System Theme Detection (unchanged)
+# System Theme Detection
 # -----------------------
 def is_system_dark_mode() -> bool:
-    """Detects whether the OS theme is dark or light across platforms."""
-    system = platform.system()
-
-    if system == "Darwin":
-        return _detect_macos_theme()
-    elif system == "Windows":
-        return _detect_windows_theme()
-    elif system == "Linux":
-        return _detect_linux_theme()
-    else:
-        return _detect_fallback_theme()
-
-
-def _detect_macos_theme() -> bool:
-    """Detect macOS theme using defaults command."""
-    try:
-        result = subprocess.run(
-            ["defaults", "read", "-g", "AppleInterfaceStyle"],
-            capture_output=True,
-            text=True
-        )
-        is_theme_dark: bool = "Dark" in result.stdout
-        Logger.debug(f"macOS theme detected: {'Dark' if is_theme_dark else 'Light'}")
-        return is_theme_dark
-    except Exception as e:
-        Logger.warning(f"Failed to detect macOS theme: {e}, defaulting to light.")
-        return False
-
-
-def _detect_windows_theme() -> bool:
-    """Detect Windows theme using registry."""
-    try:
-        import winreg
-        key = winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-        )
-        # 0 = dark, 1 = light
-        value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
-        winreg.CloseKey(key)
-        Logger.debug(f"Windows theme detected: {'Dark' if value == 0 else 'Light'}")
-        return value == 0
-    except Exception as e:
-        Logger.warning(f"Failed to detect Windows theme: {e}, defaulting to light.")
-        return False
-
-
-def _detect_linux_theme() -> bool:
-    """Detect Linux theme using GTK or KDE settings."""
-    if _detect_gtk_theme():
-        return True
-    if _detect_kde_theme():
-        return True
-
-    Logger.debug("Linux theme defaulting to Light.")
-    return False
-
-
-def _detect_gtk_theme() -> bool:
-    """Detect GTK theme on Linux."""
-    try:
-        result = subprocess.run(
-            ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-            capture_output=True, text=True
-        )
-        if "dark" in result.stdout.lower():
-            Logger.debug("Linux GTK theme detected: Dark")
-            return True
-    except Exception as e:
-        Logger.debug(f"Failed to detect GTK theme: {e}, continuing to KDE check.")
-    return False
-
-
-def _detect_kde_theme() -> bool:
-    """Detect KDE theme on Linux."""
-    try:
-        result = subprocess.run(
-            ["kreadconfig5", "--group", "General", "--key", "ColorScheme"],
-            capture_output=True, text=True
-        )
-        if "dark" in result.stdout.lower():
-            Logger.debug("Linux KDE theme detected: Dark")
-            return True
-    except Exception as e:
-        Logger.warning(f"Failed to detect KDE theme: {e}, defaulting to light.")
-    return False
-
+    if IS_MACOS:
+        return detect_macos_theme()
+    if IS_WINDOWS:
+        return detect_windows_theme()
+    if IS_LINUX:
+        return detect_linux_theme()
+    return _detect_fallback_theme()
 
 def _detect_fallback_theme() -> bool:
     """Fallback theme detection using Qt heuristic."""
