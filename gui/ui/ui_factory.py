@@ -1,8 +1,9 @@
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QMenuBar, QMenu
 )
-from PySide6.QtCore import Qt
+
 from gui.ui.elements.drag_drop import DragDrop
 
 

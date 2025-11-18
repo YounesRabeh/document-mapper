@@ -1,7 +1,5 @@
-import os
-
+from PySide6.QtCore import Qt, Signal, QObject
 from PySide6.QtGui import QPalette, QColor
-from PySide6.QtCore import Qt, Signal, QObject, QTimer
 from PySide6.QtWidgets import QApplication, QWidget
 
 from core.enums.app_themes import AppTheme

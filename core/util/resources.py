@@ -1,8 +1,8 @@
 import os
 import sys
+from pathlib import Path
 from types import MethodType
 from typing import Optional
-from pathlib import Path
 
 from core.util.logger import Logger
 

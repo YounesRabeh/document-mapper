@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout
+
 from gui.stages.base_stage import BaseStage, UIFactory
 from gui.ui.elements.menu_bar import MenuBar
 

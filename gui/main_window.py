@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import QMainWindow, QStackedWidget
 
-
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from gui.stages.stage1 import Stage1

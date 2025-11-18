@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+
 from core.util.logger import Logger
 
 def detect_os_name() -> str:
