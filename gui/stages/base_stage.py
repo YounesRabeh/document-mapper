@@ -1,9 +1,7 @@
-
-from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpacerItem, QSizePolicy, QMenuBar, QMenu
-)
 from PySide6.QtCore import Qt, Signal
-
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy
+)
 from gui.ui.ui_factory import UIFactory
 
 

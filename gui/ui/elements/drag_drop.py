@@ -1,10 +1,11 @@
+import mimetypes
+import os
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QFileDialog, QMessageBox, QLabel
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
-import os
-import mimetypes
 
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger

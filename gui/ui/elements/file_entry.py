@@ -1,7 +1,8 @@
 import os
-from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushButton, QMenu, QSizePolicy
-from PySide6.QtGui import QPixmap, QAction, QFontMetrics
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap, QAction
+from PySide6.QtWidgets import QWidget, QLabel, QHBoxLayout, QVBoxLayout, QPushButton, QMenu, QSizePolicy
 
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
