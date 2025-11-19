@@ -58,7 +58,6 @@ class BaseStage(QWidget):
             next_btn = UIFactory.create_button(next_text, self.next_stage.emit)
             self.nav_layout.addWidget(next_btn)
 
-
     def add_file_drag_drop(self, width, height, allowed_extensions=None, on_files_selected=None):
         """Adds a drag-drop area to the content layout."""
         drag_drop_area = UIFactory.create_drag_drop_area(
