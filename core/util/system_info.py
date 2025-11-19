@@ -13,7 +13,6 @@ IS_WINDOWS = OS_NAME == "Windows"
 IS_LINUX = OS_NAME == "Linux"
 IS_MACOS = OS_NAME == "Darwin"
 
-
 def detect_macos_theme() -> bool:
     """Detect dark mode on macOS."""
     try:
