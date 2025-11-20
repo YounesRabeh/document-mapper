@@ -52,7 +52,7 @@ class UIFactory:
         return menubar
 
     @staticmethod
-    def create_drag_drop_area(width, height, allowed_extensions=None, on_files_selected=None):
+    def create_drag_drop_area(width, height, allowed_extensions=None, on_files_selected=None) -> QWidget:
         """Creates a drag-drop area that supports click and drag-drop operations."""
         drag_drop = DragDrop()
         return drag_drop.create_drag_drop_area(width, height, allowed_extensions, on_files_selected)
