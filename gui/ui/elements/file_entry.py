@@ -153,7 +153,7 @@ class FileEntry(QWidget):
         layout.addWidget(menu_button)
 
         # ========== UNIVERSAL STYLE ==========
-        ThemeManager.apply_theme_to_widget(self, Resources.get_in_qss("file_entry/default.qss"))
+        ThemeManager.apply_theme_to_widget(self, Resources.get_in_qss("elements/file_entry/default.qss"))
 
     def paintEvent(self, event):
         super().paintEvent(event)

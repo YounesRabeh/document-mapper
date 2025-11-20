@@ -1,6 +1,5 @@
 import mimetypes
 import os
-
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
@@ -40,7 +39,7 @@ class DragDrop:
         layout.addWidget(label)
         layout.setAlignment(Qt.AlignCenter)
 
-        ThemeManager.apply_theme_to_widget(widget, Resources.get_in_qss("drag_drop/default.qss"))
+        ThemeManager.apply_theme_to_widget(widget, Resources.get_in_qss("elements/drag_drop/default.qss"))
 
         # Mouse press event (open file dialog)
         def mouse_press_event(event):
