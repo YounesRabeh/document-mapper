@@ -17,8 +17,8 @@ min_height = 500
 title = "Document Mapper"
 theme_mode = "AUTO"
 
-[resources]
-base = "resources"
+[resources]        # Resource directories configuration [DO NOT CHANGE]
+base = "resources" # Base resources directory [DO NOT CHANGE]
 qss = "resources/qss"
 icons = "resources/icons"
 images = "resources/images"

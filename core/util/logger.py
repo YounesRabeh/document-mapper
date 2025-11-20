@@ -187,9 +187,9 @@ class Logger:
         """
         Log a debug-level message.
 
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """
@@ -200,9 +200,8 @@ class Logger:
         """
         Log an informational message.
 
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """
@@ -213,9 +212,9 @@ class Logger:
         """
         Log a warning message.
 
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """
@@ -226,9 +225,9 @@ class Logger:
         """
         Log an error message.
 
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """
@@ -239,23 +238,22 @@ class Logger:
         """
         Log a critical (highest-severity) message.
 
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """
         cls.log(cls._format_message(msg, tag), LogLevel.CRITICAL)
-
 
     @classmethod
     def exception(cls, msg: str, tag=None):
         """
         Log an ERROR message including the full traceback of the current exception.
         Should only be used inside an except block.
-        Args:
-            msg (str): The message to log.
-            tag (str, optional): Custom tag to prefix the log message.
+
+        :param msg: The message to log.
+        :param tag: Custom tag to prefix the log message.
                 If not provided, the tag defaults to the caller's class name
                 or module name.
         """

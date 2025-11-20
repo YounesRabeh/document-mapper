@@ -59,7 +59,8 @@ def _detect_gtk_dark() -> bool:
             capture_output=True, text=True
         )
         return "dark" in result.stdout.lower()
-    except:
+    except Exception as e:
+        Logger.warning("GTK theme detection failed: {e}")
         return False
 
 
@@ -71,7 +72,8 @@ def _detect_kde_dark() -> bool:
             capture_output=True, text=True
         )
         return "dark" in result.stdout.lower()
-    except:
+    except Exception as e:
+        Logger.warning("GTK theme detection failed: {e}")
         return False
 
 
