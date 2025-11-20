@@ -56,31 +56,30 @@ class Resources:
     _cfg = {}
     _resources = {}
     _is_bundled = getattr(sys, 'frozen', False)
+    _base_path = None
+    _resource_key: str = "resources"
 
     @classmethod
     def _get_base_path(cls):
-        """Get the base path for resources (works in both dev and bundled env)."""
-        if cls._is_bundled:
-            # In bundled app, resources are in _internal folder
-            return Path(sys._MEIPASS) / "resources"
-        else:
-            # In development, use project root
-            return Path.cwd() / "resources"
+        if cls._base_path is None:
+            cls._base_path = (
+                Path(sys._MEIPASS) / cls._resource_key
+                if cls._is_bundled
+                else Path.cwd() / cls._resource_key
+            )
+        return cls._base_path
 
     @classmethod
     def _list_files(cls, directory: str) -> list[str]:
         """Recursively list all files in a directory."""
-        files = []
-        if not os.path.exists(directory):
-            return files
-        for root, _, filenames in os.walk(directory):
-            for f in filenames:
-                files.append(os.path.join(root, f))
-        return files
+        path = Path(directory)
+        if not path.exists():
+            return []
+        return [str(p) for p in path.rglob("*") if p.is_file()]
 
     @classmethod
     def _create_get_all_method(cls, name: str):
-        """Create get_all_<name>()"""
+        """Create get_all_in_<name>()"""
 
         def method(self_or_cls):
             return cls._resources.get(name, [])
@@ -93,38 +92,43 @@ class Resources:
         """Create get_in_<name>(filename_or_path)"""
 
         def method(self_or_cls, path: str, suppress: bool = False):
-            base_path = getattr(cls, name)
+            p = Path(path)
 
-            # Try direct path first
-            if os.path.exists(path):
-                return os.path.abspath(path)
+            # Absolute or already-existing path
+            if p.exists():
+                return str(p.resolve())
 
-            # Try relative to base path
-            candidate = os.path.join(base_path, path)
-            if os.path.exists(candidate):
-                return os.path.abspath(candidate)
+            base_path = Path(getattr(cls, name))
 
-            # Try in bundled location
+            candidate = base_path / path
+            if candidate.exists():
+                return str(candidate.resolve())
+
             if cls._is_bundled:
-                bundled_candidate = os.path.join(cls._get_base_path(), path)
-                if os.path.exists(bundled_candidate):
-                    return os.path.abspath(bundled_candidate)
+                bundled_candidate = cls._get_base_path() / path
+                if bundled_candidate.exists():
+                    return str(bundled_candidate.resolve())
 
-            Logger.error(f"Resource not found: {path}")
             if not suppress:
+                Logger.error(f"Resource not found: {path}")
                 raise FileNotFoundError(f"Resource not found: {path}")
-            return None  # Return None if suppression is active
+
+            return None
 
         method.__name__ = f"get_in_{name}"
-        setattr(cls, method.__name__, MethodType(method, cls))
+        setattr(cls, method.__name__, classmethod(method))
 
     @classmethod
     def initialize(cls, cfg: Optional[dict] = None):
         if cfg is not None:
-            cls._cfg = {k.replace("RESOURCES_", "").lower(): v
-                        for k, v in cfg.items() if k.startswith("RESOURCES_")}
-        elif not hasattr(cls, "_cfg") or not cls._cfg:
-            Logger.error("No configuration provided and Resources._cfg is empty!")
+            cls._cfg = {
+                k.replace("RESOURCES_", "").lower(): v
+                for k, v in cfg.items()
+                if k.startswith("RESOURCES_")
+            }
+            cls._resource_key = cls._cfg.get("base", "resources")
+        elif not cls._cfg:
+            Logger.error("No configuration provided and 'Resources._cfg' is empty!")
             return
 
         base_path = cls._get_base_path()
@@ -134,19 +138,18 @@ class Resources:
                 setattr(cls, key, str(base_path))
                 continue
 
-            # In bundled app, resources are directly in _internal/resources/subfolder
             if cls._is_bundled:
                 abs_path = base_path / key
             else:
-                abs_path = Path(path) if Path(path).is_absolute() else base_path / Path(path).name
+                p = Path(path)
+                abs_path = p if p.is_absolute() else base_path / p.name
+                abs_path.mkdir(parents=True, exist_ok=True)
 
+            abs_path = abs_path.resolve()
             setattr(cls, key, str(abs_path))
 
-            # Only create directories in development mode
-            if not cls._is_bundled:
-                os.makedirs(abs_path, exist_ok=True)
-
-            cls._resources[key] = cls._list_files(str(abs_path))
+            # Index files
+            cls._resources[key] = cls._list_files(abs_path)
             cls._create_get_all_method(key)
             cls._create_get_method(key)
 
@@ -156,4 +159,3 @@ class Resources:
     def get_all(cls) -> dict[str, list[str]]:
         """Return the dict of all indexed resources."""
         return cls._resources
-
