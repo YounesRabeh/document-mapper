@@ -15,10 +15,10 @@ class MenuBar:
                 ("New Project", None, None),
                 ("Settings", None, None),
                 (None, None),  # separator
-                ("Exit", None, None),
+                ("Exit", None, "Ctrl+Q"),
             ],
             "View": [
-                ("Toggle Theme", ThemeManager.toggle_theme,),
+                ("Toggle Theme", ThemeManager.toggle_theme, "Ctrl+T"),
             ],
             "Help": [
                 ("About", None, None),
