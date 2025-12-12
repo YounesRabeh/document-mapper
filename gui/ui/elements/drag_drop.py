@@ -12,11 +12,12 @@ from core.util.resources import Resources
 
 
 class DragDrop:
-    """
-    Creates a drag-drop area that supports click and drag-drop operations.
-    """
     def create_drag_drop_area(self, width, height, allowed_extensions=None, on_files_selected=None):
+        """
+            Creates a drag-drop area that supports click and drag-drop operations.
+        """
         if allowed_extensions is None:
+            # TODO: Make this configurable from a central place
             allowed_extensions = ['.txt', '.pdf', '.doc', '.docx', '.png', '.jpg', '.jpeg']
             Logger.warning("No allowed_extensions specified; defaulting to common file types.")
 
