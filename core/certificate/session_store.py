@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from core.certificate.models import MappingEntry, ProjectSession
+from core.certificate.models import (
+    DEFAULT_CERTIFICATE_TYPE,
+    MappingEntry,
+    ProjectSession,
+    normalize_certificate_type,
+)
 from core.util.resources import Resources
 
 
@@ -67,7 +72,7 @@ class ProjectSessionStore:
             template_path=str(paths.get("template_path", "")).strip(),
             output_dir=str(paths.get("output_dir", "")).strip(),
             license_path=str(paths.get("license_path", "")).strip(),
-            certificate_type=str(paths.get("certificate_type", "certificato")).strip() or "certificato",
+            certificate_type=normalize_certificate_type(paths.get("certificate_type", DEFAULT_CERTIFICATE_TYPE)),
             category=str(paths.get("category", "")).strip(),
             export_pdf=bool(paths.get("toPDF", False)),
             pdf_timeout_seconds=max(1, timeout),

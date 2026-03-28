@@ -97,6 +97,11 @@ class GuiFlowTestCase(unittest.TestCase):
             window.setup_page.excel_input["input"].setPlainText(str(workbook))
             window.setup_page.template_input["input"].setPlainText(str(template))
             window.setup_page.output_input["input"].setPlainText(temp_dir)
+            self.assertEqual(window.setup_page.certificate_type_input.count(), 4)
+            self.assertEqual(
+                window.setup_page.certificate_type_input.itemText(0),
+                "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+            )
             window.setup_page._sync_session()
 
             self.assertEqual(window.session.excel_path, str(workbook))

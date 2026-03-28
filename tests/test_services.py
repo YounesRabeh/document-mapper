@@ -9,7 +9,7 @@ import pandas as pd
 
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
 from core.certificate.generator import CertificateGenerator
-from core.certificate.models import MappingEntry, ProjectSession
+from core.certificate.models import MappingEntry, ProjectSession, normalize_certificate_type
 from core.certificate.session_store import ProjectSessionStore
 
 
@@ -61,6 +61,12 @@ def fake_spire_dependencies():
 class ServicesTestCase(unittest.TestCase):
     def test_normalize_column_name(self):
         self.assertEqual(normalize_column_name("  nome   completo "), "NOME COMPLETO")
+
+    def test_normalize_certificate_type_strips_template_extension(self):
+        self.assertEqual(
+            normalize_certificate_type("MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx"),
+            "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+        )
 
     def test_validate_mappings_uses_normalized_columns(self):
         service = ExcelDataService()
@@ -196,6 +202,27 @@ class ServicesTestCase(unittest.TestCase):
             self.assertEqual(result.success_count, 1)
             self.assertEqual(len(result.generated_pdf_paths), 1)
             self.assertTrue(Path(result.generated_pdf_paths[0]).exists())
+
+    def test_generator_sanitizes_certificate_type_filename_fragment(self):
+        dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
+        generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = generator._build_docx_output_path(
+                ProjectSession(
+                    output_dir=temp_dir,
+                    certificate_type="MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+                ),
+                dataframe.iloc[0],
+                0,
+                Path(temp_dir),
+                {"NOME": "NOME", "COGNOME": "COGNOME"},
+            )
+
+        self.assertEqual(
+            output_path.name,
+            "ADA_LOVELACE_attestato_MODELLO_ATTESTATO_integrale_PS_12_ORE_tipo_B_e_C.docx",
+        )
 
     def test_validate_session_reports_missing_columns(self):
         generator = CertificateGenerator(

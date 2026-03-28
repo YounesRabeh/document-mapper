@@ -1,7 +1,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from typing import Any
+
+CERTIFICATE_TYPE_OPTIONS = (
+    "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+    "MODELLO ATTESTATO integrale PS 16 ORE tipo A",
+    "MODELLO ATTESTATO RETRAINING PS 4h tipo B,C",
+    "MODELLO ATTESTATO RETRAINING PS 6h tipo A",
+)
+DEFAULT_CERTIFICATE_TYPE = CERTIFICATE_TYPE_OPTIONS[0]
+
+
+def normalize_certificate_type(value: str) -> str:
+    normalized = re.sub(r"\.(docx?)$", "", str(value).strip(), flags=re.IGNORECASE)
+    if not normalized:
+        return DEFAULT_CERTIFICATE_TYPE
+
+    canonical_options = {option.casefold(): option for option in CERTIFICATE_TYPE_OPTIONS}
+    return canonical_options.get(normalized.casefold(), normalized)
 
 
 @dataclass(slots=True)
@@ -30,11 +48,14 @@ class ProjectSession:
     template_path: str = ""
     output_dir: str = ""
     license_path: str = ""
-    certificate_type: str = "certificato"
+    certificate_type: str = DEFAULT_CERTIFICATE_TYPE
     category: str = ""
     export_pdf: bool = False
     pdf_timeout_seconds: int = 300
     mappings: list[MappingEntry] = field(default_factory=list)
+
+    def __post_init__(self):
+        self.certificate_type = normalize_certificate_type(self.certificate_type)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -63,7 +84,7 @@ class ProjectSession:
             template_path=str(payload.get("template_path", "")).strip(),
             output_dir=str(payload.get("output_dir", "")).strip(),
             license_path=str(payload.get("license_path", "")).strip(),
-            certificate_type=str(payload.get("certificate_type", "certificato")).strip() or "certificato",
+            certificate_type=normalize_certificate_type(payload.get("certificate_type", DEFAULT_CERTIFICATE_TYPE)),
             category=str(payload.get("category", "")).strip(),
             export_pdf=bool(payload.get("export_pdf", False)),
             pdf_timeout_seconds=max(1, timeout),

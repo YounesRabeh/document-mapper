@@ -262,7 +262,8 @@ class CertificateGenerator:
             fallback = self._sanitize_filename_fragment(f"row_{row_index + 1:03d}")
             first_name = fallback
 
-        parts = [part for part in (first_name, last_name, "attestato", session.certificate_type) if part]
+        certificate_type_part = self._sanitize_filename_fragment(Path(session.certificate_type).stem or session.certificate_type)
+        parts = [part for part in (first_name, last_name, "attestato", certificate_type_part) if part]
         if session.category.strip():
             parts.append(self._sanitize_filename_fragment(session.category))
         filename = "_".join(parts) + ".docx"

@@ -26,7 +26,14 @@ from PySide6.QtWidgets import (
 
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
-from core.certificate.models import GenerationResult, MappingEntry, ProjectSession
+from core.certificate.models import (
+    CERTIFICATE_TYPE_OPTIONS,
+    DEFAULT_CERTIFICATE_TYPE,
+    GenerationResult,
+    MappingEntry,
+    ProjectSession,
+    normalize_certificate_type,
+)
 from core.util.system_info import open_path
 
 PAGE_MIN_WIDTH = 860
@@ -116,10 +123,17 @@ class SetupPage(WorkflowPage):
         form.addRow("Word template", self.template_input["container"])
         form.addRow("Output folder", self.output_input["container"])
 
-        self.certificate_type_input = self._create_text_row()
+        self.certificate_type_input = self._create_certificate_type_dropdown()
         self.category_input = self._create_text_row()
         form.addRow("Certificate type", self.certificate_type_input)
         form.addRow("Category", self.category_input)
+
+        self.certificate_type_hint = QLabel(
+            "Integrale: tipo B/C = 12 ore, tipo A = 16 ore. Retraining: tipo B/C = 4h, tipo A = 6h."
+        )
+        self.certificate_type_hint.setWordWrap(True)
+        self.certificate_type_hint.setStyleSheet("color: palette(mid);")
+        self.body_layout.addWidget(self.certificate_type_hint)
 
         options_box = QGroupBox("Export options")
         options_layout = QHBoxLayout(options_box)
@@ -147,7 +161,7 @@ class SetupPage(WorkflowPage):
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(next_button)
 
-        self.certificate_type_input.textChanged.connect(self._sync_session)
+        self.certificate_type_input.currentTextChanged.connect(self._sync_session)
         self.category_input.textChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
@@ -159,6 +173,14 @@ class SetupPage(WorkflowPage):
         widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         widget.setLineWrapMode(QPlainTextEdit.NoWrap)
+        return widget
+
+    def _create_certificate_type_dropdown(self):
+        widget = QComboBox()
+        widget.setMinimumWidth(520)
+        widget.setMinimumHeight(36)
+        for option in CERTIFICATE_TYPE_OPTIONS:
+            widget.addItem(option)
         return widget
 
     def _create_browse_row(self, button_label: str, placeholder: str, callback):
@@ -196,7 +218,9 @@ class SetupPage(WorkflowPage):
             self.excel_input["input"].setPlainText(self.session.excel_path)
             self.template_input["input"].setPlainText(self.session.template_path)
             self.output_input["input"].setPlainText(self.session.output_dir)
-            self.certificate_type_input.setPlainText(self.session.certificate_type)
+            self._ensure_certificate_type_option(self.session.certificate_type)
+            current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
+            self.certificate_type_input.setCurrentText(current_certificate_type)
             self.category_input.setPlainText(self.session.category)
             self.export_pdf_checkbox.setChecked(self.session.export_pdf)
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
@@ -209,6 +233,7 @@ class SetupPage(WorkflowPage):
             f"Workbook: {_ellipsis_path(self.session.excel_path)}",
             f"Template: {_ellipsis_path(self.session.template_path)}",
             f"Output folder: {_ellipsis_path(self.session.output_dir)}",
+            f"Certificate type: {self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE}",
             f"Mappings configured: {len(self.session.mappings)}",
         ]
         self.status_label.setText("\n".join(lines))
@@ -220,12 +245,19 @@ class SetupPage(WorkflowPage):
         self.session.excel_path = self.excel_input["input"].toPlainText().strip()
         self.session.template_path = self.template_input["input"].toPlainText().strip()
         self.session.output_dir = self.output_input["input"].toPlainText().strip()
-        self.session.certificate_type = self.certificate_type_input.toPlainText().strip() or "certificato"
+        self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
         self.session.category = self.category_input.toPlainText().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
         self._refresh_status()
         self.session_changed.emit()
+
+    def _ensure_certificate_type_option(self, value: str):
+        normalized = normalize_certificate_type(value)
+        if not normalized:
+            return
+        if self.certificate_type_input.findText(normalized) == -1:
+            self.certificate_type_input.addItem(normalized)
 
     def _set_text_and_sync(self, widget: QPlainTextEdit, value: str):
         widget.setPlainText(value)
