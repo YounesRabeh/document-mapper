@@ -145,3 +145,24 @@ def _open_libreoffice_macos(file_path: str) -> None:
         Logger.info(f"Opened {file_path}")
     except FileNotFoundError:
         Logger.warning("LibreOffice not found on macOS.")
+
+
+def open_path(path: str) -> None:
+    """Open a file or directory using the system default application."""
+    if not path:
+        Logger.warning("Cannot open an empty path.")
+        return
+
+    try:
+        if IS_WINDOWS:
+            os.startfile(path)  # type: ignore[attr-defined]
+        elif IS_MACOS:
+            subprocess.Popen(["open", path])
+        elif IS_LINUX:
+            subprocess.Popen(["xdg-open", path])
+        else:
+            Logger.warning(f"Unsupported OS for opening paths: {path}")
+            return
+        Logger.info(f"Opened path: {path}")
+    except Exception as exc:
+        Logger.error(f"Failed to open path '{path}': {exc}")

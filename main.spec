@@ -43,6 +43,11 @@ used_modules = detect_pyside_modules(project_root)
 print(f"[INFO] Detected PySide6 modules: {used_modules}")
 
 hiddenimports = []
+hiddenimports += [
+    "spire.doc",
+    "spire.doc.common",
+    "openpyxl",
+]
 
 # --- Data files (config + gui + resources) ---
 datas = [

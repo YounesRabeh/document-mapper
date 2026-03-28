@@ -1,0 +1,11 @@
+{
+  "excel_path": "",
+  "template_path": "",
+  "output_dir": "",
+  "license_path": "",
+  "certificate_type": "certificato",
+  "category": "",
+  "export_pdf": false,
+  "pdf_timeout_seconds": 300,
+  "mappings": []
+}
