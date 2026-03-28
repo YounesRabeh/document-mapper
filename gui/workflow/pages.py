@@ -124,9 +124,7 @@ class SetupPage(WorkflowPage):
         form.addRow("Output folder", self.output_input["container"])
 
         self.certificate_type_input = self._create_certificate_type_dropdown()
-        self.category_input = self._create_text_row()
         form.addRow("Certificate type", self.certificate_type_input)
-        form.addRow("Category", self.category_input)
 
         self.certificate_type_hint = QLabel(
             "Integrale: tipo B/C = 12 ore, tipo A = 16 ore. Retraining: tipo B/C = 4h, tipo A = 6h."
@@ -162,18 +160,8 @@ class SetupPage(WorkflowPage):
         self.nav_layout.addWidget(next_button)
 
         self.certificate_type_input.currentTextChanged.connect(self._sync_session)
-        self.category_input.textChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
-
-    def _create_text_row(self):
-        widget = QPlainTextEdit()
-        widget.setFixedHeight(36)
-        widget.setMinimumWidth(320)
-        widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        widget.setLineWrapMode(QPlainTextEdit.NoWrap)
-        return widget
 
     def _create_certificate_type_dropdown(self):
         widget = QComboBox()
@@ -221,7 +209,6 @@ class SetupPage(WorkflowPage):
             self._ensure_certificate_type_option(self.session.certificate_type)
             current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
             self.certificate_type_input.setCurrentText(current_certificate_type)
-            self.category_input.setPlainText(self.session.category)
             self.export_pdf_checkbox.setChecked(self.session.export_pdf)
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
         finally:
@@ -246,7 +233,6 @@ class SetupPage(WorkflowPage):
         self.session.template_path = self.template_input["input"].toPlainText().strip()
         self.session.output_dir = self.output_input["input"].toPlainText().strip()
         self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
-        self.session.category = self.category_input.toPlainText().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
         self._refresh_status()

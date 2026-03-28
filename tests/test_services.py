@@ -111,7 +111,6 @@ class ServicesTestCase(unittest.TestCase):
                     '"output_dir": "/tmp/out", '
                     '"license_path": "/tmp/license.xml", '
                     '"certificate_type": "attestato", '
-                    '"category": "python", '
                     '"toPDF": true, '
                     '"toPDF_timeout": 180'
                     '}'
@@ -126,7 +125,6 @@ class ServicesTestCase(unittest.TestCase):
         self.assertEqual(session.output_dir, "/tmp/out")
         self.assertEqual(session.license_path, "/tmp/license.xml")
         self.assertEqual(session.certificate_type, "attestato")
-        self.assertEqual(session.category, "python")
         self.assertTrue(session.export_pdf)
         self.assertEqual(session.pdf_timeout_seconds, 180)
         self.assertEqual(len(session.mappings), 2)

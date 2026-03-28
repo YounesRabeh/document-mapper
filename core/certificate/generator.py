@@ -264,8 +264,6 @@ class CertificateGenerator:
 
         certificate_type_part = self._sanitize_filename_fragment(Path(session.certificate_type).stem or session.certificate_type)
         parts = [part for part in (first_name, last_name, "attestato", certificate_type_part) if part]
-        if session.category.strip():
-            parts.append(self._sanitize_filename_fragment(session.category))
         filename = "_".join(parts) + ".docx"
         return output_dir / filename
 

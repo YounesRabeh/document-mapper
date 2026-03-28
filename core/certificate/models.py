@@ -49,7 +49,6 @@ class ProjectSession:
     output_dir: str = ""
     license_path: str = ""
     certificate_type: str = DEFAULT_CERTIFICATE_TYPE
-    category: str = ""
     export_pdf: bool = False
     pdf_timeout_seconds: int = 300
     mappings: list[MappingEntry] = field(default_factory=list)
@@ -64,7 +63,6 @@ class ProjectSession:
             "output_dir": self.output_dir,
             "license_path": self.license_path,
             "certificate_type": self.certificate_type,
-            "category": self.category,
             "export_pdf": self.export_pdf,
             "pdf_timeout_seconds": self.pdf_timeout_seconds,
             "mappings": [entry.to_dict() for entry in self.mappings],
@@ -85,7 +83,6 @@ class ProjectSession:
             output_dir=str(payload.get("output_dir", "")).strip(),
             license_path=str(payload.get("license_path", "")).strip(),
             certificate_type=normalize_certificate_type(payload.get("certificate_type", DEFAULT_CERTIFICATE_TYPE)),
-            category=str(payload.get("category", "")).strip(),
             export_pdf=bool(payload.get("export_pdf", False)),
             pdf_timeout_seconds=max(1, timeout),
             mappings=[

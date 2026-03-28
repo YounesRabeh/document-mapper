@@ -204,6 +204,16 @@ cython_debug/
 # Codex session/tooling artifacts
 .codex
 
+# Document Mapper private/user data
+resources/temp/
+resources/data/
+resources/templates/
+config.json
+SETUP.json
+document-mapper-project.json
+*.lic
+*.license
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
