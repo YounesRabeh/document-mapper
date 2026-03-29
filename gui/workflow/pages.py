@@ -8,15 +8,18 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFileDialog,
-    QFormLayout,
+    QFrame,
+    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -42,6 +45,179 @@ PANEL_MIN_HEIGHT = 150
 EDITOR_MIN_HEIGHT = 120
 WIDE_PANEL_MIN_WIDTH = 420
 SIDE_PANEL_MIN_WIDTH = 260
+WORKFLOW_PAGE_QSS = """
+QWidget#workflowPage {
+    background: palette(window);
+}
+
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+
+QLabel#workflowTitle {
+    color: palette(window-text);
+    font-size: 22px;
+    font-weight: 700;
+}
+
+QLabel#workflowDescription {
+    color: palette(text);
+    font-size: 14px;
+}
+
+QFrame#workflowCard,
+QGroupBox {
+    background: palette(alternate-base);
+    border: 1px solid palette(midlight);
+    border-radius: 14px;
+}
+
+QFrame#workflowCardTitleBar {
+    background: transparent;
+    border: none;
+}
+
+QLabel#workflowCardTitle {
+    color: palette(window-text);
+    font-size: 16px;
+    font-weight: 700;
+}
+
+QLabel#workflowHint {
+    color: palette(window-text);
+    font-size: 13px;
+}
+
+QLabel#workflowFieldLabel {
+    color: palette(text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+QLabel#workflowStatus {
+    color: palette(window-text);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+QGroupBox {
+    margin-top: 12px;
+    padding-top: 12px;
+    color: palette(window-text);
+    font-weight: 700;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 14px;
+    padding: 0 6px;
+}
+
+QLineEdit,
+QComboBox,
+QSpinBox,
+QPlainTextEdit,
+QListWidget,
+QTableWidget {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 10px;
+    color: palette(text);
+    padding: 8px 12px;
+    selection-background-color: palette(highlight);
+    selection-color: palette(highlighted-text);
+}
+
+QLineEdit:focus,
+QComboBox:focus,
+QSpinBox:focus,
+QPlainTextEdit:focus,
+QListWidget:focus,
+QTableWidget:focus {
+    border: 1px solid palette(highlight);
+}
+
+QLineEdit::placeholder {
+    color: palette(mid);
+}
+
+QComboBox::drop-down,
+QSpinBox::up-button,
+QSpinBox::down-button {
+    border: none;
+    background: transparent;
+    width: 24px;
+}
+
+QComboBox QAbstractItemView {
+    background: palette(base);
+    color: palette(text);
+    border: 1px solid palette(mid);
+    selection-background-color: palette(highlight);
+    selection-color: palette(highlighted-text);
+}
+
+QPushButton {
+    background: palette(button);
+    border: 1px solid palette(mid);
+    border-radius: 10px;
+    color: palette(button-text);
+    padding: 10px 16px;
+    font-weight: 600;
+    min-height: 16px;
+}
+
+QPushButton:hover {
+    background: palette(alternate-base);
+    border-color: palette(highlight);
+}
+
+QPushButton:pressed {
+    background: palette(midlight);
+}
+
+QPushButton#workflowPrimaryButton {
+    background: palette(highlight);
+    border: 1px solid palette(highlight);
+    color: palette(highlighted-text);
+}
+
+QPushButton#workflowPrimaryButton:hover {
+    background: palette(link);
+    border-color: palette(link);
+}
+
+QPushButton#workflowPrimaryButton:pressed {
+    background: palette(highlight);
+}
+
+QCheckBox {
+    color: palette(window-text);
+    spacing: 8px;
+}
+
+QCheckBox::indicator {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 4px;
+    width: 16px;
+    height: 16px;
+}
+
+QCheckBox::indicator:checked {
+    background: palette(highlight);
+    border-color: palette(highlight);
+}
+
+QCheckBox::indicator:disabled {
+    background: palette(button);
+}
+"""
 
 
 def _ellipsis_path(path: str) -> str:
@@ -60,31 +236,75 @@ class WorkflowPage(QWidget):
         self.session = ProjectSession()
         self._loading = False
         self.setMinimumSize(PAGE_MIN_WIDTH, PAGE_MIN_HEIGHT)
+        self.setObjectName("workflowPage")
+        self.setStyleSheet(WORKFLOW_PAGE_QSS)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setFrameShape(QFrame.NoFrame)
+
+        self.scroll_content = QWidget()
+        self.scroll_area.setWidget(self.scroll_content)
+        layout.addWidget(self.scroll_area, stretch=1)
+
+        scroll_layout = QVBoxLayout(self.scroll_content)
+        scroll_layout.setContentsMargins(24, 24, 24, 16)
+        scroll_layout.setSpacing(18)
 
         title_label = QLabel(title)
-        title_label.setStyleSheet("font-size: 22px; font-weight: 600;")
+        title_label.setObjectName("workflowTitle")
         description_label = QLabel(description)
         description_label.setWordWrap(True)
-        description_label.setStyleSheet("color: palette(mid);")
+        description_label.setObjectName("workflowDescription")
 
-        layout.addWidget(title_label)
-        layout.addWidget(description_label)
+        scroll_layout.addWidget(title_label)
+        scroll_layout.addWidget(description_label)
 
         self.body_layout = QVBoxLayout()
         self.body_layout.setSpacing(16)
-        layout.addLayout(self.body_layout, stretch=1)
+        scroll_layout.addLayout(self.body_layout, stretch=1)
+        scroll_layout.addStretch(1)
 
         self.nav_layout = QHBoxLayout()
+        self.nav_layout.setContentsMargins(24, 0, 24, 24)
         self.nav_layout.setSpacing(12)
         layout.addLayout(self.nav_layout)
 
     def bind_session(self, session: ProjectSession):
         self.session = session
         self.refresh_from_session()
+
+    def _create_card(self, title: str) -> tuple[QFrame, QVBoxLayout]:
+        card = QFrame()
+        card.setObjectName("workflowCard")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(18, 16, 18, 16)
+        card_layout.setSpacing(14)
+
+        title_bar = QFrame()
+        title_bar.setObjectName("workflowCardTitleBar")
+        title_layout = QHBoxLayout(title_bar)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(0)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("workflowCardTitle")
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+
+        card_layout.addWidget(title_bar)
+        return card, card_layout
+
+    def _create_field_label(self, text: str) -> QLabel:
+        label = QLabel(text)
+        label.setObjectName("workflowFieldLabel")
+        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        return label
 
     def refresh_from_session(self):
         pass
@@ -97,11 +317,16 @@ class SetupPage(WorkflowPage):
             "Choose the Excel workbook, Word template, output folder, and generation options for this certificate batch.",
         )
 
-        form = QFormLayout()
-        form.setLabelAlignment(Qt.AlignLeft)
-        form.setFormAlignment(Qt.AlignTop)
-        form.setSpacing(12)
-        self.body_layout.addLayout(form)
+        form_card, form_card_layout = self._create_card("Certificate Batch")
+        form = QGridLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(12)
+        form.setColumnMinimumWidth(0, 128)
+        form.setColumnStretch(1, 1)
+        form.setColumnMinimumWidth(2, 148)
+        form_card_layout.addLayout(form)
+        self.body_layout.addWidget(form_card)
 
         self.excel_input = self._create_browse_row(
             "Workbook",
@@ -119,42 +344,54 @@ class SetupPage(WorkflowPage):
             self._browse_output_dir,
         )
 
-        form.addRow("Excel workbook", self.excel_input["container"])
-        form.addRow("Word template", self.template_input["container"])
-        form.addRow("Output folder", self.output_input["container"])
+        self._add_browse_row(form, 0, "Excel workbook", self.excel_input)
+        self._add_browse_row(form, 1, "Word template", self.template_input)
+        self._add_browse_row(form, 2, "Output folder", self.output_input)
 
         self.certificate_type_input = self._create_certificate_type_dropdown()
-        form.addRow("Certificate type", self.certificate_type_input)
+        self.certificate_type_input.setMinimumHeight(40)
+        form.addWidget(self._create_field_label("Certificate type"), 3, 0)
+        form.addWidget(self.certificate_type_input, 3, 1, 1, 2)
 
         self.certificate_type_hint = QLabel(
             "Integrale: tipo B/C = 12 ore, tipo A = 16 ore. Retraining: tipo B/C = 4h, tipo A = 6h."
         )
         self.certificate_type_hint.setWordWrap(True)
-        self.certificate_type_hint.setStyleSheet("color: palette(mid);")
-        self.body_layout.addWidget(self.certificate_type_hint)
+        self.certificate_type_hint.setObjectName("workflowHint")
+        form_card_layout.addWidget(self.certificate_type_hint)
 
-        options_box = QGroupBox("Export options")
-        options_layout = QHBoxLayout(options_box)
-        options_layout.setContentsMargins(12, 12, 12, 12)
-        options_box.setMinimumHeight(84)
+        options_card, options_layout = self._create_card("Export Options")
 
         self.export_pdf_checkbox = QCheckBox("Also export PDF")
         self.pdf_timeout_input = QSpinBox()
         self.pdf_timeout_input.setRange(10, 3600)
         self.pdf_timeout_input.setSuffix(" s")
+        self.pdf_timeout_input.setMinimumWidth(128)
+        self.pdf_timeout_input.setMinimumHeight(40)
 
-        options_layout.addWidget(self.export_pdf_checkbox)
-        options_layout.addStretch()
-        options_layout.addWidget(QLabel("PDF timeout"))
-        options_layout.addWidget(self.pdf_timeout_input)
-        self.body_layout.addWidget(options_box)
+        export_row = QHBoxLayout()
+        export_row.setContentsMargins(0, 0, 0, 0)
+        export_row.setSpacing(12)
 
+        export_row.addWidget(self.export_pdf_checkbox)
+        export_row.addStretch()
+        export_row.addWidget(self._create_field_label("PDF timeout"))
+        export_row.addWidget(self.pdf_timeout_input)
+        options_layout.addLayout(export_row)
+        self.body_layout.addWidget(options_card)
+
+        status_card, status_card_layout = self._create_card("Session Summary")
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
+        self.status_label.setObjectName("workflowStatus")
         self.status_label.setMinimumHeight(72)
-        self.body_layout.addWidget(self.status_label)
+        status_card_layout.addWidget(self.status_label)
+        self.body_layout.addWidget(status_card)
 
         next_button = QPushButton("Next: Mapping")
+        next_button.setObjectName("workflowPrimaryButton")
+        next_button.setMinimumWidth(170)
+        next_button.setMinimumHeight(42)
         next_button.clicked.connect(self._go_next)
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(next_button)
@@ -166,33 +403,36 @@ class SetupPage(WorkflowPage):
     def _create_certificate_type_dropdown(self):
         widget = QComboBox()
         widget.setMinimumWidth(520)
-        widget.setMinimumHeight(36)
         for option in CERTIFICATE_TYPE_OPTIONS:
             widget.addItem(option)
         return widget
 
+    def _add_browse_row(self, grid: QGridLayout, row: int, label_text: str, row_widgets: dict):
+        grid.addWidget(self._create_field_label(label_text), row, 0)
+        grid.addWidget(row_widgets["container"], row, 1)
+        grid.addWidget(row_widgets["button"], row, 2)
+        grid.setRowMinimumHeight(row, 46)
+
     def _create_browse_row(self, button_label: str, placeholder: str, callback):
         container = QWidget()
-        container.setMinimumWidth(460)
+        container.setMinimumWidth(420)
+        container.setMinimumHeight(40)
         layout = QHBoxLayout(container)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(0)
 
-        text_input = QPlainTextEdit()
+        text_input = QLineEdit()
         text_input.setPlaceholderText(placeholder)
-        text_input.setFixedHeight(36)
-        text_input.setMinimumWidth(320)
-        text_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        text_input.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        text_input.setLineWrapMode(QPlainTextEdit.NoWrap)
+        text_input.setClearButtonEnabled(True)
+        text_input.setMinimumWidth(360)
+        text_input.setMinimumHeight(40)
         browse_button = QPushButton(button_label)
-        browse_button.setFixedWidth(140)
+        browse_button.setMinimumWidth(148)
+        browse_button.setMinimumHeight(40)
         browse_button.clicked.connect(callback)
 
         text_input.textChanged.connect(self._sync_session)
-
         layout.addWidget(text_input, stretch=1)
-        layout.addWidget(browse_button)
 
         return {
             "container": container,
@@ -203,9 +443,9 @@ class SetupPage(WorkflowPage):
     def refresh_from_session(self):
         self._loading = True
         try:
-            self.excel_input["input"].setPlainText(self.session.excel_path)
-            self.template_input["input"].setPlainText(self.session.template_path)
-            self.output_input["input"].setPlainText(self.session.output_dir)
+            self.excel_input["input"].setText(self.session.excel_path)
+            self.template_input["input"].setText(self.session.template_path)
+            self.output_input["input"].setText(self.session.output_dir)
             self._ensure_certificate_type_option(self.session.certificate_type)
             current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
             self.certificate_type_input.setCurrentText(current_certificate_type)
@@ -229,9 +469,9 @@ class SetupPage(WorkflowPage):
         if self._loading:
             return
 
-        self.session.excel_path = self.excel_input["input"].toPlainText().strip()
-        self.session.template_path = self.template_input["input"].toPlainText().strip()
-        self.session.output_dir = self.output_input["input"].toPlainText().strip()
+        self.session.excel_path = self.excel_input["input"].text().strip()
+        self.session.template_path = self.template_input["input"].text().strip()
+        self.session.output_dir = self.output_input["input"].text().strip()
         self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
@@ -245,8 +485,8 @@ class SetupPage(WorkflowPage):
         if self.certificate_type_input.findText(normalized) == -1:
             self.certificate_type_input.addItem(normalized)
 
-    def _set_text_and_sync(self, widget: QPlainTextEdit, value: str):
-        widget.setPlainText(value)
+    def _set_text_and_sync(self, widget: QLineEdit, value: str):
+        widget.setText(value)
         self._sync_session()
 
     def _browse_excel(self):

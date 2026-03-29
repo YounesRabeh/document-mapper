@@ -94,9 +94,9 @@ class GuiFlowTestCase(unittest.TestCase):
             ), patch.object(main_window_module, "CertificateGenerator", side_effect=lambda _excel: FakeGenerator()):
                 window = main_window_module.MainWindow(config)
 
-            window.setup_page.excel_input["input"].setPlainText(str(workbook))
-            window.setup_page.template_input["input"].setPlainText(str(template))
-            window.setup_page.output_input["input"].setPlainText(temp_dir)
+            window.setup_page.excel_input["input"].setText(str(workbook))
+            window.setup_page.template_input["input"].setText(str(template))
+            window.setup_page.output_input["input"].setText(temp_dir)
             self.assertEqual(window.setup_page.certificate_type_input.count(), 4)
             self.assertEqual(
                 window.setup_page.certificate_type_input.itemText(0),

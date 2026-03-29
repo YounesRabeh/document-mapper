@@ -10,8 +10,8 @@ domain = "younesrabeh.com"
 persistence_logging = true
 
 [window]
-width = 800
-height = 500
+width = 960
+height = 640
 min_width = 960
 min_height = 640
 title = "Document Mapper"

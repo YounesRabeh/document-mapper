@@ -30,11 +30,13 @@ class MainWindow(QMainWindow):
 
         ThemeManager(config)
 
-        self.resize(self.config.get("WINDOW_WIDTH", 800), self.config.get("WINDOW_HEIGHT", 500))
-        self.setMinimumSize(
-            max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH),
-            max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT),
+        min_width = max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH)
+        min_height = max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT)
+        self.resize(
+            max(self.config.get("WINDOW_WIDTH", 800), min_width),
+            max(self.config.get("WINDOW_HEIGHT", 500), min_height),
         )
+        self.setMinimumSize(min_width, min_height)
         self.setWindowTitle(self.config.get("WINDOW_TITLE", "Document Mapper"))
 
         self.stage_manager = QStackedWidget()

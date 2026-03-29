@@ -96,6 +96,10 @@ class ThemeManager(QObject):
             Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
+        # Use a consistent Qt style so custom palettes render more predictably
+        # across platforms and widget types.
+        app.setStyle("Fusion")
+
         if theme == AppTheme.DARK:
             ThemeManager._apply_dark_palette()
             Logger.debug("Applied DARK theme.")
@@ -130,26 +134,84 @@ class ThemeManager(QObject):
     # Palette Definitions
     # -----------------------
     @staticmethod
+    def _build_palette(
+        *,
+        window: QColor,
+        window_text: QColor,
+        base: QColor,
+        alternate_base: QColor,
+        text: QColor,
+        button: QColor,
+        button_text: QColor,
+        highlight: QColor,
+        highlighted_text: QColor,
+        mid: QColor,
+        midlight: QColor,
+        light: QColor,
+        dark: QColor,
+        shadow: QColor,
+        link: QColor,
+        placeholder: QColor,
+        disabled_text: QColor,
+    ) -> QPalette:
+        palette = QPalette()
+
+        palette.setColor(QPalette.Window, window)
+        palette.setColor(QPalette.WindowText, window_text)
+        palette.setColor(QPalette.Base, base)
+        palette.setColor(QPalette.AlternateBase, alternate_base)
+        palette.setColor(QPalette.ToolTipBase, base)
+        palette.setColor(QPalette.ToolTipText, text)
+        palette.setColor(QPalette.Text, text)
+        palette.setColor(QPalette.Button, button)
+        palette.setColor(QPalette.ButtonText, button_text)
+        palette.setColor(QPalette.BrightText, Qt.red)
+        palette.setColor(QPalette.Link, link)
+        palette.setColor(QPalette.Highlight, highlight)
+        palette.setColor(QPalette.HighlightedText, highlighted_text)
+        palette.setColor(QPalette.PlaceholderText, placeholder)
+        palette.setColor(QPalette.Mid, mid)
+        palette.setColor(QPalette.Midlight, midlight)
+        palette.setColor(QPalette.Light, light)
+        palette.setColor(QPalette.Dark, dark)
+        palette.setColor(QPalette.Shadow, shadow)
+
+        for group in (QPalette.Disabled,):
+            palette.setColor(group, QPalette.WindowText, disabled_text)
+            palette.setColor(group, QPalette.Text, disabled_text)
+            palette.setColor(group, QPalette.ButtonText, disabled_text)
+            palette.setColor(group, QPalette.Highlight, mid)
+            palette.setColor(group, QPalette.HighlightedText, highlighted_text)
+            palette.setColor(group, QPalette.PlaceholderText, disabled_text)
+
+        return palette
+
+    @staticmethod
     def _apply_light_palette():
         app = QApplication.instance()
         if not app:
             Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
-        light_palette = QPalette()
-        light_palette.setColor(QPalette.Window, QColor(255, 255, 255))
-        light_palette.setColor(QPalette.WindowText, Qt.black)
-        light_palette.setColor(QPalette.Base, QColor(245, 245, 245))
-        light_palette.setColor(QPalette.AlternateBase, QColor(240, 240, 240))
-        light_palette.setColor(QPalette.ToolTipBase, Qt.black)
-        light_palette.setColor(QPalette.ToolTipText, Qt.white)
-        light_palette.setColor(QPalette.Text, Qt.black)
-        light_palette.setColor(QPalette.Button, QColor(240, 240, 240))
-        light_palette.setColor(QPalette.ButtonText, Qt.black)
-        light_palette.setColor(QPalette.BrightText, Qt.red)
-        light_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-        light_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-        light_palette.setColor(QPalette.HighlightedText, Qt.white)
+        light_palette = ThemeManager._build_palette(
+            window=QColor("#edf2f7"),
+            window_text=QColor("#1f2430"),
+            base=QColor("#ffffff"),
+            alternate_base=QColor("#dde5f0"),
+            text=QColor("#1f2430"),
+            button=QColor("#e7edf6"),
+            button_text=QColor("#202531"),
+            highlight=QColor("#3b82f6"),
+            highlighted_text=QColor("#ffffff"),
+            mid=QColor("#a7b2c2"),
+            midlight=QColor("#c5cede"),
+            light=QColor("#ffffff"),
+            dark=QColor("#7e8898"),
+            shadow=QColor("#5e6877"),
+            link=QColor("#2563eb"),
+            placeholder=QColor("#7f8898"),
+            disabled_text=QColor("#96a0b0"),
+        )
 
         app.setPalette(light_palette)
 
@@ -160,20 +222,25 @@ class ThemeManager(QObject):
             Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
-        dark_palette = QPalette()
-        dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.WindowText, Qt.white)
-        dark_palette.setColor(QPalette.Base, QColor(35, 35, 35))
-        dark_palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
-        dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-        dark_palette.setColor(QPalette.Text, Qt.white)
-        dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-        dark_palette.setColor(QPalette.ButtonText, Qt.white)
-        dark_palette.setColor(QPalette.BrightText, Qt.red)
-        dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.HighlightedText, Qt.black)
+        dark_palette = ThemeManager._build_palette(
+            window=QColor("#272b31"),
+            window_text=QColor("#f3f4f6"),
+            base=QColor("#1d2025"),
+            alternate_base=QColor("#323842"),
+            text=QColor("#f3f4f6"),
+            button=QColor("#39404b"),
+            button_text=QColor("#f3f4f6"),
+            highlight=QColor("#5b8cff"),
+            highlighted_text=QColor("#ffffff"),
+            mid=QColor("#5e6878"),
+            midlight=QColor("#4b5360"),
+            light=QColor("#798292"),
+            dark=QColor("#171a1e"),
+            shadow=QColor("#0f1215"),
+            link=QColor("#7aa2ff"),
+            placeholder=QColor("#8b95a3"),
+            disabled_text=QColor("#757d8a"),
+        )
 
         app.setPalette(dark_palette)
 
