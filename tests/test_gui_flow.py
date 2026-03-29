@@ -99,6 +99,8 @@ class GuiFlowTestCase(unittest.TestCase):
             ), patch.object(main_window_module, "CertificateGenerator", side_effect=lambda _excel: FakeGenerator()):
                 window = main_window_module.MainWindow(config)
 
+            self.assertEqual(len(window.stage_cards), 4)
+            self.assertEqual(window.sidebar_title.text(), "Workflow")
             window.setup_page.excel_input["input"].setText(str(workbook))
             window.setup_page.template_input["input"].setText(str(template))
             window.setup_page.output_input["input"].setText(temp_dir)
@@ -111,10 +113,12 @@ class GuiFlowTestCase(unittest.TestCase):
 
             self.assertEqual(window.session.excel_path, str(workbook))
             self.assertEqual(window.session.template_path, str(template))
+            self.assertEqual(window.stage_manager.currentIndex(), 0)
 
             window.goto_stage(2)
-            mapping_item = window.mapping_page.mapping_table.item(0, 0)
-            mapping_item.setText("<<NOME>>")
+            self.assertTrue(window.stage_cards[2].property("active"))
+            mapping_input = window.mapping_page.mapping_table.cellWidget(0, 0)
+            mapping_input.setText("<<NOME>>")
             column_combo = window.mapping_page.mapping_table.cellWidget(0, 1)
             column_combo.setCurrentText("NOME")
             window.mapping_page._sync_session_from_table()

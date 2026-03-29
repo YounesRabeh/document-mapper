@@ -11,9 +11,9 @@ language = "en"
 persistence_logging = true
 
 [window]
-width = 960
-height = 640
-min_width = 960
+width = 1180
+height = 700
+min_width = 1160
 min_height = 640
 title = "Document Mapper"
 theme_mode = "AUTO"

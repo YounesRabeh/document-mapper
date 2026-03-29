@@ -1,7 +1,21 @@
 from pathlib import Path
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QStackedWidget
+from PySide6.QtWidgets import (
+    QFileDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
@@ -12,8 +26,177 @@ from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
 from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 
-WINDOW_MIN_WIDTH = 960
+SIDEBAR_WIDTH = 296
+CONTENT_MIN_WIDTH = 860
+WINDOW_MIN_WIDTH = 1180
 WINDOW_MIN_HEIGHT = 640
+
+MAIN_WINDOW_QSS = """
+QWidget#windowRoot {
+    background: palette(window);
+}
+
+QScrollArea#workflowSidebarScroll {
+    background: palette(alternate-base);
+    border: none;
+    border-right: 1px solid palette(midlight);
+}
+
+QScrollArea#workflowSidebarScroll > QWidget > QWidget {
+    background: palette(alternate-base);
+}
+
+QFrame#workflowSidebar {
+    background: palette(alternate-base);
+    border: none;
+}
+
+QLabel#sidebarEyebrow {
+    color: palette(mid);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+}
+
+QLabel#sidebarTitle {
+    color: palette(window-text);
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QLabel#sidebarSubtitle {
+    color: palette(text);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+QFrame#sidebarStageCard {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 16px;
+}
+
+QFrame#sidebarStageCard:hover {
+    background: palette(button);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[active="true"] {
+    background: palette(button);
+    border-color: palette(highlight);
+}
+
+QLabel#sidebarStageIndex {
+    background: palette(base);
+    color: palette(text);
+    border-radius: 14px;
+    padding: 6px 0;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageIndex {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+}
+
+QLabel#sidebarStageTitle {
+    color: palette(window-text);
+    font-size: 15px;
+    font-weight: 800;
+}
+
+QLabel#sidebarStageDetail {
+    color: palette(text);
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QPushButton#sidebarUtilityButton {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(button-text);
+    font-weight: 600;
+    padding: 10px 12px;
+}
+
+QPushButton#sidebarUtilityButton:hover {
+    border-color: palette(highlight);
+    background: palette(button);
+}
+"""
+
+
+class SidebarStageCard(QFrame):
+    clicked = Signal(int)
+
+    def __init__(self, stage_index: int, title_key: str, detail_key: str, localization: LocalizationManager):
+        super().__init__()
+        self.stage_index = stage_index
+        self.title_key = title_key
+        self.detail_key = detail_key
+        self.localization = localization
+
+        self.setObjectName("sidebarStageCard")
+        self.setProperty("active", False)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setMinimumHeight(82)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(12)
+
+        self.index_label = QLabel()
+        self.index_label.setObjectName("sidebarStageIndex")
+        self.index_label.setAlignment(Qt.AlignCenter)
+        self.index_label.setFixedSize(34, 28)
+        self.index_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        text_layout = QVBoxLayout()
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(5)
+
+        self.title_label = QLabel()
+        self.title_label.setObjectName("sidebarStageTitle")
+        self.title_label.setWordWrap(True)
+        self.title_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        self.detail_label = QLabel()
+        self.detail_label.setObjectName("sidebarStageDetail")
+        self.detail_label.setWordWrap(True)
+        self.detail_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+
+        text_layout.addWidget(self.title_label)
+        text_layout.addWidget(self.detail_label)
+
+        layout.addWidget(self.index_label, alignment=Qt.AlignTop)
+        layout.addLayout(text_layout, stretch=1)
+
+        self.retranslate()
+
+    def retranslate(self):
+        self.index_label.setText(f"{self.stage_index:02d}")
+        self.title_label.setText(self.localization.t(self.title_key))
+        self.detail_label.setText(self.localization.t(self.detail_key))
+
+    def set_active(self, active: bool):
+        self.setProperty("active", active)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit(self.stage_index)
+        super().mousePressEvent(event)
 
 
 class MainWindow(QMainWindow):
@@ -41,9 +224,21 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(min_width, min_height)
         self.setWindowTitle(self.localization.t("app.name"))
 
+        self.window_root = QWidget()
+        self.window_root.setObjectName("windowRoot")
+        self.window_root.setStyleSheet(MAIN_WINDOW_QSS)
+        self.setCentralWidget(self.window_root)
+
+        root_layout = QHBoxLayout(self.window_root)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        self.sidebar = self._create_sidebar()
+        root_layout.addWidget(self.sidebar)
+
         self.stage_manager = QStackedWidget()
-        self.stage_manager.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
-        self.setCentralWidget(self.stage_manager)
+        self.stage_manager.setMinimumSize(CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        root_layout.addWidget(self.stage_manager, stretch=1)
 
         self.setup_page = SetupPage(self.localization)
         self.mapping_page = MappingPage(self.excel_service, self.generator, self.localization)
@@ -70,6 +265,66 @@ class MainWindow(QMainWindow):
         self._refresh_pages()
         self._retranslate_ui()
         self.goto_stage(1)
+
+    def _create_sidebar(self) -> QScrollArea:
+        sidebar_scroll = QScrollArea()
+        sidebar_scroll.setObjectName("workflowSidebarScroll")
+        sidebar_scroll.setWidgetResizable(True)
+        sidebar_scroll.setFrameShape(QFrame.NoFrame)
+        sidebar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        sidebar_scroll.setFixedWidth(SIDEBAR_WIDTH)
+
+        sidebar = QFrame()
+        sidebar.setObjectName("workflowSidebar")
+        sidebar_scroll.setWidget(sidebar)
+
+        layout = QVBoxLayout(sidebar)
+        layout.setContentsMargins(22, 24, 22, 24)
+        layout.setSpacing(14)
+
+        self.sidebar_eyebrow = QLabel("WORKFLOW")
+        self.sidebar_eyebrow.setObjectName("sidebarEyebrow")
+
+        self.sidebar_title = QLabel()
+        self.sidebar_title.setObjectName("sidebarTitle")
+
+        self.sidebar_subtitle = QLabel()
+        self.sidebar_subtitle.setObjectName("sidebarSubtitle")
+        self.sidebar_subtitle.setWordWrap(True)
+
+        layout.addWidget(self.sidebar_eyebrow)
+        layout.addWidget(self.sidebar_title)
+        layout.addWidget(self.sidebar_subtitle)
+
+        self.stage_cards: dict[int, SidebarStageCard] = {}
+        for index, title_key, detail_key in (
+            (1, "sidebar.stage.setup", "sidebar.stage.setup.detail"),
+            (2, "sidebar.stage.mapping", "sidebar.stage.mapping.detail"),
+            (3, "sidebar.stage.generate", "sidebar.stage.generate.detail"),
+            (4, "sidebar.stage.results", "sidebar.stage.results.detail"),
+        ):
+            card = SidebarStageCard(index, title_key, detail_key, self.localization)
+            card.clicked.connect(self.goto_stage)
+            self.stage_cards[index] = card
+            layout.addWidget(card)
+
+        layout.addStretch(1)
+
+        self.sidebar_new_button = QPushButton()
+        self.sidebar_open_button = QPushButton()
+        self.sidebar_save_button = QPushButton()
+        for button in (self.sidebar_new_button, self.sidebar_open_button, self.sidebar_save_button):
+            button.setObjectName("sidebarUtilityButton")
+            button.setMinimumHeight(44)
+        self.sidebar_new_button.clicked.connect(self._new_project)
+        self.sidebar_open_button.clicked.connect(self._open_project)
+        self.sidebar_save_button.clicked.connect(self._save_project)
+
+        layout.addWidget(self.sidebar_new_button)
+        layout.addWidget(self.sidebar_open_button)
+        layout.addWidget(self.sidebar_save_button)
+
+        return sidebar_scroll
 
     def _create_menu_bar(self):
         self.file_menu = self.menuBar().addMenu("")
@@ -135,6 +390,7 @@ class MainWindow(QMainWindow):
         current_page = self.stage_manager.currentWidget()
         if hasattr(current_page, "scroll_to_top"):
             current_page.scroll_to_top()
+        self._set_active_stage(index)
         Logger.debug(f"Switched to workflow page {index}")
 
     def _new_project(self):
@@ -195,6 +451,8 @@ class MainWindow(QMainWindow):
 
     def _retranslate_ui(self):
         self.setWindowTitle(self.localization.t("app.name"))
+        self.sidebar_title.setText(self.localization.t("sidebar.heading"))
+        self.sidebar_subtitle.setText(self.localization.t("sidebar.subtitle"))
         self.file_menu.setTitle(self.localization.t("menu.file"))
         self.view_menu.setTitle(self.localization.t("menu.view"))
         self.help_menu.setTitle(self.localization.t("menu.help"))
@@ -207,8 +465,17 @@ class MainWindow(QMainWindow):
         self.exit_action.setText(self.localization.t("action.exit"))
         self.toggle_theme_action.setText(self.localization.t("action.toggle_theme"))
         self.about_action.setText(self.localization.t("action.about"))
+        self.sidebar_new_button.setText(self.localization.t("action.new_project"))
+        self.sidebar_open_button.setText(self.localization.t("action.open_project"))
+        self.sidebar_save_button.setText(self.localization.t("action.save_project"))
 
         self.language_en_action.setText(self.localization.t("menu.language.en"))
         self.language_it_action.setText(self.localization.t("menu.language.it"))
         self.language_en_action.setChecked(self.localization.current_language == "en")
         self.language_it_action.setChecked(self.localization.current_language == "it")
+        for card in self.stage_cards.values():
+            card.retranslate()
+
+    def _set_active_stage(self, active_index: int):
+        for index, card in self.stage_cards.items():
+            card.set_active(index == active_index)

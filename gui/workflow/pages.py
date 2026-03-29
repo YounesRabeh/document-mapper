@@ -112,9 +112,18 @@ QLabel#workflowStatus {
     line-height: 1.4;
 }
 
+QLabel#workflowInfoBox {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 10px;
+    color: palette(text);
+    padding: 12px 14px;
+    line-height: 1.45;
+}
+
 QGroupBox {
     margin-top: 0;
-    padding-top: 18px;
+    padding-top: 30px;
     color: palette(window-text);
     font-weight: 700;
 }
@@ -123,7 +132,7 @@ QGroupBox::title {
     subcontrol-origin: padding;
     subcontrol-position: top left;
     left: 18px;
-    top: 14px;
+    top: 12px;
     padding: 0;
 }
 
@@ -976,21 +985,19 @@ class GeneratePage(WorkflowPage):
         self._thread: QThread | None = None
         self._worker: GenerationWorker | None = None
 
-        self.summary_box = QGroupBox()
-        self._bind_translation(self.summary_box, "upper_title", "group.batch_summary")
-        summary_layout = QVBoxLayout(self.summary_box)
-        summary_layout.setContentsMargins(12, 12, 12, 12)
-        self.summary_box.setMinimumHeight(PANEL_MIN_HEIGHT)
-        self.summary_output = QPlainTextEdit()
-        self.summary_output.setReadOnly(True)
-        self.summary_output.setMinimumHeight(PANEL_MIN_HEIGHT - 24)
+        self.summary_box, summary_layout = self._create_card("group.batch_summary")
+        self.summary_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.summary_output = QLabel()
+        self.summary_output.setObjectName("workflowInfoBox")
+        self.summary_output.setWordWrap(True)
+        self.summary_output.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.summary_output.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.summary_output.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        self.summary_output.setMinimumHeight(0)
         summary_layout.addWidget(self.summary_output)
         self.body_layout.addWidget(self.summary_box)
 
-        self.log_box = QGroupBox()
-        self._bind_translation(self.log_box, "upper_title", "group.generation_log")
-        log_layout = QVBoxLayout(self.log_box)
-        log_layout.setContentsMargins(12, 12, 12, 12)
+        self.log_box, log_layout = self._create_card("group.generation_log")
         self.log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
         self.log_output = QPlainTextEdit()
         self.log_output.setReadOnly(True)
@@ -1027,7 +1034,7 @@ class GeneratePage(WorkflowPage):
             summary_lines.extend(f"- {self.localization.translate_runtime_text(error)}" for error in errors)
         else:
             summary_lines.append(self.localization.t("summary.ready_to_generate_short"))
-        self.summary_output.setPlainText("\n".join(summary_lines))
+        self.summary_output.setText("\n".join(summary_lines))
 
     def _start_generation(self):
         errors = self.generator.validate_session(self.session)
