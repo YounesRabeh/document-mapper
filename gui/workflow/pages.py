@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QSize, QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -39,7 +39,9 @@ from core.certificate.models import (
     ProjectSession,
     normalize_certificate_type,
 )
+from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
+from core.util.resources import Resources
 from core.util.system_info import open_path
 
 PAGE_MIN_WIDTH = 860
@@ -168,12 +170,41 @@ QSpinBox::down-button {
     width: 24px;
 }
 
+QComboBox {
+    padding-right: 34px;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 28px;
+    border-left: 1px solid palette(mid);
+}
+
+QComboBox::down-arrow {
+    image: url("__COMBO_ARROW_PATH__");
+    width: 12px;
+    height: 12px;
+}
+
 QComboBox QAbstractItemView {
     background: palette(base);
     color: palette(text);
     border: 1px solid palette(mid);
-    selection-background-color: palette(highlight);
-    selection-color: palette(highlighted-text);
+    selection-background-color: palette(button);
+    selection-color: palette(text);
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background: palette(alternate-base);
+    color: palette(window-text);
+}
+
+QComboBox QAbstractItemView::item:selected,
+QComboBox QAbstractItemView::item:selected:active,
+QComboBox QAbstractItemView::item:selected:!active {
+    background: palette(button);
+    color: palette(text);
 }
 
 QListWidget,
@@ -197,10 +228,16 @@ QTableWidget::item {
 }
 
 QTableWidget#mappingTable {
+    background: palette(alternate-base);
     border: 1px solid palette(midlight);
     alternate-background-color: palette(alternate-base);
-    selection-background-color: palette(button);
+    selection-background-color: transparent;
     selection-color: palette(text);
+    gridline-color: transparent;
+}
+
+QTableWidget#mappingTable QWidget#qt_scrollarea_viewport {
+    background: palette(alternate-base);
 }
 
 QTableWidget#mappingTable:focus {
@@ -212,20 +249,20 @@ QTableWidget#mappingTable::item {
 }
 
 QTableWidget#mappingTable::item:selected {
-    background: palette(alternate-base);
+    background: transparent;
     color: palette(text);
     border: none;
 }
 
 QTableWidget#mappingTable::item:selected:active,
 QTableWidget#mappingTable::item:selected:!active {
-    background: palette(alternate-base);
+    background: transparent;
     color: palette(text);
 }
 
 QTableWidget#mappingTable QComboBox,
 QTableWidget#mappingTable QLineEdit {
-    background: palette(alternate-base);
+    background: palette(base);
     border: 1px solid palette(mid);
     border-radius: 8px;
     padding: 4px 10px;
@@ -234,13 +271,22 @@ QTableWidget#mappingTable QLineEdit {
 }
 
 QTableWidget#mappingTable QComboBox {
-    background: palette(alternate-base);
+    background: palette(base);
 }
 
 QTableWidget#mappingTable QComboBox:focus,
 QTableWidget#mappingTable QLineEdit:focus {
-    background: palette(alternate-base);
+    background: palette(base);
     border: 1px solid palette(midlight);
+}
+
+QTableWidget#mappingTable::item:hover {
+    background: transparent;
+}
+
+QWidget#mappingCellContainer {
+    background: transparent;
+    border: none;
 }
 
 QHeaderView::section {
@@ -258,15 +304,73 @@ QTableCornerButton::section {
     border-bottom: 1px solid palette(mid);
 }
 
+QFrame#columnEntry {
+    background: palette(button);
+    border: 1px solid palette(midlight);
+    border-radius: 10px;
+    min-height: 44px;
+}
+
+QLabel#columnEntryLabel {
+    color: palette(window-text);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+}
+
+QPushButton#columnEntryAddButton {
+    background: transparent;
+    border: none;
+    color: palette(highlight);
+    font-size: 18px;
+    font-weight: 700;
+    padding: 0;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    border-radius: 14px;
+}
+
+QPushButton#columnEntryAddButton:hover {
+    background: transparent;
+    border: none;
+    color: palette(link);
+}
+
+QPushButton#columnEntryAddButton:pressed {
+    background: transparent;
+    border: none;
+    color: palette(highlight);
+}
+
 QListWidget::item {
     padding: 8px 10px;
     margin: 2px 0;
+    border: 1px solid transparent;
     border-radius: 8px;
 }
 
-QListWidget::item:selected {
+QListWidget::item:selected,
+QListWidget::item:selected:active,
+QListWidget::item:selected:!active {
     background: palette(button);
     color: palette(window-text);
+    border: 1px solid palette(midlight);
+}
+
+QListWidget::item:hover {
+    background: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(midlight);
+}
+
+QListWidget::item:selected:hover,
+QListWidget::item:selected:active:hover,
+QListWidget::item:selected:!active:hover {
+    background: palette(button);
+    color: palette(window-text);
+    border: 1px solid palette(midlight);
 }
 
 QPushButton {
@@ -327,6 +431,16 @@ QCheckBox::indicator:disabled {
 """
 
 
+def _workflow_combo_arrow_path() -> str:
+    try:
+        resolved = Resources.get_in_icons("sys/chevron_down.svg", suppress=True)
+        if resolved:
+            return Path(resolved).resolve().as_posix()
+    except Exception:
+        pass
+    return (Path(__file__).resolve().parents[2] / "resources" / "icons" / "sys" / "chevron_down.svg").as_posix()
+
+
 class WorkflowPage(QWidget):
     next_requested = Signal()
     prev_requested = Signal()
@@ -340,7 +454,7 @@ class WorkflowPage(QWidget):
         self._translation_bindings: list[tuple[object, str, str]] = []
         self.setMinimumSize(PAGE_MIN_WIDTH, PAGE_MIN_HEIGHT)
         self.setObjectName("workflowPage")
-        self.setStyleSheet(WORKFLOW_PAGE_QSS)
+        self.setStyleSheet(WORKFLOW_PAGE_QSS.replace("__COMBO_ARROW_PATH__", _workflow_combo_arrow_path()))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -683,6 +797,7 @@ class MappingPage(WorkflowPage):
         excel_service: ExcelDataService,
         generator: CertificateGenerator,
         localization: LocalizationManager,
+        template_service: TemplatePlaceholderService | None = None,
     ):
         super().__init__(
             localization,
@@ -691,7 +806,9 @@ class MappingPage(WorkflowPage):
         )
         self.excel_service = excel_service
         self.generator = generator
+        self.template_service = template_service or TemplatePlaceholderService()
         self.columns: list[str] = []
+        self.detected_placeholders: list[str] = []
 
         content_layout = QHBoxLayout()
         content_layout.setSpacing(16)
@@ -709,17 +826,13 @@ class MappingPage(WorkflowPage):
         self._bind_translation(self.columns_hint, "text", "hint.columns_panel")
         self.columns_list = QListWidget()
         self.columns_list.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.columns_list.setAlternatingRowColors(True)
-        self.columns_list.itemDoubleClicked.connect(self._apply_selected_column_from_item)
-        self.columns_list.currentRowChanged.connect(self._update_actions)
-        self.use_selected_column_button = QPushButton()
-        self._bind_translation(self.use_selected_column_button, "text", "button.use_selected_column")
-        self.use_selected_column_button.clicked.connect(self._use_selected_column)
-        self.use_selected_column_button.setEnabled(False)
+        self.columns_list.setAlternatingRowColors(False)
+        self.columns_list.setSpacing(2)
+        self.columns_list.setSelectionMode(QAbstractItemView.NoSelection)
+        self.columns_list.setFocusPolicy(Qt.NoFocus)
         left_layout.addWidget(self.columns_label)
         left_layout.addWidget(self.columns_hint)
         left_layout.addWidget(self.columns_list)
-        left_layout.addWidget(self.use_selected_column_button, alignment=Qt.AlignLeft)
         content_layout.addWidget(self.left_box, stretch=1)
 
         self.right_box, right_layout = self._create_card("group.placeholder_mappings")
@@ -728,9 +841,12 @@ class MappingPage(WorkflowPage):
         self.mapping_hint.setWordWrap(True)
         self.mapping_hint.setObjectName("workflowHint")
         self._bind_translation(self.mapping_hint, "text", "hint.mapping_editor")
+        self.template_status = QLabel()
+        self.template_status.setWordWrap(True)
+        self.template_status.setObjectName("workflowStatus")
         self.mapping_table = QTableWidget(0, 2)
         self.mapping_table.setObjectName("mappingTable")
-        self.mapping_table.setAlternatingRowColors(True)
+        self.mapping_table.setAlternatingRowColors(False)
         self.mapping_table.setShowGrid(False)
         self.mapping_table.horizontalHeader().setStretchLastSection(True)
         self.mapping_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
@@ -741,18 +857,23 @@ class MappingPage(WorkflowPage):
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.mapping_table.setMinimumHeight(300)
+        self.mapping_table.viewport().setStyleSheet("background: palette(alternate-base);")
         self.mapping_table.itemSelectionChanged.connect(self._update_actions)
 
         mapping_buttons = QHBoxLayout()
         self.add_button = QPushButton()
         self.remove_button = QPushButton()
+        self.refresh_button = QPushButton()
         self._bind_translation(self.add_button, "text", "button.add_mapping")
         self._bind_translation(self.remove_button, "text", "button.remove_selected")
-        self.add_button.clicked.connect(self._add_mapping_row)
+        self._bind_translation(self.refresh_button, "text", "button.refresh_mapping_data")
+        self.add_button.clicked.connect(self._add_empty_mapping_row)
         self.remove_button.clicked.connect(self._remove_selected_row)
+        self.refresh_button.clicked.connect(self._refresh_mapping_context)
         self.remove_button.setEnabled(False)
         mapping_buttons.addWidget(self.add_button)
         mapping_buttons.addWidget(self.remove_button)
+        mapping_buttons.addWidget(self.refresh_button)
         mapping_buttons.addStretch()
 
         self.validation_summary = QLabel()
@@ -765,6 +886,7 @@ class MappingPage(WorkflowPage):
         self.validation_label = self._create_field_label("label.validation")
 
         right_layout.addWidget(self.mapping_hint)
+        right_layout.addWidget(self.template_status)
         right_layout.addLayout(mapping_buttons)
         right_layout.addWidget(self.mapping_table, stretch=1)
         right_layout.addWidget(self.validation_label)
@@ -785,13 +907,7 @@ class MappingPage(WorkflowPage):
         self.retranslate_ui()
 
     def refresh_from_session(self):
-        self._loading = True
-        try:
-            self._load_columns()
-            self._populate_table()
-            self._refresh_validation()
-        finally:
-            self._loading = False
+        self._reload_mapping_context()
 
     def _load_columns(self):
         self.columns = []
@@ -815,28 +931,145 @@ class MappingPage(WorkflowPage):
             )
         )
         for column in self.columns:
-            self.columns_list.addItem(column)
+            self._add_column_entry(column)
+
+    def _add_column_entry(self, column_name: str):
+        item = QListWidgetItem()
+        item.setFlags(Qt.NoItemFlags)
+        self.columns_list.addItem(item)
+
+        row_widget = QFrame()
+        row_widget.setObjectName("columnEntry")
+        row_widget.setMinimumHeight(44)
+        layout = QHBoxLayout(row_widget)
+        layout.setContentsMargins(14, 8, 10, 8)
+        layout.setSpacing(10)
+
+        label = QLabel(column_name)
+        label.setObjectName("columnEntryLabel")
+        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        button = QPushButton("→")
+        button.setObjectName("columnEntryAddButton")
+        button.setCursor(Qt.PointingHandCursor)
+        button.setFixedSize(28, 28)
+        button.clicked.connect(lambda _checked=False, value=column_name: self._assign_column_to_mapping(value))
+
+        layout.addWidget(label, stretch=1)
+        layout.addWidget(button, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        item.setSizeHint(QSize(0, 48))
+        self.columns_list.setItemWidget(item, row_widget)
 
     def _populate_table(self):
         self.mapping_table.setRowCount(0)
-        mappings = self.session.mappings or [MappingEntry()]
+        mappings = self._build_mapping_rows()
         for mapping in mappings:
             self._add_mapping_row(mapping.placeholder, mapping.column_name)
+
+    def _build_mapping_rows(self) -> list[MappingEntry]:
+        merged_mappings: list[MappingEntry] = []
+        detected_lookup = {placeholder: None for placeholder in self.detected_placeholders}
+        manual_mappings = [
+            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
+            for entry in self.session.mappings
+        ]
+
+        for placeholder in self.detected_placeholders:
+            matching = next((entry for entry in manual_mappings if entry.placeholder == placeholder), None)
+            if matching is not None:
+                merged_mappings.append(matching)
+            else:
+                merged_mappings.append(MappingEntry(placeholder=placeholder))
+
+        for entry in manual_mappings:
+            placeholder = entry.placeholder.strip()
+            if not placeholder or placeholder not in detected_lookup:
+                merged_mappings.append(entry)
+
+        if not merged_mappings:
+            return [MappingEntry()]
+
+        self.session.mappings = [
+            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
+            for entry in merged_mappings
+            if entry.placeholder or entry.column_name
+        ]
+        return merged_mappings
+
+    def _load_template_placeholders(self):
+        self.detected_placeholders = []
+        if not self.session.template_path:
+            self.template_status.setText(self.localization.t("status.select_template_for_placeholders"))
+            return
+
+        try:
+            placeholders = self.template_service.extract_placeholders(self.session.template_path)
+        except Exception as exc:
+            self.template_status.setText(
+                self.localization.t("status.could_not_inspect_template", error=exc)
+            )
+            return
+
+        self.detected_placeholders = placeholders
+        if placeholders:
+            self.template_status.setText(
+                self.localization.t(
+                    "status.detected_template_placeholders",
+                    count=len(placeholders),
+                )
+            )
+            return
+
+        self.template_status.setText(self.localization.t("status.no_template_placeholders_detected"))
+
+    def _reload_mapping_context(self):
+        self._loading = True
+        try:
+            self._load_columns()
+            self._load_template_placeholders()
+            self._populate_table()
+            self._refresh_validation()
+        finally:
+            self._loading = False
+        self._update_actions()
+
+    def _refresh_mapping_context(self):
+        self._sync_session_from_table()
+        if self.session.excel_path:
+            self.excel_service.clear_cache(self.session.excel_path)
+        else:
+            self.excel_service.clear_cache()
+        if self.session.template_path:
+            self.template_service.clear_cache(self.session.template_path)
+        else:
+            self.template_service.clear_cache()
+        self._reload_mapping_context()
+        self.session_changed.emit()
+
+    def _add_empty_mapping_row(self):
+        row = self._add_mapping_row()
+        self.mapping_table.setCurrentCell(row, 0)
+        self.mapping_table.scrollToBottom()
+        placeholder_combo = self._get_cell_editor(row, 0, QComboBox)
+        if isinstance(placeholder_combo, QComboBox):
+            if placeholder_combo.lineEdit() is not None:
+                placeholder_combo.lineEdit().setFocus()
+            else:
+                placeholder_combo.setFocus()
 
     def _add_mapping_row(self, placeholder: str = "", column_name: str = ""):
         row = self.mapping_table.rowCount()
         self.mapping_table.insertRow(row)
-        self.mapping_table.setRowHeight(row, 44)
+        self.mapping_table.setRowHeight(row, 52)
 
         placeholder_item = QTableWidgetItem("")
         placeholder_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.mapping_table.setItem(row, 0, placeholder_item)
-        placeholder_input = QLineEdit()
-        placeholder_input.setText(placeholder)
-        placeholder_input.setMinimumHeight(34)
-        placeholder_input.textChanged.connect(self._sync_session_from_table)
-        placeholder_input.installEventFilter(self)
-        self.mapping_table.setCellWidget(row, 0, placeholder_input)
+        column_item = QTableWidgetItem("")
+        column_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+        self.mapping_table.setItem(row, 1, column_item)
+
+        placeholder_combo = self._create_placeholder_dropdown(placeholder)
+        self.mapping_table.setCellWidget(row, 0, self._wrap_table_editor(placeholder_combo))
 
         combo = QComboBox()
         combo.addItem("")
@@ -846,9 +1079,44 @@ class MappingPage(WorkflowPage):
             combo.setCurrentText(column_name)
         combo.currentTextChanged.connect(self._sync_session_from_table)
         combo.installEventFilter(self)
-        self.mapping_table.setCellWidget(row, 1, combo)
+        self.mapping_table.setCellWidget(row, 1, self._wrap_table_editor(combo))
         self._update_actions()
         return row
+
+    def _wrap_table_editor(self, editor: QWidget) -> QWidget:
+        container = QWidget()
+        container.setObjectName("mappingCellContainer")
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(0)
+        layout.addWidget(editor)
+        return container
+
+    def _create_placeholder_dropdown(self, placeholder: str) -> QComboBox:
+        combo = QComboBox()
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.NoInsert)
+        combo.setMinimumHeight(34)
+        combo.addItem("")
+        for value in self.detected_placeholders:
+            if combo.findText(value) == -1:
+                combo.addItem(value)
+        if placeholder and combo.findText(placeholder) == -1:
+            combo.addItem(placeholder)
+        combo.setCurrentText(placeholder)
+        combo.currentTextChanged.connect(self._sync_session_from_table)
+        combo.installEventFilter(self)
+        if combo.lineEdit() is not None:
+            combo.lineEdit().installEventFilter(self)
+        return combo
+
+    def _get_cell_editor(self, row: int, column: int, editor_type):
+        cell_widget = self.mapping_table.cellWidget(row, column)
+        if isinstance(cell_widget, editor_type):
+            return cell_widget
+        if isinstance(cell_widget, QWidget):
+            return cell_widget.findChild(editor_type)
+        return None
 
     def _remove_selected_row(self):
         current_row = self.mapping_table.currentRow()
@@ -857,17 +1125,6 @@ class MappingPage(WorkflowPage):
             self._sync_session_from_table()
         self._update_actions()
 
-    def _use_selected_column(self):
-        item = self.columns_list.currentItem()
-        if item is None:
-            return
-        self._assign_column_to_mapping(item.text())
-
-    def _apply_selected_column_from_item(self, item: QListWidgetItem):
-        if item is None:
-            return
-        self._assign_column_to_mapping(item.text())
-
     def _assign_column_to_mapping(self, column_name: str):
         row = self.mapping_table.currentRow()
         if row < 0 or row >= self.mapping_table.rowCount():
@@ -875,7 +1132,7 @@ class MappingPage(WorkflowPage):
             self.mapping_table.setCurrentCell(row, 0)
             return
 
-        combo = self.mapping_table.cellWidget(row, 1)
+        combo = self._get_cell_editor(row, 1, QComboBox)
         if isinstance(combo, QComboBox):
             combo.setCurrentText(column_name)
         self.mapping_table.setCurrentCell(row, 0)
@@ -886,9 +1143,9 @@ class MappingPage(WorkflowPage):
 
         mappings: list[MappingEntry] = []
         for row in range(self.mapping_table.rowCount()):
-            placeholder_widget = self.mapping_table.cellWidget(row, 0)
-            placeholder = placeholder_widget.text().strip() if isinstance(placeholder_widget, QLineEdit) else ""
-            combo = self.mapping_table.cellWidget(row, 1)
+            placeholder_widget = self._get_cell_editor(row, 0, QComboBox)
+            placeholder = placeholder_widget.currentText().strip() if isinstance(placeholder_widget, QComboBox) else ""
+            combo = self._get_cell_editor(row, 1, QComboBox)
             column_name = combo.currentText().strip() if isinstance(combo, QComboBox) else ""
 
             if placeholder or column_name:
@@ -929,14 +1186,13 @@ class MappingPage(WorkflowPage):
                 self.localization.t("table.excel_column"),
             ]
         )
+        self._load_template_placeholders()
         self._refresh_validation()
         if self.session.excel_path:
             self._load_columns()
         self._update_actions()
 
     def _update_actions(self, *_args):
-        has_selected_column = self.columns_list.currentItem() is not None
-        self.use_selected_column_button.setEnabled(has_selected_column)
         has_selected_row = self.mapping_table.currentRow() >= 0 and self.mapping_table.rowCount() > 0
         self.remove_button.setEnabled(has_selected_row)
 
@@ -948,7 +1204,11 @@ class MappingPage(WorkflowPage):
     def _select_row_for_editor(self, editor):
         for row in range(self.mapping_table.rowCount()):
             for column in range(self.mapping_table.columnCount()):
-                if self.mapping_table.cellWidget(row, column) is editor:
+                cell_widget = self.mapping_table.cellWidget(row, column)
+                if cell_widget is editor:
+                    self.mapping_table.setCurrentCell(row, column)
+                    return
+                if isinstance(cell_widget, QWidget) and cell_widget.findChild(type(editor)) is editor:
                     self.mapping_table.setCurrentCell(row, column)
                     return
 

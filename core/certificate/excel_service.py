@@ -13,20 +13,39 @@ def normalize_column_name(value: str) -> str:
 
 
 class ExcelDataService:
+    def __init__(self):
+        self._preview_cache: dict[str, tuple[tuple[int, int], ExcelPreview]] = {}
+
     def inspect(self, excel_path: str) -> ExcelPreview:
-        dataframe = self.read_dataframe(excel_path)
-        return ExcelPreview(
+        path = self._resolve_path(excel_path)
+        cache_key = str(path)
+        signature = self._build_signature(path)
+        cached = self._preview_cache.get(cache_key)
+        if cached and cached[0] == signature:
+            preview = cached[1]
+            return ExcelPreview(columns=list(preview.columns), row_count=preview.row_count)
+
+        dataframe = self.read_dataframe(str(path))
+        preview = ExcelPreview(
             columns=[str(column) for column in dataframe.columns],
             row_count=len(dataframe.index),
         )
+        self._preview_cache[cache_key] = (signature, preview)
+        return ExcelPreview(columns=list(preview.columns), row_count=preview.row_count)
 
     def read_dataframe(self, excel_path: str) -> pd.DataFrame:
-        if not excel_path:
-            raise ValueError("Excel path is empty.")
-        path = Path(excel_path)
-        if not path.exists():
-            raise FileNotFoundError(f"Excel file not found: {excel_path}")
+        path = self._resolve_path(excel_path)
         return pd.read_excel(path, header=0)
+
+    def clear_cache(self, excel_path: str | None = None):
+        if excel_path:
+            try:
+                cache_key = str(Path(excel_path).expanduser().resolve())
+            except OSError:
+                return
+            self._preview_cache.pop(cache_key, None)
+            return
+        self._preview_cache.clear()
 
     def build_column_lookup(self, columns: list[str]) -> dict[str, str]:
         lookup: dict[str, str] = {}
@@ -57,3 +76,15 @@ class ExcelDataService:
                 errors.append(f"Excel column '{column_name}' is not available in the selected workbook.")
 
         return errors
+
+    def _resolve_path(self, excel_path: str) -> Path:
+        if not excel_path:
+            raise ValueError("Excel path is empty.")
+        path = Path(excel_path).expanduser().resolve()
+        if not path.exists():
+            raise FileNotFoundError(f"Excel file not found: {excel_path}")
+        return path
+
+    def _build_signature(self, path: Path) -> tuple[int, int]:
+        stat = path.stat()
+        return stat.st_mtime_ns, stat.st_size

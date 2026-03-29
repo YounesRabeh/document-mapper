@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import GenerationResult, ProjectSession
+from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.certificate.session_store import ProjectSessionStore
 from core.manager.theme_manager import ThemeManager
@@ -77,6 +79,16 @@ QFrame#sidebarStageCard {
 }
 
 QFrame#sidebarStageCard:hover {
+    background: palette(window);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[completed="true"] {
+    background: palette(window);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[completed="true"]:hover {
     background: palette(button);
     border-color: palette(midlight);
 }
@@ -86,8 +98,14 @@ QFrame#sidebarStageCard[active="true"] {
     border-color: palette(highlight);
 }
 
+QFrame#sidebarStageCard[blocked="true"],
+QFrame#sidebarStageCard[blocked="true"]:hover {
+    background: transparent;
+    border-color: transparent;
+}
+
 QLabel#sidebarStageIndex {
-    background: palette(base);
+    background: palette(button);
     color: palette(text);
     border-radius: 14px;
     padding: 6px 0;
@@ -98,6 +116,16 @@ QLabel#sidebarStageIndex {
 QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageIndex {
     background: palette(highlight);
     color: palette(highlighted-text);
+}
+
+QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageIndex {
+    background: palette(midlight);
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageIndex {
+    background: palette(window);
+    color: palette(mid);
 }
 
 QLabel#sidebarStageTitle {
@@ -112,6 +140,10 @@ QLabel#sidebarStageDetail {
     opacity: 0.85;
 }
 
+QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
 QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
     color: palette(window-text);
 }
@@ -120,9 +152,14 @@ QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
     color: palette(window-text);
 }
 
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageTitle,
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageDetail {
+    color: palette(mid);
+}
+
 QPushButton#sidebarUtilityButton {
-    background: palette(base);
-    border: 1px solid palette(mid);
+    background: palette(window);
+    border: 1px solid palette(midlight);
     border-radius: 12px;
     color: palette(button-text);
     font-weight: 600;
@@ -134,6 +171,13 @@ QPushButton#sidebarUtilityButton:hover {
     background: palette(button);
 }
 """
+
+
+@dataclass(slots=True)
+class WorkflowStageState:
+    active: bool = False
+    completed: bool = False
+    blocked: bool = False
 
 
 class SidebarStageCard(QFrame):
@@ -148,6 +192,9 @@ class SidebarStageCard(QFrame):
 
         self.setObjectName("sidebarStageCard")
         self.setProperty("active", False)
+        self.setProperty("completed", False)
+        self.setProperty("blocked", False)
+        self._blocked = False
         self.setCursor(Qt.PointingHandCursor)
         self.setMinimumHeight(82)
 
@@ -187,14 +234,19 @@ class SidebarStageCard(QFrame):
         self.title_label.setText(self.localization.t(self.title_key))
         self.detail_label.setText(self.localization.t(self.detail_key))
 
-    def set_active(self, active: bool):
-        self.setProperty("active", active)
-        self.style().unpolish(self)
-        self.style().polish(self)
-        self.update()
+    def set_stage_state(self, state: WorkflowStageState):
+        self._blocked = state.blocked
+        self.setProperty("active", state.active)
+        self.setProperty("completed", state.completed)
+        self.setProperty("blocked", state.blocked)
+        self.setCursor(Qt.ArrowCursor if state.blocked else Qt.PointingHandCursor)
+        for widget in (self, self.index_label, self.title_label, self.detail_label):
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            widget.update()
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and not self._blocked:
             self.clicked.emit(self.stage_index)
         super().mousePressEvent(event)
 
@@ -208,6 +260,7 @@ class MainWindow(QMainWindow):
         self.current_project_path: str | None = None
         self.session_store = ProjectSessionStore()
         self.excel_service = ExcelDataService()
+        self.template_service = TemplatePlaceholderService()
         self.generator = CertificateGenerator(self.excel_service)
         self.session = self.session_store.load_last_session()
         self.last_result = GenerationResult()
@@ -241,7 +294,12 @@ class MainWindow(QMainWindow):
         root_layout.addWidget(self.stage_manager, stretch=1)
 
         self.setup_page = SetupPage(self.localization)
-        self.mapping_page = MappingPage(self.excel_service, self.generator, self.localization)
+        self.mapping_page = MappingPage(
+            self.excel_service,
+            self.generator,
+            self.localization,
+            self.template_service,
+        )
         self.generate_page = GeneratePage(self.generator, self.localization)
         self.results_page = ResultsPage(self.localization)
 
@@ -249,6 +307,8 @@ class MainWindow(QMainWindow):
         self.stage_manager.addWidget(self.mapping_page)
         self.stage_manager.addWidget(self.generate_page)
         self.stage_manager.addWidget(self.results_page)
+        self._last_valid_stage = 1
+        self.stage_manager.currentChanged.connect(self._handle_stage_changed)
 
         self.setup_page.next_requested.connect(lambda: self.goto_stage(2))
         self.mapping_page.prev_requested.connect(lambda: self.goto_stage(1))
@@ -374,24 +434,25 @@ class MainWindow(QMainWindow):
         self.mapping_page.bind_session(self.session)
         self.generate_page.bind_session(self.session)
         self.results_page.bind_result(self.last_result, self.session)
+        self._refresh_workflow_state()
 
     def _persist_last_session(self):
         self.session_store.save_last_session(self.session)
         self.generate_page.bind_session(self.session)
+        self._refresh_workflow_state()
 
     def goto_stage(self, index: int):
-        self.stage_manager.setCurrentIndex(index - 1)
-        if index == 2:
-            self.mapping_page.bind_session(self.session)
-        elif index == 3:
-            self.generate_page.bind_session(self.session)
-        elif index == 4:
-            self.results_page.bind_result(self.last_result, self.session)
-        current_page = self.stage_manager.currentWidget()
-        if hasattr(current_page, "scroll_to_top"):
-            current_page.scroll_to_top()
-        self._set_active_stage(index)
-        Logger.debug(f"Switched to workflow page {index}")
+        if index < 1 or index > self.stage_manager.count():
+            return False
+        if not self._can_navigate_to_stage(index):
+            self._refresh_workflow_state()
+            return False
+        target_index = index - 1
+        if self.stage_manager.currentIndex() == target_index:
+            self._handle_stage_changed(target_index)
+            return True
+        self.stage_manager.setCurrentIndex(target_index)
+        return True
 
     def _new_project(self):
         self.current_project_path = None
@@ -475,7 +536,76 @@ class MainWindow(QMainWindow):
         self.language_it_action.setChecked(self.localization.current_language == "it")
         for card in self.stage_cards.values():
             card.retranslate()
+        self._refresh_workflow_state()
 
-    def _set_active_stage(self, active_index: int):
+    def _handle_stage_changed(self, current_index: int):
+        stage_number = current_index + 1
+        if not self._can_navigate_to_stage(stage_number):
+            fallback_stage = self._resolve_fallback_stage()
+            if fallback_stage != stage_number:
+                self.stage_manager.blockSignals(True)
+                self.stage_manager.setCurrentIndex(fallback_stage - 1)
+                self.stage_manager.blockSignals(False)
+            self._handle_stage_changed(fallback_stage - 1)
+            return
+
+        self._last_valid_stage = stage_number
+        if stage_number == 2:
+            self.mapping_page.bind_session(self.session)
+        elif stage_number == 3:
+            self.generate_page.bind_session(self.session)
+        elif stage_number == 4:
+            self.results_page.bind_result(self.last_result, self.session)
+        current_page = self.stage_manager.currentWidget()
+        if hasattr(current_page, "scroll_to_top"):
+            current_page.scroll_to_top()
+        self._refresh_workflow_state()
+        Logger.debug(f"Switched to workflow page {stage_number}")
+
+    def _refresh_workflow_state(self):
+        states = self._compute_workflow_states()
         for index, card in self.stage_cards.items():
-            card.set_active(index == active_index)
+            card.set_stage_state(states[index])
+
+    def _compute_workflow_states(self) -> dict[int, WorkflowStageState]:
+        current_stage = max(1, min(self.stage_manager.currentIndex() + 1, self.stage_manager.count() or 1))
+        generate_available = not self.generator.validate_session(self.session)
+        results_available = self._has_generation_results()
+        blocked_by_stage = {
+            1: False,
+            2: False,
+            3: not generate_available,
+            4: not results_available,
+        }
+        return {
+            index: WorkflowStageState(
+                active=index == current_stage and not blocked_by_stage[index],
+                completed=index < current_stage and not blocked_by_stage[index],
+                blocked=blocked_by_stage[index],
+            )
+            for index in range(1, self.stage_manager.count() + 1)
+        }
+
+    def _can_navigate_to_stage(self, index: int) -> bool:
+        if index < 1 or index > self.stage_manager.count():
+            return False
+        return not self._compute_workflow_states()[index].blocked
+
+    def _resolve_fallback_stage(self) -> int:
+        if self._can_navigate_to_stage(self._last_valid_stage):
+            return self._last_valid_stage
+        for stage in range(self.stage_manager.count(), 0, -1):
+            if self._can_navigate_to_stage(stage):
+                return stage
+        return 1
+
+    def _has_generation_results(self) -> bool:
+        return any(
+            (
+                self.last_result.total_rows,
+                self.last_result.generated_docx_paths,
+                self.last_result.generated_pdf_paths,
+                self.last_result.log_path,
+                self.last_result.errors,
+            )
+        )

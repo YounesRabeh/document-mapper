@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+import zipfile
 
 import pandas as pd
 
@@ -11,6 +12,7 @@ from core.certificate.excel_service import ExcelDataService, normalize_column_na
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import MappingEntry, ProjectSession, normalize_certificate_type
 from core.certificate.session_store import ProjectSessionStore
+from core.certificate.template_service import TemplatePlaceholderService
 
 
 class FakeExcelService:
@@ -75,6 +77,82 @@ class ServicesTestCase(unittest.TestCase):
             [MappingEntry(placeholder="<<NOME>>", column_name="nome")],
         )
         self.assertEqual(errors, [])
+
+    def test_template_service_extracts_placeholders_from_docx(self):
+        service = TemplatePlaceholderService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.docx"
+            with zipfile.ZipFile(template_path, "w") as archive:
+                archive.writestr(
+                    "word/document.xml",
+                    (
+                        '<?xml version="1.0" encoding="UTF-8"?>'
+                        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                        "<w:body><w:p>"
+                        "<w:r><w:t>Hello </w:t></w:r>"
+                        "<w:r><w:t>&lt;&lt;NOME&gt;&gt;</w:t></w:r>"
+                        "<w:r><w:t> and </w:t></w:r>"
+                        "<w:r><w:t>&lt;DATA&gt;</w:t></w:r>"
+                        "</w:p></w:body></w:document>"
+                    ),
+                )
+
+            placeholders = service.extract_placeholders(str(template_path))
+
+        self.assertEqual(placeholders, ["<<NOME>>", "<DATA>"])
+
+    def test_excel_service_inspect_uses_cache_until_cleared(self):
+        class CountingExcelService(ExcelDataService):
+            def __init__(self):
+                super().__init__()
+                self.read_calls = 0
+
+            def read_dataframe(self, _excel_path: str) -> pd.DataFrame:
+                self.read_calls += 1
+                return pd.DataFrame([{"NOME": "Ada"}])
+
+        service = CountingExcelService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            excel_path = Path(temp_dir) / "data.xlsx"
+            excel_path.write_text("placeholder", encoding="utf-8")
+
+            preview_one = service.inspect(str(excel_path))
+            preview_two = service.inspect(str(excel_path))
+            service.clear_cache(str(excel_path))
+            preview_three = service.inspect(str(excel_path))
+
+        self.assertEqual(preview_one.columns, ["NOME"])
+        self.assertEqual(preview_two.columns, ["NOME"])
+        self.assertEqual(preview_three.columns, ["NOME"])
+        self.assertEqual(service.read_calls, 2)
+
+    def test_template_service_uses_cache_until_cleared(self):
+        class CountingTemplateService(TemplatePlaceholderService):
+            def __init__(self):
+                super().__init__()
+                self.extract_calls = 0
+
+            def _extract_template_text(self, path: Path) -> str:
+                self.extract_calls += 1
+                return super()._extract_binary_text(path)
+
+        service = CountingTemplateService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.doc"
+            template_path.write_text("Hello <<NOME>>", encoding="utf-8")
+
+            placeholders_one = service.extract_placeholders(str(template_path))
+            placeholders_two = service.extract_placeholders(str(template_path))
+            service.clear_cache(str(template_path))
+            placeholders_three = service.extract_placeholders(str(template_path))
+
+        self.assertEqual(placeholders_one, ["<<NOME>>"])
+        self.assertEqual(placeholders_two, ["<<NOME>>"])
+        self.assertEqual(placeholders_three, ["<<NOME>>"])
+        self.assertEqual(service.extract_calls, 2)
 
     def test_session_store_round_trip(self):
         session = ProjectSession(
