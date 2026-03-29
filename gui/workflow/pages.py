@@ -34,10 +34,13 @@ from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
     CERTIFICATE_TYPE_OPTIONS,
     DEFAULT_CERTIFICATE_TYPE,
+    DEFAULT_PLACEHOLDER_DELIMITER,
     GenerationResult,
     MappingEntry,
     ProjectSession,
+    derive_placeholder_boundaries,
     normalize_certificate_type,
+    normalize_placeholder_delimiter,
 )
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
@@ -278,6 +281,31 @@ QTableWidget#mappingTable QComboBox:focus,
 QTableWidget#mappingTable QLineEdit:focus {
     background: palette(base);
     border: 1px solid palette(midlight);
+}
+
+QTableWidget#mappingTable QPushButton#mappingRowDeleteButton {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 8px;
+    color: palette(text);
+    padding: 0;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QTableWidget#mappingTable QPushButton#mappingRowDeleteButton:hover {
+    background: palette(button);
+    border-color: palette(highlight);
+    color: palette(window-text);
+}
+
+QTableWidget#mappingTable QPushButton#mappingRowDeleteButton:pressed {
+    background: palette(midlight);
+    border-color: palette(midlight);
 }
 
 QTableWidget#mappingTable::item:hover {
@@ -809,6 +837,11 @@ class MappingPage(WorkflowPage):
         self.template_service = template_service or TemplatePlaceholderService()
         self.columns: list[str] = []
         self.detected_placeholders: list[str] = []
+        self._last_detected_delimiters: tuple[str, str] | None = None
+        self._delimiter_refresh_timer = QTimer(self)
+        self._delimiter_refresh_timer.setSingleShot(True)
+        self._delimiter_refresh_timer.setInterval(180)
+        self._delimiter_refresh_timer.timeout.connect(self._auto_refresh_mapping_context)
 
         content_layout = QHBoxLayout()
         content_layout.setSpacing(16)
@@ -840,7 +873,18 @@ class MappingPage(WorkflowPage):
         self.mapping_hint = QLabel()
         self.mapping_hint.setWordWrap(True)
         self.mapping_hint.setObjectName("workflowHint")
-        self._bind_translation(self.mapping_hint, "text", "hint.mapping_editor")
+        delimiter_row = QHBoxLayout()
+        delimiter_row.setContentsMargins(0, 0, 0, 0)
+        delimiter_row.setSpacing(12)
+        self.delimiter_label = self._create_field_label("field.placeholder_delimiter")
+        self.delimiter_input = QLineEdit()
+        self.delimiter_input.setClearButtonEnabled(True)
+        self.delimiter_input.setMaximumWidth(220)
+        self.delimiter_input.setMinimumHeight(40)
+        self.delimiter_input.textChanged.connect(self._sync_delimiter)
+        delimiter_row.addWidget(self.delimiter_label)
+        delimiter_row.addWidget(self.delimiter_input)
+        delimiter_row.addStretch()
         self.template_status = QLabel()
         self.template_status.setWordWrap(True)
         self.template_status.setObjectName("workflowStatus")
@@ -853,7 +897,7 @@ class MappingPage(WorkflowPage):
         self.mapping_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.mapping_table.verticalHeader().setVisible(False)
         self.mapping_table.verticalHeader().setDefaultSectionSize(44)
-        self.mapping_table.setColumnWidth(0, 320)
+        self.mapping_table.setColumnWidth(0, 280)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.mapping_table.setMinimumHeight(300)
@@ -862,17 +906,12 @@ class MappingPage(WorkflowPage):
 
         mapping_buttons = QHBoxLayout()
         self.add_button = QPushButton()
-        self.remove_button = QPushButton()
         self.refresh_button = QPushButton()
         self._bind_translation(self.add_button, "text", "button.add_mapping")
-        self._bind_translation(self.remove_button, "text", "button.remove_selected")
         self._bind_translation(self.refresh_button, "text", "button.refresh_mapping_data")
         self.add_button.clicked.connect(self._add_empty_mapping_row)
-        self.remove_button.clicked.connect(self._remove_selected_row)
         self.refresh_button.clicked.connect(self._refresh_mapping_context)
-        self.remove_button.setEnabled(False)
         mapping_buttons.addWidget(self.add_button)
-        mapping_buttons.addWidget(self.remove_button)
         mapping_buttons.addWidget(self.refresh_button)
         mapping_buttons.addStretch()
 
@@ -886,6 +925,7 @@ class MappingPage(WorkflowPage):
         self.validation_label = self._create_field_label("label.validation")
 
         right_layout.addWidget(self.mapping_hint)
+        right_layout.addLayout(delimiter_row)
         right_layout.addWidget(self.template_status)
         right_layout.addLayout(mapping_buttons)
         right_layout.addWidget(self.mapping_table, stretch=1)
@@ -907,7 +947,75 @@ class MappingPage(WorkflowPage):
         self.retranslate_ui()
 
     def refresh_from_session(self):
+        self._loading = True
+        try:
+            self.delimiter_input.setText(self.session.placeholder_delimiter)
+        finally:
+            self._loading = False
+        self._last_detected_delimiters = (
+            derive_placeholder_boundaries(self.session.detected_placeholder_delimiter)
+            if self.session.detected_placeholder_delimiter
+            else None
+        )
+        self._refresh_mapping_help_text()
         self._reload_mapping_context()
+
+    def _current_delimiter(self) -> str:
+        return self.delimiter_input.text().strip()
+
+    def _placeholder_example(self) -> str:
+        delimiter = self._current_delimiter() or DEFAULT_PLACEHOLDER_DELIMITER
+        start, end = derive_placeholder_boundaries(delimiter)
+        return f"{start}NOME{end}"
+
+    def _placeholder_pair_label(self) -> str:
+        delimiter = self._current_delimiter() or DEFAULT_PLACEHOLDER_DELIMITER
+        start, end = derive_placeholder_boundaries(delimiter)
+        return f"{start}...{end}"
+
+    def _refresh_mapping_help_text(self):
+        self.mapping_hint.setText(
+            self.localization.t(
+                "hint.mapping_editor",
+                example=self._placeholder_example(),
+            )
+        )
+
+    def _update_template_status(self):
+        delimiter = self._current_delimiter()
+        if not self.session.template_path:
+            self.template_status.setText(
+                self.localization.t(
+                    "status.select_template_for_placeholders",
+                    example=self._placeholder_example(),
+                )
+            )
+            return
+        if not delimiter:
+            self.template_status.setText(self.localization.t("status.placeholder_delimiter_required"))
+            return
+        if self._last_detected_delimiters == derive_placeholder_boundaries(delimiter):
+            if self.detected_placeholders:
+                self.template_status.setText(
+                    self.localization.t(
+                        "status.detected_template_placeholders",
+                        count=len(self.detected_placeholders),
+                    )
+                )
+            else:
+                self.template_status.setText(
+                    self.localization.t(
+                        "status.no_template_placeholders_detected",
+                        example=self._placeholder_pair_label(),
+                    )
+                )
+            return
+        self.template_status.setText(
+            self.localization.t(
+                "status.refresh_to_detect_placeholders",
+                example=self._placeholder_example(),
+            )
+        )
 
     def _load_columns(self):
         self.columns = []
@@ -997,19 +1105,29 @@ class MappingPage(WorkflowPage):
 
     def _load_template_placeholders(self):
         self.detected_placeholders = []
-        if not self.session.template_path:
-            self.template_status.setText(self.localization.t("status.select_template_for_placeholders"))
+        delimiter = self._current_delimiter()
+        if not self.session.template_path or not delimiter:
+            self._last_detected_delimiters = None
+            self.session.detected_placeholder_delimiter = ""
+            self.session.detected_placeholder_count = 0
+            self._update_template_status()
             return
 
         try:
-            placeholders = self.template_service.extract_placeholders(self.session.template_path)
+            placeholders = self.template_service.extract_placeholders(self.session.template_path, delimiter)
         except Exception as exc:
+            self._last_detected_delimiters = None
+            self.session.detected_placeholder_delimiter = ""
+            self.session.detected_placeholder_count = 0
             self.template_status.setText(
                 self.localization.t("status.could_not_inspect_template", error=exc)
             )
             return
 
         self.detected_placeholders = placeholders
+        self._last_detected_delimiters = derive_placeholder_boundaries(delimiter)
+        self.session.detected_placeholder_delimiter = delimiter
+        self.session.detected_placeholder_count = len(placeholders)
         if placeholders:
             self.template_status.setText(
                 self.localization.t(
@@ -1019,13 +1137,19 @@ class MappingPage(WorkflowPage):
             )
             return
 
-        self.template_status.setText(self.localization.t("status.no_template_placeholders_detected"))
+        self.template_status.setText(
+            self.localization.t(
+                "status.no_template_placeholders_detected",
+                example=self._placeholder_pair_label(),
+            )
+        )
 
-    def _reload_mapping_context(self):
+    def _reload_mapping_context(self, previous_detected_placeholders: set[str] | None = None):
         self._loading = True
         try:
             self._load_columns()
             self._load_template_placeholders()
+            self._prune_stale_detected_mappings(previous_detected_placeholders or set())
             self._populate_table()
             self._refresh_validation()
         finally:
@@ -1033,7 +1157,9 @@ class MappingPage(WorkflowPage):
         self._update_actions()
 
     def _refresh_mapping_context(self):
-        self._sync_session_from_table()
+        self._delimiter_refresh_timer.stop()
+        self._sync_session_from_table(emit_signal=False)
+        previous_detected_placeholders = set(self.detected_placeholders)
         if self.session.excel_path:
             self.excel_service.clear_cache(self.session.excel_path)
         else:
@@ -1042,8 +1168,57 @@ class MappingPage(WorkflowPage):
             self.template_service.clear_cache(self.session.template_path)
         else:
             self.template_service.clear_cache()
-        self._reload_mapping_context()
+        self._reload_mapping_context(previous_detected_placeholders)
         self.session_changed.emit()
+
+    def _auto_refresh_mapping_context(self):
+        self._sync_session_from_table(emit_signal=False)
+        previous_detected_placeholders = set(self.detected_placeholders)
+        self._reload_mapping_context(previous_detected_placeholders)
+        self.session_changed.emit()
+
+    def _prune_stale_detected_mappings(self, previous_detected_placeholders: set[str]):
+        if not previous_detected_placeholders:
+            return
+
+        stale_placeholders = previous_detected_placeholders.difference(self.detected_placeholders)
+        if not stale_placeholders:
+            return
+
+        self.session.mappings = [
+            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
+            for entry in self.session.mappings
+            if entry.placeholder.strip() not in stale_placeholders
+        ]
+
+    def _sync_delimiter(self, *_args):
+        if self._loading:
+            return
+
+        normalized_delimiter = normalize_placeholder_delimiter(self.delimiter_input.text())
+        if normalized_delimiter != self.delimiter_input.text():
+            cursor_position = min(self.delimiter_input.cursorPosition(), len(normalized_delimiter))
+            self._loading = True
+            try:
+                self.delimiter_input.setText(normalized_delimiter)
+                self.delimiter_input.setCursorPosition(cursor_position)
+            finally:
+                self._loading = False
+
+        self.session.placeholder_delimiter = normalized_delimiter
+        self.session.detected_placeholder_delimiter = ""
+        self.session.detected_placeholder_count = 0
+        self._last_detected_delimiters = None
+        self._refresh_mapping_help_text()
+        if not self.session.template_path or not normalized_delimiter:
+            self._refresh_mapping_context()
+            return
+
+        self.template_status.setText(self.localization.t("status.detecting_placeholders"))
+        self._refresh_validation()
+        self._update_actions()
+        self.session_changed.emit()
+        self._delimiter_refresh_timer.start()
 
     def _add_empty_mapping_row(self):
         row = self._add_mapping_row()
@@ -1079,17 +1254,19 @@ class MappingPage(WorkflowPage):
             combo.setCurrentText(column_name)
         combo.currentTextChanged.connect(self._sync_session_from_table)
         combo.installEventFilter(self)
-        self.mapping_table.setCellWidget(row, 1, self._wrap_table_editor(combo))
+        self.mapping_table.setCellWidget(row, 1, self._wrap_table_editor(combo, self._create_row_delete_button()))
         self._update_actions()
         return row
 
-    def _wrap_table_editor(self, editor: QWidget) -> QWidget:
+    def _wrap_table_editor(self, editor: QWidget, trailing_widget: QWidget | None = None) -> QWidget:
         container = QWidget()
         container.setObjectName("mappingCellContainer")
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(0)
-        layout.addWidget(editor)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(6)
+        layout.addWidget(editor, 1)
+        if trailing_widget is not None:
+            layout.addWidget(trailing_widget, 0, Qt.AlignRight | Qt.AlignVCenter)
         return container
 
     def _create_placeholder_dropdown(self, placeholder: str) -> QComboBox:
@@ -1118,11 +1295,38 @@ class MappingPage(WorkflowPage):
             return cell_widget.findChild(editor_type)
         return None
 
+    def _create_row_delete_button(self) -> QPushButton:
+        button = QPushButton("×")
+        button.setObjectName("mappingRowDeleteButton")
+        button.setCursor(Qt.PointingHandCursor)
+        button.setFixedSize(30, 30)
+        button.clicked.connect(lambda: self._remove_row_for_widget(button))
+        return button
+
+    def _find_row_for_widget(self, widget: QWidget) -> int:
+        for row in range(self.mapping_table.rowCount()):
+            for column in range(self.mapping_table.columnCount()):
+                cell_widget = self.mapping_table.cellWidget(row, column)
+                if cell_widget is widget:
+                    return row
+                if isinstance(cell_widget, QWidget) and cell_widget.findChild(type(widget)) is widget:
+                    return row
+        return -1
+
     def _remove_selected_row(self):
         current_row = self.mapping_table.currentRow()
         if current_row >= 0:
             self.mapping_table.removeRow(current_row)
             self._sync_session_from_table()
+        self._update_actions()
+
+    def _remove_row_for_widget(self, widget: QWidget):
+        row = self._find_row_for_widget(widget)
+        if row < 0:
+            return
+        self.mapping_table.setCurrentCell(row, 0)
+        self.mapping_table.removeRow(row)
+        self._sync_session_from_table()
         self._update_actions()
 
     def _assign_column_to_mapping(self, column_name: str):
@@ -1137,7 +1341,7 @@ class MappingPage(WorkflowPage):
             combo.setCurrentText(column_name)
         self.mapping_table.setCurrentCell(row, 0)
 
-    def _sync_session_from_table(self, *_args):
+    def _sync_session_from_table(self, *_args, emit_signal: bool = True):
         if self._loading:
             return
 
@@ -1154,7 +1358,8 @@ class MappingPage(WorkflowPage):
         self.session.mappings = mappings
         self._refresh_validation()
         self._update_actions()
-        self.session_changed.emit()
+        if emit_signal:
+            self.session_changed.emit()
 
     def _refresh_validation(self):
         errors = self.generator.validate_session(self.session)
@@ -1180,6 +1385,7 @@ class MappingPage(WorkflowPage):
 
     def retranslate_page(self):
         self.columns_label.setText(self.localization.t("status.no_workbook_loaded"))
+        self._refresh_mapping_help_text()
         self.mapping_table.setHorizontalHeaderLabels(
             [
                 self.localization.t("table.placeholder"),
@@ -1193,8 +1399,7 @@ class MappingPage(WorkflowPage):
         self._update_actions()
 
     def _update_actions(self, *_args):
-        has_selected_row = self.mapping_table.currentRow() >= 0 and self.mapping_table.rowCount() > 0
-        self.remove_button.setEnabled(has_selected_row)
+        return None
 
     def eventFilter(self, watched, event):
         if event.type() in (QEvent.FocusIn, QEvent.MouseButtonPress):

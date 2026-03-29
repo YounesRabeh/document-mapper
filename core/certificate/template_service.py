@@ -5,23 +5,41 @@ from pathlib import Path
 import zipfile
 from xml.etree import ElementTree
 
+from core.certificate.models import DEFAULT_PLACEHOLDER_DELIMITER, derive_placeholder_boundaries
 
-PLACEHOLDER_PATTERN = re.compile(r"<<[^<>\r\n]+>>|<[^<>\r\n]+>")
+
+def _build_placeholder_pattern(delimiter: str) -> tuple[re.Pattern[str], str, str] | None:
+    normalized = str(delimiter or "").strip()
+    if not normalized:
+        return None
+    start, end = derive_placeholder_boundaries(normalized)
+    prefix_guard = rf"(?<!{re.escape(start)})" if len(start) == 1 else ""
+    suffix_guard = rf"(?!{re.escape(end)})" if len(end) == 1 else ""
+    return re.compile(rf"{prefix_guard}{re.escape(start)}([^\r\n]+?){re.escape(end)}{suffix_guard}"), start, end
 
 
 class TemplatePlaceholderService:
     def __init__(self):
-        self._placeholder_cache: dict[str, tuple[tuple[int, int], list[str]]] = {}
+        self._placeholder_cache: dict[tuple[str, str, str], tuple[tuple[int, int], list[str]]] = {}
 
-    def extract_placeholders(self, template_path: str) -> list[str]:
+    def extract_placeholders(
+        self,
+        template_path: str,
+        delimiter: str = DEFAULT_PLACEHOLDER_DELIMITER,
+    ) -> list[str]:
         if not template_path:
             return []
+
+        pattern_result = _build_placeholder_pattern(delimiter)
+        if pattern_result is None:
+            return []
+        pattern, start, end = pattern_result
 
         path = Path(template_path).expanduser().resolve()
         if not path.exists():
             raise FileNotFoundError(f"Template file not found: {template_path}")
 
-        cache_key = str(path)
+        cache_key = (str(path), start, end)
         signature = self._build_signature(path)
         cached = self._placeholder_cache.get(cache_key)
         if cached and cached[0] == signature:
@@ -30,7 +48,12 @@ class TemplatePlaceholderService:
         text = self._extract_template_text(path)
         placeholders: list[str] = []
         seen: set[str] = set()
-        for match in PLACEHOLDER_PATTERN.finditer(text):
+        for match in pattern.finditer(text):
+            inner_value = match.group(1).strip()
+            if len(start) == 1 and inner_value.startswith(start):
+                continue
+            if len(end) == 1 and inner_value.endswith(end):
+                continue
             placeholder = match.group(0).strip()
             if placeholder and placeholder not in seen:
                 placeholders.append(placeholder)
@@ -44,7 +67,9 @@ class TemplatePlaceholderService:
                 cache_key = str(Path(template_path).expanduser().resolve())
             except OSError:
                 return
-            self._placeholder_cache.pop(cache_key, None)
+            keys_to_remove = [key for key in self._placeholder_cache if key[0] == cache_key]
+            for key in keys_to_remove:
+                self._placeholder_cache.pop(key, None)
             return
         self._placeholder_cache.clear()
 

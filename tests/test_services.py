@@ -10,7 +10,12 @@ import pandas as pd
 
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
 from core.certificate.generator import CertificateGenerator
-from core.certificate.models import MappingEntry, ProjectSession, normalize_certificate_type
+from core.certificate.models import (
+    DEFAULT_PLACEHOLDER_DELIMITER,
+    MappingEntry,
+    ProjectSession,
+    normalize_certificate_type,
+)
 from core.certificate.session_store import ProjectSessionStore
 from core.certificate.template_service import TemplatePlaceholderService
 
@@ -98,9 +103,42 @@ class ServicesTestCase(unittest.TestCase):
                     ),
                 )
 
-            placeholders = service.extract_placeholders(str(template_path))
+            placeholders = service.extract_placeholders(str(template_path), "<<")
 
-        self.assertEqual(placeholders, ["<<NOME>>", "<DATA>"])
+        self.assertEqual(placeholders, ["<<NOME>>"])
+
+    def test_template_service_extracts_placeholders_with_custom_delimiters(self):
+        service = TemplatePlaceholderService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.doc"
+            template_path.write_text("Hello %NOME% and %DATA%", encoding="utf-8")
+
+            placeholders = service.extract_placeholders(str(template_path), "%")
+
+        self.assertEqual(placeholders, ["%NOME%", "%DATA%"])
+
+    def test_template_service_does_not_match_nested_double_delimiters_as_single(self):
+        service = TemplatePlaceholderService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.doc"
+            template_path.write_text("Hello <<NOME>> only", encoding="utf-8")
+
+            placeholders = service.extract_placeholders(str(template_path), "<")
+
+        self.assertEqual(placeholders, [])
+
+    def test_template_service_returns_no_matches_for_empty_delimiters(self):
+        service = TemplatePlaceholderService()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.doc"
+            template_path.write_text("Hello <<NOME>>", encoding="utf-8")
+
+            placeholders = service.extract_placeholders(str(template_path), "")
+
+        self.assertEqual(placeholders, [])
 
     def test_excel_service_inspect_uses_cache_until_cleared(self):
         class CountingExcelService(ExcelDataService):
@@ -144,10 +182,10 @@ class ServicesTestCase(unittest.TestCase):
             template_path = Path(temp_dir) / "template.doc"
             template_path.write_text("Hello <<NOME>>", encoding="utf-8")
 
-            placeholders_one = service.extract_placeholders(str(template_path))
-            placeholders_two = service.extract_placeholders(str(template_path))
+            placeholders_one = service.extract_placeholders(str(template_path), "<<")
+            placeholders_two = service.extract_placeholders(str(template_path), "<<")
             service.clear_cache(str(template_path))
-            placeholders_three = service.extract_placeholders(str(template_path))
+            placeholders_three = service.extract_placeholders(str(template_path), "<<")
 
         self.assertEqual(placeholders_one, ["<<NOME>>"])
         self.assertEqual(placeholders_two, ["<<NOME>>"])
@@ -160,6 +198,7 @@ class ServicesTestCase(unittest.TestCase):
             template_path="/tmp/template.docx",
             output_dir="/tmp/out",
             certificate_type="attestato",
+            placeholder_delimiter="{{",
             export_pdf=True,
             mappings=[MappingEntry(placeholder="<<NAME>>", column_name="NOME")],
         )
@@ -170,6 +209,26 @@ class ServicesTestCase(unittest.TestCase):
             loaded = store.load(saved_path)
 
         self.assertEqual(loaded.to_dict(), session.to_dict())
+
+    def test_session_defaults_placeholder_delimiters(self):
+        session = ProjectSession()
+
+        self.assertEqual(session.placeholder_delimiter, DEFAULT_PLACEHOLDER_DELIMITER)
+        self.assertEqual(session.placeholder_start, "<<")
+        self.assertEqual(session.placeholder_end, ">>")
+
+    def test_session_infers_placeholder_delimiters_from_legacy_mappings(self):
+        session = ProjectSession.from_dict(
+            {
+                "mappings": [
+                    {"placeholder": "<NOME>", "column_name": "NOME"},
+                ]
+            }
+        )
+
+        self.assertEqual(session.placeholder_delimiter, "<")
+        self.assertEqual(session.placeholder_start, "<")
+        self.assertEqual(session.placeholder_end, ">")
 
     def test_session_store_loads_legacy_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -203,6 +262,9 @@ class ServicesTestCase(unittest.TestCase):
         self.assertEqual(session.output_dir, "/tmp/out")
         self.assertEqual(session.license_path, "/tmp/license.xml")
         self.assertEqual(session.certificate_type, "attestato")
+        self.assertEqual(session.placeholder_delimiter, "<<")
+        self.assertEqual(session.placeholder_start, "<<")
+        self.assertEqual(session.placeholder_end, ">>")
         self.assertTrue(session.export_pdf)
         self.assertEqual(session.pdf_timeout_seconds, 180)
         self.assertEqual(len(session.mappings), 2)
@@ -232,6 +294,8 @@ class ServicesTestCase(unittest.TestCase):
                 excel_path=str(Path(temp_dir) / "data.xlsx"),
                 template_path=str(template_path),
                 output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=2,
                 mappings=[
                     MappingEntry(placeholder="<<NOME>>", column_name="NOME"),
                     MappingEntry(placeholder="<<DATA>>", column_name="DATA"),
@@ -269,6 +333,8 @@ class ServicesTestCase(unittest.TestCase):
                 excel_path=str(excel_path),
                 template_path=str(template_path),
                 output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=1,
                 export_pdf=True,
                 mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
             )
@@ -313,12 +379,56 @@ class ServicesTestCase(unittest.TestCase):
                 excel_path=str(excel_path),
                 template_path=str(template_path),
                 output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=1,
                 mappings=[MappingEntry(placeholder="<<COGNOME>>", column_name="COGNOME")],
             )
 
             errors = generator.validate_session(session)
 
             self.assertTrue(any("COGNOME" in error for error in errors))
+
+    def test_validate_session_requires_placeholder_delimiter(self):
+        generator = CertificateGenerator(
+            excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada"}]))
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.docx"
+            excel_path = Path(temp_dir) / "data.xlsx"
+            template_path.write_text("template", encoding="utf-8")
+            excel_path.write_text("placeholder", encoding="utf-8")
+            session = ProjectSession(
+                excel_path=str(excel_path),
+                template_path=str(template_path),
+                output_dir=temp_dir,
+                mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
+            )
+            session.placeholder_delimiter = ""
+
+            errors = generator.validate_session(session)
+
+            self.assertIn("Set a placeholder delimiter before continuing.", errors)
+
+    def test_validate_session_requires_placeholder_detection_for_current_delimiter(self):
+        generator = CertificateGenerator(
+            excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada"}]))
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.docx"
+            excel_path = Path(temp_dir) / "data.xlsx"
+            template_path.write_text("template", encoding="utf-8")
+            excel_path.write_text("placeholder", encoding="utf-8")
+            session = ProjectSession(
+                excel_path=str(excel_path),
+                template_path=str(template_path),
+                output_dir=temp_dir,
+                placeholder_delimiter="<<",
+                mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
+            )
+
+            errors = generator.validate_session(session)
+
+            self.assertIn("Refresh and detect at least one placeholder before continuing.", errors)
 
 
 if __name__ == "__main__":

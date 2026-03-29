@@ -73,6 +73,7 @@ class ProjectSessionStore:
             output_dir=str(paths.get("output_dir", "")).strip(),
             license_path=str(paths.get("license_path", "")).strip(),
             certificate_type=normalize_certificate_type(paths.get("certificate_type", DEFAULT_CERTIFICATE_TYPE)),
+            placeholder_delimiter="",
             export_pdf=bool(paths.get("toPDF", False)),
             pdf_timeout_seconds=max(1, timeout),
             mappings=[

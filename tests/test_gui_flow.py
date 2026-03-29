@@ -7,7 +7,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from PySide6.QtCore import QSettings
-from PySide6.QtWidgets import QApplication, QComboBox, QLineEdit
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QComboBox
 
 from core.certificate.models import GenerationResult, MappingEntry, ProjectSession
 
@@ -41,8 +42,20 @@ class FakeGenerator:
             errors.append("Select a Word certificate template.")
         if not session.output_dir:
             errors.append("Choose an output folder.")
+        if not session.placeholder_delimiter.strip():
+            errors.append("Set a placeholder delimiter before continuing.")
+        elif (
+            session.detected_placeholder_delimiter.strip() != session.placeholder_delimiter.strip()
+            or session.detected_placeholder_count <= 0
+        ):
+            errors.append("Refresh and detect at least one placeholder before continuing.")
         if not session.mappings:
             errors.append("Add at least one placeholder mapping.")
+        for index, mapping in enumerate(session.mappings, start=1):
+            if not mapping.placeholder.strip():
+                errors.append(f"Mapping row {index} is missing a placeholder.")
+            if not mapping.column_name.strip():
+                errors.append(f"Mapping row {index} is missing an Excel column.")
         return errors
 
 
@@ -143,6 +156,7 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assertTrue(window.stage_cards[2].property("active"))
             self.assert_stage_state(window, 1, completed=True)
             self.assert_stage_state(window, 4, blocked=True)
+            self.assertEqual(window.mapping_page.delimiter_input.text(), "<<")
 
             window.stage_cards[4].clicked.emit(4)
             self.assertEqual(window.stage_manager.currentIndex(), 1)
@@ -157,6 +171,49 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assertEqual(len(window.session.mappings), 1)
             self.assertEqual(window.session.mappings[0].column_name, "NOME")
             self.assert_stage_state(window, 3, blocked=False, completed=False)
+            self.assertEqual(window.session.detected_placeholder_delimiter, "<<")
+            self.assertEqual(window.session.detected_placeholder_count, 1)
+
+            window.mapping_page.delimiter_input.setText("<   ")
+            QTest.qWait(250)
+            self.assertEqual(window.mapping_page.delimiter_input.text(), "<")
+            self.assertEqual(window.session.placeholder_delimiter, "<")
+            self.assertEqual(window.session.placeholder_start, "<")
+            self.assertEqual(window.session.placeholder_end, ">")
+            self.assertEqual(window.session.detected_placeholder_delimiter, "<")
+            self.assertEqual(window.session.detected_placeholder_count, 0)
+            self.assert_stage_state(window, 3, blocked=True)
+            self.assertEqual(window.mapping_page.detected_placeholders, [])
+            self.assertEqual(window.session.mappings, [])
+            self.assertEqual(window.session.detected_placeholder_delimiter, "<")
+            self.assertEqual(window.session.detected_placeholder_count, 0)
+            self.assert_stage_state(window, 3, blocked=True)
+            mapping_input = window.mapping_page._get_cell_editor(0, 0, QComboBox)
+            self.assertEqual(mapping_input.currentText(), "")
+
+            window.mapping_page.delimiter_input.clear()
+            self.assertEqual(window.session.placeholder_delimiter, "")
+            self.assert_stage_state(window, 3, blocked=True)
+
+            with patch.object(main_window_module.QMessageBox, "warning") as warning_mock:
+                window.mapping_page.next_button.click()
+
+            self.assertEqual(window.stage_manager.currentIndex(), 1)
+            self.assertTrue(warning_mock.called)
+            self.assertIn("Set a placeholder delimiter before continuing.", warning_mock.call_args.args[2])
+
+            window.mapping_page.delimiter_input.setText("<<")
+            QTest.qWait(250)
+            self.assertEqual(window.session.placeholder_delimiter, "<<")
+            self.assert_stage_state(window, 3, blocked=True)
+            mapping_input = window.mapping_page._get_cell_editor(0, 0, QComboBox)
+            self.assertEqual(mapping_input.currentText(), "<<NOME>>")
+            self.assertEqual(window.session.detected_placeholder_delimiter, "<<")
+            self.assertEqual(window.session.detected_placeholder_count, 1)
+            column_combo = window.mapping_page._get_cell_editor(0, 1, QComboBox)
+            column_combo.setCurrentText("NOME")
+            window.mapping_page._sync_session_from_table()
+            self.assert_stage_state(window, 3, blocked=False)
 
             window.stage_cards[3].clicked.emit(3)
             self.assertEqual(window.stage_manager.currentIndex(), 2)
@@ -181,6 +238,7 @@ class GuiFlowTestCase(unittest.TestCase):
             window.localization.set_language("it")
             self.assertEqual(window.view_menu.title(), "Visualizza")
             self.assertEqual(window.setup_page.next_button.text(), "Avanti: Mappatura")
+            self.assertIn("esempio", window.mapping_page.mapping_hint.text())
             self.assertIn("Creati 1 certificati DOCX su 1.", window.results_page.summary_label.text())
             self.assert_stage_state(window, 4, active=True, blocked=False)
 
@@ -194,6 +252,8 @@ class GuiFlowTestCase(unittest.TestCase):
                 excel_path=str(workbook),
                 template_path=str(template),
                 output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=1,
                 mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
             )
             with patch.object(main_window_module.QFileDialog, "getOpenFileName", return_value=("project.json", "")):

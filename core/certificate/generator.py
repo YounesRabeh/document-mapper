@@ -11,7 +11,7 @@ from typing import Callable
 import pandas as pd
 
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
-from core.certificate.models import GenerationResult, MappingEntry, ProjectSession
+from core.certificate.models import GenerationResult, MappingEntry, ProjectSession, normalize_placeholder_delimiter
 from core.util.logger import Logger
 
 LogCallback = Callable[[str], None]
@@ -49,6 +49,14 @@ class CertificateGenerator:
 
         if session.license_path and not Path(session.license_path).exists():
             errors.append(f"License file not found: {session.license_path}")
+
+        if not session.placeholder_delimiter.strip():
+            errors.append("Set a placeholder delimiter before continuing.")
+        else:
+            active_delimiter = normalize_placeholder_delimiter(session.placeholder_delimiter)
+            detected_delimiter = normalize_placeholder_delimiter(session.detected_placeholder_delimiter)
+            if detected_delimiter != active_delimiter or session.detected_placeholder_count <= 0:
+                errors.append("Refresh and detect at least one placeholder before continuing.")
 
         if not session.mappings:
             errors.append("Add at least one placeholder mapping.")
