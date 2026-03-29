@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
 from core.certificate.models import GenerationResult
@@ -75,6 +76,9 @@ class GuiFlowTestCase(unittest.TestCase):
 
         fake_store = FakeSessionStore()
         config = {
+            "APP_NAME": "Document Mapper Test",
+            "APP_ORGANIZATION": "Document Mapper Tests",
+            "APP_LANGUAGE": "en",
             "WINDOW_WIDTH": 900,
             "WINDOW_HEIGHT": 600,
             "WINDOW_MIN_WIDTH": 800,
@@ -88,6 +92,7 @@ class GuiFlowTestCase(unittest.TestCase):
             template = Path(temp_dir) / "template.docx"
             workbook.write_text("placeholder", encoding="utf-8")
             template.write_text("placeholder", encoding="utf-8")
+            QSettings(config["APP_ORGANIZATION"], config["APP_NAME"]).clear()
 
             with patch.object(main_window_module, "ProjectSessionStore", return_value=fake_store), patch.object(
                 main_window_module, "ExcelDataService", return_value=FakeExcelService()
@@ -129,6 +134,11 @@ class GuiFlowTestCase(unittest.TestCase):
 
             self.assertEqual(window.stage_manager.currentIndex(), 3)
             self.assertIn("Created 1 of 1 DOCX certificates.", window.results_page.summary_label.text())
+
+            window.localization.set_language("it")
+            self.assertEqual(window.view_menu.title(), "Visualizza")
+            self.assertEqual(window.setup_page.next_button.text(), "Avanti: Mappatura")
+            self.assertIn("Creati 1 certificati DOCX su 1.", window.results_page.summary_label.text())
 
 
 if __name__ == "__main__":

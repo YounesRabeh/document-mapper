@@ -1,11 +1,12 @@
 from pathlib import Path
 
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QFileDialog, QMainWindow, QMessageBox, QStackedWidget
 
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import GenerationResult, ProjectSession
+from core.manager.localization_manager import LocalizationManager
 from core.certificate.session_store import ProjectSessionStore
 from core.manager.theme_manager import ThemeManager
 from core.util.logger import Logger
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow):
         self.last_result = GenerationResult()
 
         ThemeManager(config)
+        self.localization = LocalizationManager(config)
 
         min_width = max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH)
         min_height = max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT)
@@ -37,16 +39,16 @@ class MainWindow(QMainWindow):
             max(self.config.get("WINDOW_HEIGHT", 500), min_height),
         )
         self.setMinimumSize(min_width, min_height)
-        self.setWindowTitle(self.config.get("WINDOW_TITLE", "Document Mapper"))
+        self.setWindowTitle(self.localization.t("app.name"))
 
         self.stage_manager = QStackedWidget()
         self.stage_manager.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.setCentralWidget(self.stage_manager)
 
-        self.setup_page = SetupPage()
-        self.mapping_page = MappingPage(self.excel_service, self.generator)
-        self.generate_page = GeneratePage(self.generator)
-        self.results_page = ResultsPage()
+        self.setup_page = SetupPage(self.localization)
+        self.mapping_page = MappingPage(self.excel_service, self.generator, self.localization)
+        self.generate_page = GeneratePage(self.generator, self.localization)
+        self.results_page = ResultsPage(self.localization)
 
         self.stage_manager.addWidget(self.setup_page)
         self.stage_manager.addWidget(self.mapping_page)
@@ -64,39 +66,53 @@ class MainWindow(QMainWindow):
         self.mapping_page.session_changed.connect(self._persist_last_session)
 
         self._create_menu_bar()
+        self.localization.language_changed.connect(self._retranslate_ui)
         self._refresh_pages()
+        self._retranslate_ui()
         self.goto_stage(1)
 
     def _create_menu_bar(self):
-        file_menu = self.menuBar().addMenu("File")
-        view_menu = self.menuBar().addMenu("View")
-        help_menu = self.menuBar().addMenu("Help")
+        self.file_menu = self.menuBar().addMenu("")
+        self.view_menu = self.menuBar().addMenu("")
+        self.help_menu = self.menuBar().addMenu("")
+        self.language_menu = self.view_menu.addMenu("")
 
-        new_project = QAction("New Project", self)
-        open_project = QAction("Open Project...", self)
-        save_project = QAction("Save Project", self)
-        save_project_as = QAction("Save Project As...", self)
-        exit_action = QAction("Exit", self)
-        toggle_theme = QAction("Toggle Theme", self)
-        about_action = QAction("About", self)
+        self.new_project_action = QAction(self)
+        self.open_project_action = QAction(self)
+        self.save_project_action = QAction(self)
+        self.save_project_as_action = QAction(self)
+        self.exit_action = QAction(self)
+        self.toggle_theme_action = QAction(self)
+        self.about_action = QAction(self)
 
-        new_project.triggered.connect(self._new_project)
-        open_project.triggered.connect(self._open_project)
-        save_project.triggered.connect(self._save_project)
-        save_project_as.triggered.connect(self._save_project_as)
-        exit_action.triggered.connect(self.close)
-        toggle_theme.triggered.connect(ThemeManager.toggle_theme)
-        about_action.triggered.connect(self._show_about)
+        self.new_project_action.triggered.connect(self._new_project)
+        self.open_project_action.triggered.connect(self._open_project)
+        self.save_project_action.triggered.connect(self._save_project)
+        self.save_project_as_action.triggered.connect(self._save_project_as)
+        self.exit_action.triggered.connect(self.close)
+        self.toggle_theme_action.triggered.connect(ThemeManager.toggle_theme)
+        self.about_action.triggered.connect(self._show_about)
 
-        file_menu.addAction(new_project)
-        file_menu.addAction(open_project)
-        file_menu.addAction(save_project)
-        file_menu.addAction(save_project_as)
-        file_menu.addSeparator()
-        file_menu.addAction(exit_action)
+        self.file_menu.addAction(self.new_project_action)
+        self.file_menu.addAction(self.open_project_action)
+        self.file_menu.addAction(self.save_project_action)
+        self.file_menu.addAction(self.save_project_as_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(self.exit_action)
 
-        view_menu.addAction(toggle_theme)
-        help_menu.addAction(about_action)
+        self.view_menu.addAction(self.toggle_theme_action)
+        self.help_menu.addAction(self.about_action)
+
+        self.language_action_group = QActionGroup(self)
+        self.language_action_group.setExclusive(True)
+        self.language_en_action = QAction(self, checkable=True)
+        self.language_it_action = QAction(self, checkable=True)
+        self.language_action_group.addAction(self.language_en_action)
+        self.language_action_group.addAction(self.language_it_action)
+        self.language_en_action.triggered.connect(lambda checked: checked and self.localization.set_language("en"))
+        self.language_it_action.triggered.connect(lambda checked: checked and self.localization.set_language("it"))
+        self.language_menu.addAction(self.language_en_action)
+        self.language_menu.addAction(self.language_it_action)
 
     def _refresh_pages(self):
         self.setup_page.bind_session(self.session)
@@ -127,7 +143,12 @@ class MainWindow(QMainWindow):
         self.goto_stage(1)
 
     def _open_project(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Open project", "", "Project Files (*.json)")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.localization.t("dialog.open_project.title"),
+            "",
+            self.localization.t("dialog.project_files"),
+        )
         if not path:
             return
         try:
@@ -138,7 +159,7 @@ class MainWindow(QMainWindow):
             self._refresh_pages()
             self.goto_stage(1)
         except Exception as exc:
-            QMessageBox.critical(self, "Open project failed", str(exc))
+            QMessageBox.critical(self, self.localization.t("dialog.open_project.failed_title"), str(exc))
 
     def _save_project(self):
         if self.current_project_path:
@@ -149,9 +170,9 @@ class MainWindow(QMainWindow):
     def _save_project_as(self):
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Save project",
+            self.localization.t("dialog.save_project.title"),
             self.current_project_path or str(Path.cwd() / "document-mapper-project.json"),
-            "Project Files (*.json)",
+            self.localization.t("dialog.project_files"),
         )
         if not path:
             return
@@ -165,6 +186,26 @@ class MainWindow(QMainWindow):
     def _show_about(self):
         QMessageBox.information(
             self,
-            "About Document Mapper",
-            "Document Mapper creates DOCX certificates from Excel data and optional PDF exports.",
+            self.localization.t("dialog.about.title"),
+            self.localization.t("dialog.about.body"),
         )
+
+    def _retranslate_ui(self):
+        self.setWindowTitle(self.localization.t("app.name"))
+        self.file_menu.setTitle(self.localization.t("menu.file"))
+        self.view_menu.setTitle(self.localization.t("menu.view"))
+        self.help_menu.setTitle(self.localization.t("menu.help"))
+        self.language_menu.setTitle(self.localization.t("menu.language"))
+
+        self.new_project_action.setText(self.localization.t("action.new_project"))
+        self.open_project_action.setText(self.localization.t("action.open_project"))
+        self.save_project_action.setText(self.localization.t("action.save_project"))
+        self.save_project_as_action.setText(self.localization.t("action.save_project_as"))
+        self.exit_action.setText(self.localization.t("action.exit"))
+        self.toggle_theme_action.setText(self.localization.t("action.toggle_theme"))
+        self.about_action.setText(self.localization.t("action.about"))
+
+        self.language_en_action.setText(self.localization.t("menu.language.en"))
+        self.language_it_action.setText(self.localization.t("menu.language.it"))
+        self.language_en_action.setChecked(self.localization.current_language == "en")
+        self.language_it_action.setChecked(self.localization.current_language == "it")

@@ -5,6 +5,7 @@ description = "A desktop app for generating certificate DOCX files from Excel da
 author = "Younes Rabeh"
 organization = "Younes Rabeh"
 domain = "younesrabeh.com"
+language = "en"
 
 [logging]
 persistence_logging = true

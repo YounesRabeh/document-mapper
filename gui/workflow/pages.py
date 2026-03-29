@@ -37,6 +37,7 @@ from core.certificate.models import (
     ProjectSession,
     normalize_certificate_type,
 )
+from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
 
 PAGE_MIN_WIDTH = 860
@@ -220,21 +221,17 @@ QCheckBox::indicator:disabled {
 """
 
 
-def _ellipsis_path(path: str) -> str:
-    if not path:
-        return "Not selected"
-    return str(Path(path))
-
-
 class WorkflowPage(QWidget):
     next_requested = Signal()
     prev_requested = Signal()
     session_changed = Signal()
 
-    def __init__(self, title: str, description: str):
+    def __init__(self, localization: LocalizationManager, title_key: str, description_key: str):
         super().__init__()
+        self.localization = localization
         self.session = ProjectSession()
         self._loading = False
+        self._translation_bindings: list[tuple[object, str, str]] = []
         self.setMinimumSize(PAGE_MIN_WIDTH, PAGE_MIN_HEIGHT)
         self.setObjectName("workflowPage")
         self.setStyleSheet(WORKFLOW_PAGE_QSS)
@@ -256,14 +253,16 @@ class WorkflowPage(QWidget):
         scroll_layout.setContentsMargins(24, 24, 24, 16)
         scroll_layout.setSpacing(18)
 
-        title_label = QLabel(title)
-        title_label.setObjectName("workflowTitle")
-        description_label = QLabel(description)
-        description_label.setWordWrap(True)
-        description_label.setObjectName("workflowDescription")
+        self.title_label = QLabel()
+        self.title_label.setObjectName("workflowTitle")
+        self.description_label = QLabel()
+        self.description_label.setWordWrap(True)
+        self.description_label.setObjectName("workflowDescription")
+        self._bind_translation(self.title_label, "text", title_key)
+        self._bind_translation(self.description_label, "text", description_key)
 
-        scroll_layout.addWidget(title_label)
-        scroll_layout.addWidget(description_label)
+        scroll_layout.addWidget(self.title_label)
+        scroll_layout.addWidget(self.description_label)
 
         self.body_layout = QVBoxLayout()
         self.body_layout.setSpacing(16)
@@ -274,6 +273,8 @@ class WorkflowPage(QWidget):
         self.nav_layout.setContentsMargins(24, 0, 24, 24)
         self.nav_layout.setSpacing(12)
         layout.addLayout(self.nav_layout)
+
+        self.localization.language_changed.connect(self.retranslate_ui)
 
     def bind_session(self, session: ProjectSession):
         self.session = session
@@ -292,8 +293,9 @@ class WorkflowPage(QWidget):
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(0)
 
-        title_label = QLabel(title)
+        title_label = QLabel()
         title_label.setObjectName("workflowCardTitle")
+        self._bind_translation(title_label, "text", title)
         title_layout.addWidget(title_label)
         title_layout.addStretch()
 
@@ -301,23 +303,51 @@ class WorkflowPage(QWidget):
         return card, card_layout
 
     def _create_field_label(self, text: str) -> QLabel:
-        label = QLabel(text)
+        label = QLabel()
         label.setObjectName("workflowFieldLabel")
         label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self._bind_translation(label, "text", text)
         return label
 
     def refresh_from_session(self):
         pass
 
+    def retranslate_page(self):
+        pass
+
+    def retranslate_ui(self, *_args):
+        for widget, role, key in self._translation_bindings:
+            self._apply_translation(widget, role, key)
+        self.retranslate_page()
+
+    def _bind_translation(self, widget: object, role: str, key: str):
+        self._translation_bindings.append((widget, role, key))
+        self._apply_translation(widget, role, key)
+
+    def _apply_translation(self, widget: object, role: str, key: str):
+        text = self.localization.t(key)
+        if role == "text":
+            widget.setText(text)
+        elif role == "title":
+            widget.setTitle(text)
+        elif role == "placeholder":
+            widget.setPlaceholderText(text)
+
+    def _display_path(self, path: str) -> str:
+        if not path:
+            return self.localization.t("common.not_selected")
+        return str(Path(path))
+
 
 class SetupPage(WorkflowPage):
-    def __init__(self):
+    def __init__(self, localization: LocalizationManager):
         super().__init__(
-            "Setup",
-            "Choose the Excel workbook, Word template, output folder, and generation options for this certificate batch.",
+            localization,
+            "page.setup.title",
+            "page.setup.description",
         )
 
-        form_card, form_card_layout = self._create_card("Certificate Batch")
+        form_card, form_card_layout = self._create_card("card.certificate_batch")
         form = QGridLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setHorizontalSpacing(16)
@@ -329,40 +359,40 @@ class SetupPage(WorkflowPage):
         self.body_layout.addWidget(form_card)
 
         self.excel_input = self._create_browse_row(
-            "Workbook",
-            "Select Excel workbook",
+            "button.workbook",
+            "placeholder.select_excel_workbook",
             self._browse_excel,
         )
         self.template_input = self._create_browse_row(
-            "Template",
-            "Select Word template",
+            "button.template",
+            "placeholder.select_word_template",
             self._browse_template,
         )
         self.output_input = self._create_browse_row(
-            "Output folder",
-            "Select output folder",
+            "button.output_folder",
+            "placeholder.select_output_folder",
             self._browse_output_dir,
         )
 
-        self._add_browse_row(form, 0, "Excel workbook", self.excel_input)
-        self._add_browse_row(form, 1, "Word template", self.template_input)
-        self._add_browse_row(form, 2, "Output folder", self.output_input)
+        self._add_browse_row(form, 0, "field.excel_workbook", self.excel_input)
+        self._add_browse_row(form, 1, "field.word_template", self.template_input)
+        self._add_browse_row(form, 2, "field.output_folder", self.output_input)
 
         self.certificate_type_input = self._create_certificate_type_dropdown()
         self.certificate_type_input.setMinimumHeight(40)
-        form.addWidget(self._create_field_label("Certificate type"), 3, 0)
+        form.addWidget(self._create_field_label("field.certificate_type"), 3, 0)
         form.addWidget(self.certificate_type_input, 3, 1, 1, 2)
 
-        self.certificate_type_hint = QLabel(
-            "Integrale: tipo B/C = 12 ore, tipo A = 16 ore. Retraining: tipo B/C = 4h, tipo A = 6h."
-        )
+        self.certificate_type_hint = QLabel()
         self.certificate_type_hint.setWordWrap(True)
         self.certificate_type_hint.setObjectName("workflowHint")
+        self._bind_translation(self.certificate_type_hint, "text", "hint.certificate_type")
         form_card_layout.addWidget(self.certificate_type_hint)
 
-        options_card, options_layout = self._create_card("Export Options")
+        options_card, options_layout = self._create_card("card.export_options")
 
-        self.export_pdf_checkbox = QCheckBox("Also export PDF")
+        self.export_pdf_checkbox = QCheckBox()
+        self._bind_translation(self.export_pdf_checkbox, "text", "checkbox.export_pdf")
         self.pdf_timeout_input = QSpinBox()
         self.pdf_timeout_input.setRange(10, 3600)
         self.pdf_timeout_input.setSuffix(" s")
@@ -375,12 +405,12 @@ class SetupPage(WorkflowPage):
 
         export_row.addWidget(self.export_pdf_checkbox)
         export_row.addStretch()
-        export_row.addWidget(self._create_field_label("PDF timeout"))
+        export_row.addWidget(self._create_field_label("field.pdf_timeout"))
         export_row.addWidget(self.pdf_timeout_input)
         options_layout.addLayout(export_row)
         self.body_layout.addWidget(options_card)
 
-        status_card, status_card_layout = self._create_card("Session Summary")
+        status_card, status_card_layout = self._create_card("card.session_summary")
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
         self.status_label.setObjectName("workflowStatus")
@@ -388,17 +418,19 @@ class SetupPage(WorkflowPage):
         status_card_layout.addWidget(self.status_label)
         self.body_layout.addWidget(status_card)
 
-        next_button = QPushButton("Next: Mapping")
-        next_button.setObjectName("workflowPrimaryButton")
-        next_button.setMinimumWidth(170)
-        next_button.setMinimumHeight(42)
-        next_button.clicked.connect(self._go_next)
+        self.next_button = QPushButton()
+        self._bind_translation(self.next_button, "text", "button.next_mapping")
+        self.next_button.setObjectName("workflowPrimaryButton")
+        self.next_button.setMinimumWidth(170)
+        self.next_button.setMinimumHeight(42)
+        self.next_button.clicked.connect(self._go_next)
         self.nav_layout.addStretch()
-        self.nav_layout.addWidget(next_button)
+        self.nav_layout.addWidget(self.next_button)
 
         self.certificate_type_input.currentTextChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
+        self.retranslate_ui()
 
     def _create_certificate_type_dropdown(self):
         widget = QComboBox()
@@ -413,7 +445,7 @@ class SetupPage(WorkflowPage):
         grid.addWidget(row_widgets["button"], row, 2)
         grid.setRowMinimumHeight(row, 46)
 
-    def _create_browse_row(self, button_label: str, placeholder: str, callback):
+    def _create_browse_row(self, button_key: str, placeholder_key: str, callback):
         container = QWidget()
         container.setMinimumWidth(420)
         container.setMinimumHeight(40)
@@ -422,11 +454,12 @@ class SetupPage(WorkflowPage):
         layout.setSpacing(0)
 
         text_input = QLineEdit()
-        text_input.setPlaceholderText(placeholder)
+        self._bind_translation(text_input, "placeholder", placeholder_key)
         text_input.setClearButtonEnabled(True)
         text_input.setMinimumWidth(360)
         text_input.setMinimumHeight(40)
-        browse_button = QPushButton(button_label)
+        browse_button = QPushButton()
+        self._bind_translation(browse_button, "text", button_key)
         browse_button.setMinimumWidth(148)
         browse_button.setMinimumHeight(40)
         browse_button.clicked.connect(callback)
@@ -457,11 +490,14 @@ class SetupPage(WorkflowPage):
 
     def _refresh_status(self):
         lines = [
-            f"Workbook: {_ellipsis_path(self.session.excel_path)}",
-            f"Template: {_ellipsis_path(self.session.template_path)}",
-            f"Output folder: {_ellipsis_path(self.session.output_dir)}",
-            f"Certificate type: {self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE}",
-            f"Mappings configured: {len(self.session.mappings)}",
+            self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
+            self.localization.t("summary.template", value=self._display_path(self.session.template_path)),
+            self.localization.t("summary.output_folder", value=self._display_path(self.session.output_dir)),
+            self.localization.t(
+                "summary.certificate_type",
+                value=self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE,
+            ),
+            self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
         ]
         self.status_label.setText("\n".join(lines))
 
@@ -490,17 +526,31 @@ class SetupPage(WorkflowPage):
         self._sync_session()
 
     def _browse_excel(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select Excel workbook", "", "Excel Files (*.xlsx *.xls)")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.localization.t("dialog.select_excel_workbook.title"),
+            "",
+            self.localization.t("dialog.excel_files"),
+        )
         if path:
             self._set_text_and_sync(self.excel_input["input"], path)
 
     def _browse_template(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Select Word template", "", "Word Files (*.docx *.doc)")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.localization.t("dialog.select_word_template.title"),
+            "",
+            self.localization.t("dialog.word_files"),
+        )
         if path:
             self._set_text_and_sync(self.template_input["input"], path)
 
     def _browse_output_dir(self):
-        path = QFileDialog.getExistingDirectory(self, "Select output folder", self.session.output_dir or "")
+        path = QFileDialog.getExistingDirectory(
+            self,
+            self.localization.t("dialog.select_output_folder.title"),
+            self.session.output_dir or "",
+        )
         if path:
             self._set_text_and_sync(self.output_input["input"], path)
 
@@ -508,12 +558,21 @@ class SetupPage(WorkflowPage):
         self._sync_session()
         self.next_requested.emit()
 
+    def retranslate_page(self):
+        self._refresh_status()
+
 
 class MappingPage(WorkflowPage):
-    def __init__(self, excel_service: ExcelDataService, generator: CertificateGenerator):
+    def __init__(
+        self,
+        excel_service: ExcelDataService,
+        generator: CertificateGenerator,
+        localization: LocalizationManager,
+    ):
         super().__init__(
-            "Mapping",
-            "Create explicit mappings between the literal placeholders used in the template and the columns available in the workbook.",
+            localization,
+            "page.mapping.title",
+            "page.mapping.description",
         )
         self.excel_service = excel_service
         self.generator = generator
@@ -523,25 +582,26 @@ class MappingPage(WorkflowPage):
         content_layout.setSpacing(16)
         self.body_layout.addLayout(content_layout, stretch=1)
 
-        left_box = QGroupBox("Workbook columns")
-        left_layout = QVBoxLayout(left_box)
+        self.left_box = QGroupBox()
+        self._bind_translation(self.left_box, "title", "group.workbook_columns")
+        left_layout = QVBoxLayout(self.left_box)
         left_layout.setContentsMargins(12, 12, 12, 12)
-        left_box.setMinimumWidth(SIDE_PANEL_MIN_WIDTH)
-        left_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
-        self.columns_label = QLabel("No workbook loaded yet.")
+        self.left_box.setMinimumWidth(SIDE_PANEL_MIN_WIDTH)
+        self.left_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
+        self.columns_label = QLabel()
         self.columns_label.setWordWrap(True)
         self.columns_list = QListWidget()
         self.columns_list.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         left_layout.addWidget(self.columns_label)
         left_layout.addWidget(self.columns_list)
-        content_layout.addWidget(left_box, stretch=1)
+        content_layout.addWidget(self.left_box, stretch=1)
 
-        right_box = QGroupBox("Placeholder mappings")
-        right_layout = QVBoxLayout(right_box)
+        self.right_box = QGroupBox()
+        self._bind_translation(self.right_box, "title", "group.placeholder_mappings")
+        right_layout = QVBoxLayout(self.right_box)
         right_layout.setContentsMargins(12, 12, 12, 12)
-        right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
+        self.right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
         self.mapping_table = QTableWidget(0, 2)
-        self.mapping_table.setHorizontalHeaderLabels(["Placeholder", "Excel column"])
         self.mapping_table.horizontalHeader().setStretchLastSection(True)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
@@ -549,32 +609,39 @@ class MappingPage(WorkflowPage):
         self.mapping_table.itemChanged.connect(self._sync_session_from_table)
 
         mapping_buttons = QHBoxLayout()
-        add_button = QPushButton("Add mapping")
-        remove_button = QPushButton("Remove selected")
-        add_button.clicked.connect(self._add_mapping_row)
-        remove_button.clicked.connect(self._remove_selected_row)
-        mapping_buttons.addWidget(add_button)
-        mapping_buttons.addWidget(remove_button)
+        self.add_button = QPushButton()
+        self.remove_button = QPushButton()
+        self._bind_translation(self.add_button, "text", "button.add_mapping")
+        self._bind_translation(self.remove_button, "text", "button.remove_selected")
+        self.add_button.clicked.connect(self._add_mapping_row)
+        self.remove_button.clicked.connect(self._remove_selected_row)
+        mapping_buttons.addWidget(self.add_button)
+        mapping_buttons.addWidget(self.remove_button)
         mapping_buttons.addStretch()
 
         self.validation_output = QPlainTextEdit()
         self.validation_output.setReadOnly(True)
         self.validation_output.setMaximumBlockCount(200)
         self.validation_output.setMinimumHeight(EDITOR_MIN_HEIGHT)
+        self.validation_label = QLabel()
+        self._bind_translation(self.validation_label, "text", "label.validation")
 
         right_layout.addLayout(mapping_buttons)
         right_layout.addWidget(self.mapping_table, stretch=1)
-        right_layout.addWidget(QLabel("Validation"))
+        right_layout.addWidget(self.validation_label)
         right_layout.addWidget(self.validation_output)
-        content_layout.addWidget(right_box, stretch=2)
+        content_layout.addWidget(self.right_box, stretch=2)
 
-        back_button = QPushButton("Back")
-        next_button = QPushButton("Next: Generate")
-        back_button.clicked.connect(self.prev_requested.emit)
-        next_button.clicked.connect(self._go_next)
-        self.nav_layout.addWidget(back_button)
+        self.back_button = QPushButton()
+        self.next_button = QPushButton()
+        self._bind_translation(self.back_button, "text", "button.back")
+        self._bind_translation(self.next_button, "text", "button.next_generate")
+        self.back_button.clicked.connect(self.prev_requested.emit)
+        self.next_button.clicked.connect(self._go_next)
+        self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addStretch()
-        self.nav_layout.addWidget(next_button)
+        self.nav_layout.addWidget(self.next_button)
+        self.retranslate_ui()
 
     def refresh_from_session(self):
         self._loading = True
@@ -589,17 +656,23 @@ class MappingPage(WorkflowPage):
         self.columns = []
         self.columns_list.clear()
         if not self.session.excel_path:
-            self.columns_label.setText("Select a workbook on the Setup page to see available columns.")
+            self.columns_label.setText(self.localization.t("status.select_workbook_for_columns"))
             return
 
         try:
             preview = self.excel_service.inspect(self.session.excel_path)
         except Exception as exc:
-            self.columns_label.setText(f"Could not inspect workbook: {exc}")
+            self.columns_label.setText(self.localization.t("status.could_not_inspect_workbook", error=exc))
             return
 
         self.columns = preview.columns
-        self.columns_label.setText(f"{preview.row_count} rows detected in {_ellipsis_path(self.session.excel_path)}")
+        self.columns_label.setText(
+            self.localization.t(
+                "status.rows_detected",
+                row_count=preview.row_count,
+                path=self._display_path(self.session.excel_path),
+            )
+        )
         for column in self.columns:
             self.columns_list.addItem(column)
 
@@ -651,17 +724,31 @@ class MappingPage(WorkflowPage):
     def _refresh_validation(self):
         errors = self.generator.validate_session(self.session)
         if errors:
-            self.validation_output.setPlainText("\n".join(f"- {error}" for error in errors))
+            translated = [self.localization.translate_runtime_text(error) for error in errors]
+            self.validation_output.setPlainText("\n".join(f"- {error}" for error in translated))
         else:
-            self.validation_output.setPlainText("Ready to generate certificates.")
+            self.validation_output.setPlainText(self.localization.t("status.ready_to_generate"))
 
     def _go_next(self):
         self._sync_session_from_table()
         errors = self.generator.validate_session(self.session)
         if errors:
-            QMessageBox.warning(self, "Cannot continue", "\n".join(errors))
+            translated = [self.localization.translate_runtime_text(error) for error in errors]
+            QMessageBox.warning(self, self.localization.t("dialog.cannot_continue.title"), "\n".join(translated))
             return
         self.next_requested.emit()
+
+    def retranslate_page(self):
+        self.columns_label.setText(self.localization.t("status.no_workbook_loaded"))
+        self.mapping_table.setHorizontalHeaderLabels(
+            [
+                self.localization.t("table.placeholder"),
+                self.localization.t("table.excel_column"),
+            ]
+        )
+        self._refresh_validation()
+        if self.session.excel_path:
+            self._load_columns()
 
 
 class GenerationWorker(QObject):
@@ -686,64 +773,74 @@ class GenerationWorker(QObject):
 class GeneratePage(WorkflowPage):
     results_ready = Signal(object)
 
-    def __init__(self, generator: CertificateGenerator):
+    def __init__(self, generator: CertificateGenerator, localization: LocalizationManager):
         super().__init__(
-            "Generate",
-            "Review the current batch, validate the inputs, and run the document generation pipeline.",
+            localization,
+            "page.generate.title",
+            "page.generate.description",
         )
         self.generator = generator
         self._thread: QThread | None = None
         self._worker: GenerationWorker | None = None
 
-        summary_box = QGroupBox("Batch summary")
-        summary_layout = QVBoxLayout(summary_box)
+        self.summary_box = QGroupBox()
+        self._bind_translation(self.summary_box, "title", "group.batch_summary")
+        summary_layout = QVBoxLayout(self.summary_box)
         summary_layout.setContentsMargins(12, 12, 12, 12)
-        summary_box.setMinimumHeight(PANEL_MIN_HEIGHT)
+        self.summary_box.setMinimumHeight(PANEL_MIN_HEIGHT)
         self.summary_output = QPlainTextEdit()
         self.summary_output.setReadOnly(True)
         self.summary_output.setMinimumHeight(PANEL_MIN_HEIGHT - 24)
         summary_layout.addWidget(self.summary_output)
-        self.body_layout.addWidget(summary_box)
+        self.body_layout.addWidget(self.summary_box)
 
-        log_box = QGroupBox("Generation log")
-        log_layout = QVBoxLayout(log_box)
+        self.log_box = QGroupBox()
+        self._bind_translation(self.log_box, "title", "group.generation_log")
+        log_layout = QVBoxLayout(self.log_box)
         log_layout.setContentsMargins(12, 12, 12, 12)
-        log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
+        self.log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
         self.log_output = QPlainTextEdit()
         self.log_output.setReadOnly(True)
         self.log_output.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         log_layout.addWidget(self.log_output)
-        self.body_layout.addWidget(log_box, stretch=1)
+        self.body_layout.addWidget(self.log_box, stretch=1)
 
-        back_button = QPushButton("Back")
-        self.generate_button = QPushButton("Generate certificates")
-        back_button.clicked.connect(self.prev_requested.emit)
+        self.back_button = QPushButton()
+        self.generate_button = QPushButton()
+        self._bind_translation(self.back_button, "text", "button.back")
+        self._bind_translation(self.generate_button, "text", "button.generate_certificates")
+        self.back_button.clicked.connect(self.prev_requested.emit)
         self.generate_button.clicked.connect(self._start_generation)
-        self.nav_layout.addWidget(back_button)
+        self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(self.generate_button)
+        self.retranslate_ui()
 
     def refresh_from_session(self):
         errors = self.generator.validate_session(self.session)
         summary_lines = [
-            f"Workbook: {_ellipsis_path(self.session.excel_path)}",
-            f"Template: {_ellipsis_path(self.session.template_path)}",
-            f"Output: {_ellipsis_path(self.session.output_dir)}",
-            f"Mappings: {len(self.session.mappings)}",
-            f"Export PDF: {'Yes' if self.session.export_pdf else 'No'}",
+            self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
+            self.localization.t("summary.template", value=self._display_path(self.session.template_path)),
+            self.localization.t("summary.output", value=self._display_path(self.session.output_dir)),
+            self.localization.t("summary.mappings", count=len(self.session.mappings)),
+            self.localization.t(
+                "summary.export_pdf_enabled",
+                value=self.localization.t("common.yes") if self.session.export_pdf else self.localization.t("common.no"),
+            ),
             "",
-            "Validation",
+            self.localization.t("summary.validation"),
         ]
         if errors:
-            summary_lines.extend(f"- {error}" for error in errors)
+            summary_lines.extend(f"- {self.localization.translate_runtime_text(error)}" for error in errors)
         else:
-            summary_lines.append("- Ready to generate")
+            summary_lines.append(self.localization.t("summary.ready_to_generate_short"))
         self.summary_output.setPlainText("\n".join(summary_lines))
 
     def _start_generation(self):
         errors = self.generator.validate_session(self.session)
         if errors:
-            QMessageBox.warning(self, "Cannot generate", "\n".join(errors))
+            translated = [self.localization.translate_runtime_text(error) for error in errors]
+            QMessageBox.warning(self, self.localization.t("dialog.cannot_generate.title"), "\n".join(translated))
             self.refresh_from_session()
             return
 
@@ -767,15 +864,21 @@ class GeneratePage(WorkflowPage):
         self._thread.start()
 
     def _handle_finished(self, result: GenerationResult):
-        self.log_output.appendPlainText("Generation finished.")
+        self.log_output.appendPlainText(self.localization.t("log.generation_finished"))
         self.generate_button.setEnabled(True)
         self.results_ready.emit(result)
         self._cleanup_thread()
 
     def _handle_failed(self, error_message: str):
-        self.log_output.appendPlainText(f"Generation failed: {error_message}")
+        self.log_output.appendPlainText(
+            self.localization.t("log.generation_failed", error=self.localization.translate_runtime_text(error_message))
+        )
         self.generate_button.setEnabled(True)
-        QMessageBox.critical(self, "Generation failed", error_message)
+        QMessageBox.critical(
+            self,
+            self.localization.t("dialog.generation_failed.title"),
+            self.localization.translate_runtime_text(error_message),
+        )
         self._cleanup_thread()
 
     def _cleanup_thread(self):
@@ -784,51 +887,61 @@ class GeneratePage(WorkflowPage):
         self._worker = None
         self._thread = None
 
+    def retranslate_page(self):
+        self.refresh_from_session()
+
 
 class ResultsPage(WorkflowPage):
-    def __init__(self):
+    def __init__(self, localization: LocalizationManager):
         super().__init__(
-            "Results",
-            "Review the output from the last run, open the generated files, and inspect any generation errors.",
+            localization,
+            "page.results.title",
+            "page.results.description",
         )
         self.result = GenerationResult()
 
-        self.summary_label = QLabel("No generation results yet.")
+        self.summary_label = QLabel()
         self.summary_label.setWordWrap(True)
         self.summary_label.setMinimumHeight(72)
         self.body_layout.addWidget(self.summary_label)
 
-        files_box = QGroupBox("Generated files")
-        files_layout = QVBoxLayout(files_box)
+        self.files_box = QGroupBox()
+        self._bind_translation(self.files_box, "title", "group.generated_files")
+        files_layout = QVBoxLayout(self.files_box)
         files_layout.setContentsMargins(12, 12, 12, 12)
-        files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         self.files_list = QListWidget()
         self.files_list.setMinimumHeight(PANEL_MIN_HEIGHT)
         self.files_list.itemDoubleClicked.connect(self._open_selected_item)
         files_layout.addWidget(self.files_list)
-        self.body_layout.addWidget(files_box, stretch=1)
+        self.body_layout.addWidget(self.files_box, stretch=1)
 
-        errors_box = QGroupBox("Errors")
-        errors_layout = QVBoxLayout(errors_box)
+        self.errors_box = QGroupBox()
+        self._bind_translation(self.errors_box, "title", "group.errors")
+        errors_layout = QVBoxLayout(self.errors_box)
         errors_layout.setContentsMargins(12, 12, 12, 12)
-        errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         self.errors_output = QPlainTextEdit()
         self.errors_output.setReadOnly(True)
         self.errors_output.setMinimumHeight(PANEL_MIN_HEIGHT)
         errors_layout.addWidget(self.errors_output)
-        self.body_layout.addWidget(errors_box, stretch=1)
+        self.body_layout.addWidget(self.errors_box, stretch=1)
 
-        back_button = QPushButton("Back")
-        open_output_button = QPushButton("Open output folder")
-        open_log_button = QPushButton("Open log")
-        back_button.clicked.connect(self.prev_requested.emit)
-        open_output_button.clicked.connect(self._open_output_folder)
-        open_log_button.clicked.connect(self._open_log)
+        self.back_button = QPushButton()
+        self.open_output_button = QPushButton()
+        self.open_log_button = QPushButton()
+        self._bind_translation(self.back_button, "text", "button.back")
+        self._bind_translation(self.open_output_button, "text", "button.open_output_folder")
+        self._bind_translation(self.open_log_button, "text", "button.open_log")
+        self.back_button.clicked.connect(self.prev_requested.emit)
+        self.open_output_button.clicked.connect(self._open_output_folder)
+        self.open_log_button.clicked.connect(self._open_log)
 
-        self.nav_layout.addWidget(back_button)
+        self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addStretch()
-        self.nav_layout.addWidget(open_log_button)
-        self.nav_layout.addWidget(open_output_button)
+        self.nav_layout.addWidget(self.open_log_button)
+        self.nav_layout.addWidget(self.open_output_button)
+        self.retranslate_ui()
 
     def bind_result(self, result: GenerationResult, session: ProjectSession):
         self.result = result
@@ -836,17 +949,26 @@ class ResultsPage(WorkflowPage):
         self.refresh_from_session()
 
     def refresh_from_session(self):
-        total_files = len(self.result.generated_docx_paths) + len(self.result.generated_pdf_paths)
-        summary_lines = [
-            f"Created {self.result.success_count} of {self.result.total_rows} DOCX certificates.",
-            f"Generated PDFs: {len(self.result.generated_pdf_paths)}",
-            f"Files listed: {total_files}",
-        ]
-        if self.result.last_certificate_number:
-            summary_lines.append(f"Last certificate number: {self.result.last_certificate_number}")
-        if self.result.log_path:
-            summary_lines.append(f"Log file: {self.result.log_path}")
-        self.summary_label.setText("\n".join(summary_lines))
+        if not self.result.total_rows and not self.result.generated_docx_paths and not self.result.generated_pdf_paths:
+            self.summary_label.setText(self.localization.t("status.no_generation_results"))
+        else:
+            total_files = len(self.result.generated_docx_paths) + len(self.result.generated_pdf_paths)
+            summary_lines = [
+                self.localization.t(
+                    "results.created_docx",
+                    success_count=self.result.success_count,
+                    total_rows=self.result.total_rows,
+                ),
+                self.localization.t("results.generated_pdfs", count=len(self.result.generated_pdf_paths)),
+                self.localization.t("results.files_listed", count=total_files),
+            ]
+            if self.result.last_certificate_number:
+                summary_lines.append(
+                    self.localization.t("results.last_certificate_number", value=self.result.last_certificate_number)
+                )
+            if self.result.log_path:
+                summary_lines.append(self.localization.t("results.log_file", path=self.result.log_path))
+            self.summary_label.setText("\n".join(summary_lines))
 
         self.files_list.clear()
         for path in [*self.result.generated_docx_paths, *self.result.generated_pdf_paths]:
@@ -855,9 +977,10 @@ class ResultsPage(WorkflowPage):
             self.files_list.addItem(item)
 
         if self.result.errors:
-            self.errors_output.setPlainText("\n".join(self.result.errors))
+            translated = [self.localization.translate_runtime_text(error) for error in self.result.errors]
+            self.errors_output.setPlainText("\n".join(translated))
         else:
-            self.errors_output.setPlainText("No generation errors.")
+            self.errors_output.setPlainText(self.localization.t("results.no_generation_errors"))
 
     def _open_selected_item(self, item: QListWidgetItem):
         path = item.data(Qt.UserRole)
@@ -871,3 +994,6 @@ class ResultsPage(WorkflowPage):
     def _open_log(self):
         if self.result.log_path:
             open_path(self.result.log_path)
+
+    def retranslate_page(self):
+        self.refresh_from_session()
