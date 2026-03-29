@@ -132,6 +132,9 @@ class MainWindow(QMainWindow):
             self.generate_page.bind_session(self.session)
         elif index == 4:
             self.results_page.bind_result(self.last_result, self.session)
+        current_page = self.stage_manager.currentWidget()
+        if hasattr(current_page, "scroll_to_top"):
+            current_page.scroll_to_top()
         Logger.debug(f"Switched to workflow page {index}")
 
     def _new_project(self):

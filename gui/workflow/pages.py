@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QThread, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QGroupBox,
+    QHeaderView,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -20,6 +21,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSpinBox,
     QTableWidget,
     QTableWidgetItem,
@@ -62,13 +64,16 @@ QScrollArea > QWidget > QWidget {
 
 QLabel#workflowTitle {
     color: palette(window-text);
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    margin-bottom: 2px;
 }
 
 QLabel#workflowDescription {
-    color: palette(text);
+    color: palette(window-text);
     font-size: 14px;
+    line-height: 1.45;
 }
 
 QFrame#workflowCard,
@@ -85,8 +90,9 @@ QFrame#workflowCardTitleBar {
 
 QLabel#workflowCardTitle {
     color: palette(window-text);
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.3;
 }
 
 QLabel#workflowHint {
@@ -107,24 +113,24 @@ QLabel#workflowStatus {
 }
 
 QGroupBox {
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 0;
+    padding-top: 18px;
     color: palette(window-text);
     font-weight: 700;
 }
 
 QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 14px;
-    padding: 0 6px;
+    subcontrol-origin: padding;
+    subcontrol-position: top left;
+    left: 18px;
+    top: 14px;
+    padding: 0;
 }
 
 QLineEdit,
 QComboBox,
 QSpinBox,
-QPlainTextEdit,
-QListWidget,
-QTableWidget {
+QPlainTextEdit {
     background: palette(base);
     border: 1px solid palette(mid);
     border-radius: 10px;
@@ -137,9 +143,7 @@ QTableWidget {
 QLineEdit:focus,
 QComboBox:focus,
 QSpinBox:focus,
-QPlainTextEdit:focus,
-QListWidget:focus,
-QTableWidget:focus {
+QPlainTextEdit:focus {
     border: 1px solid palette(highlight);
 }
 
@@ -161,6 +165,99 @@ QComboBox QAbstractItemView {
     border: 1px solid palette(mid);
     selection-background-color: palette(highlight);
     selection-color: palette(highlighted-text);
+}
+
+QListWidget,
+QTableWidget {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 10px;
+    color: palette(text);
+    padding: 0;
+    selection-background-color: palette(highlight);
+    selection-color: palette(highlighted-text);
+}
+
+QListWidget:focus,
+QTableWidget:focus {
+    border: 1px solid palette(highlight);
+}
+
+QTableWidget::item {
+    padding: 6px 10px;
+}
+
+QTableWidget#mappingTable {
+    border: 1px solid palette(midlight);
+    alternate-background-color: palette(alternate-base);
+    selection-background-color: palette(button);
+    selection-color: palette(text);
+}
+
+QTableWidget#mappingTable:focus {
+    border: 1px solid palette(midlight);
+}
+
+QTableWidget#mappingTable::item {
+    border: none;
+}
+
+QTableWidget#mappingTable::item:selected {
+    background: palette(alternate-base);
+    color: palette(text);
+    border: none;
+}
+
+QTableWidget#mappingTable::item:selected:active,
+QTableWidget#mappingTable::item:selected:!active {
+    background: palette(alternate-base);
+    color: palette(text);
+}
+
+QTableWidget#mappingTable QComboBox,
+QTableWidget#mappingTable QLineEdit {
+    background: palette(alternate-base);
+    border: 1px solid palette(mid);
+    border-radius: 8px;
+    padding: 4px 10px;
+    selection-background-color: palette(button);
+    selection-color: palette(text);
+}
+
+QTableWidget#mappingTable QComboBox {
+    background: palette(alternate-base);
+}
+
+QTableWidget#mappingTable QComboBox:focus,
+QTableWidget#mappingTable QLineEdit:focus {
+    background: palette(alternate-base);
+    border: 1px solid palette(midlight);
+}
+
+QHeaderView::section {
+    background: palette(button);
+    color: palette(window-text);
+    border: none;
+    border-bottom: 1px solid palette(mid);
+    padding: 8px 10px;
+    font-weight: 600;
+}
+
+QTableCornerButton::section {
+    background: palette(button);
+    border: none;
+    border-bottom: 1px solid palette(mid);
+}
+
+QListWidget::item {
+    padding: 8px 10px;
+    margin: 2px 0;
+    border-radius: 8px;
+}
+
+QListWidget::item:selected {
+    background: palette(button);
+    color: palette(window-text);
 }
 
 QPushButton {
@@ -258,7 +355,7 @@ class WorkflowPage(QWidget):
         self.description_label = QLabel()
         self.description_label.setWordWrap(True)
         self.description_label.setObjectName("workflowDescription")
-        self._bind_translation(self.title_label, "text", title_key)
+        self._bind_translation(self.title_label, "upper_text", title_key)
         self._bind_translation(self.description_label, "text", description_key)
 
         scroll_layout.addWidget(self.title_label)
@@ -279,6 +376,7 @@ class WorkflowPage(QWidget):
     def bind_session(self, session: ProjectSession):
         self.session = session
         self.refresh_from_session()
+        self.scroll_to_top()
 
     def _create_card(self, title: str) -> tuple[QFrame, QVBoxLayout]:
         card = QFrame()
@@ -295,9 +393,10 @@ class WorkflowPage(QWidget):
 
         title_label = QLabel()
         title_label.setObjectName("workflowCardTitle")
-        self._bind_translation(title_label, "text", title)
-        title_layout.addWidget(title_label)
-        title_layout.addStretch()
+        title_label.setWordWrap(False)
+        title_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self._bind_translation(title_label, "upper_text", title)
+        title_layout.addWidget(title_label, 1)
 
         card_layout.addWidget(title_bar)
         return card, card_layout
@@ -315,6 +414,9 @@ class WorkflowPage(QWidget):
     def retranslate_page(self):
         pass
 
+    def scroll_to_top(self):
+        QTimer.singleShot(0, lambda: self.scroll_area.verticalScrollBar().setValue(0))
+
     def retranslate_ui(self, *_args):
         for widget, role, key in self._translation_bindings:
             self._apply_translation(widget, role, key)
@@ -328,8 +430,12 @@ class WorkflowPage(QWidget):
         text = self.localization.t(key)
         if role == "text":
             widget.setText(text)
+        elif role == "upper_text":
+            widget.setText(text.upper())
         elif role == "title":
             widget.setTitle(text)
+        elif role == "upper_title":
+            widget.setTitle(text.upper())
         elif role == "placeholder":
             widget.setPlaceholderText(text)
 
@@ -582,31 +688,51 @@ class MappingPage(WorkflowPage):
         content_layout.setSpacing(16)
         self.body_layout.addLayout(content_layout, stretch=1)
 
-        self.left_box = QGroupBox()
-        self._bind_translation(self.left_box, "title", "group.workbook_columns")
-        left_layout = QVBoxLayout(self.left_box)
-        left_layout.setContentsMargins(12, 12, 12, 12)
+        self.left_box, left_layout = self._create_card("group.workbook_columns")
         self.left_box.setMinimumWidth(SIDE_PANEL_MIN_WIDTH)
         self.left_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
         self.columns_label = QLabel()
         self.columns_label.setWordWrap(True)
+        self.columns_label.setObjectName("workflowStatus")
+        self.columns_hint = QLabel()
+        self.columns_hint.setWordWrap(True)
+        self.columns_hint.setObjectName("workflowHint")
+        self._bind_translation(self.columns_hint, "text", "hint.columns_panel")
         self.columns_list = QListWidget()
         self.columns_list.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.columns_list.setAlternatingRowColors(True)
+        self.columns_list.itemDoubleClicked.connect(self._apply_selected_column_from_item)
+        self.columns_list.currentRowChanged.connect(self._update_actions)
+        self.use_selected_column_button = QPushButton()
+        self._bind_translation(self.use_selected_column_button, "text", "button.use_selected_column")
+        self.use_selected_column_button.clicked.connect(self._use_selected_column)
+        self.use_selected_column_button.setEnabled(False)
         left_layout.addWidget(self.columns_label)
+        left_layout.addWidget(self.columns_hint)
         left_layout.addWidget(self.columns_list)
+        left_layout.addWidget(self.use_selected_column_button, alignment=Qt.AlignLeft)
         content_layout.addWidget(self.left_box, stretch=1)
 
-        self.right_box = QGroupBox()
-        self._bind_translation(self.right_box, "title", "group.placeholder_mappings")
-        right_layout = QVBoxLayout(self.right_box)
-        right_layout.setContentsMargins(12, 12, 12, 12)
+        self.right_box, right_layout = self._create_card("group.placeholder_mappings")
         self.right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
+        self.mapping_hint = QLabel()
+        self.mapping_hint.setWordWrap(True)
+        self.mapping_hint.setObjectName("workflowHint")
+        self._bind_translation(self.mapping_hint, "text", "hint.mapping_editor")
         self.mapping_table = QTableWidget(0, 2)
+        self.mapping_table.setObjectName("mappingTable")
+        self.mapping_table.setAlternatingRowColors(True)
+        self.mapping_table.setShowGrid(False)
         self.mapping_table.horizontalHeader().setStretchLastSection(True)
+        self.mapping_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.mapping_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.mapping_table.verticalHeader().setVisible(False)
+        self.mapping_table.verticalHeader().setDefaultSectionSize(44)
+        self.mapping_table.setColumnWidth(0, 320)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.mapping_table.setMinimumHeight(260)
-        self.mapping_table.itemChanged.connect(self._sync_session_from_table)
+        self.mapping_table.setMinimumHeight(300)
+        self.mapping_table.itemSelectionChanged.connect(self._update_actions)
 
         mapping_buttons = QHBoxLayout()
         self.add_button = QPushButton()
@@ -615,20 +741,25 @@ class MappingPage(WorkflowPage):
         self._bind_translation(self.remove_button, "text", "button.remove_selected")
         self.add_button.clicked.connect(self._add_mapping_row)
         self.remove_button.clicked.connect(self._remove_selected_row)
+        self.remove_button.setEnabled(False)
         mapping_buttons.addWidget(self.add_button)
         mapping_buttons.addWidget(self.remove_button)
         mapping_buttons.addStretch()
 
+        self.validation_summary = QLabel()
+        self.validation_summary.setWordWrap(True)
+        self.validation_summary.setObjectName("workflowStatus")
         self.validation_output = QPlainTextEdit()
         self.validation_output.setReadOnly(True)
         self.validation_output.setMaximumBlockCount(200)
-        self.validation_output.setMinimumHeight(EDITOR_MIN_HEIGHT)
-        self.validation_label = QLabel()
-        self._bind_translation(self.validation_label, "text", "label.validation")
+        self.validation_output.setMinimumHeight(160)
+        self.validation_label = self._create_field_label("label.validation")
 
+        right_layout.addWidget(self.mapping_hint)
         right_layout.addLayout(mapping_buttons)
         right_layout.addWidget(self.mapping_table, stretch=1)
         right_layout.addWidget(self.validation_label)
+        right_layout.addWidget(self.validation_summary)
         right_layout.addWidget(self.validation_output)
         content_layout.addWidget(self.right_box, stretch=2)
 
@@ -636,6 +767,7 @@ class MappingPage(WorkflowPage):
         self.next_button = QPushButton()
         self._bind_translation(self.back_button, "text", "button.back")
         self._bind_translation(self.next_button, "text", "button.next_generate")
+        self.next_button.setObjectName("workflowPrimaryButton")
         self.back_button.clicked.connect(self.prev_requested.emit)
         self.next_button.clicked.connect(self._go_next)
         self.nav_layout.addWidget(self.back_button)
@@ -685,23 +817,59 @@ class MappingPage(WorkflowPage):
     def _add_mapping_row(self, placeholder: str = "", column_name: str = ""):
         row = self.mapping_table.rowCount()
         self.mapping_table.insertRow(row)
+        self.mapping_table.setRowHeight(row, 44)
 
-        placeholder_item = QTableWidgetItem(placeholder)
+        placeholder_item = QTableWidgetItem("")
+        placeholder_item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
         self.mapping_table.setItem(row, 0, placeholder_item)
+        placeholder_input = QLineEdit()
+        placeholder_input.setText(placeholder)
+        placeholder_input.setMinimumHeight(34)
+        placeholder_input.textChanged.connect(self._sync_session_from_table)
+        placeholder_input.installEventFilter(self)
+        self.mapping_table.setCellWidget(row, 0, placeholder_input)
 
         combo = QComboBox()
         combo.addItem("")
         combo.addItems(self.columns)
+        combo.setMinimumHeight(34)
         if column_name:
             combo.setCurrentText(column_name)
         combo.currentTextChanged.connect(self._sync_session_from_table)
+        combo.installEventFilter(self)
         self.mapping_table.setCellWidget(row, 1, combo)
+        self._update_actions()
+        return row
 
     def _remove_selected_row(self):
         current_row = self.mapping_table.currentRow()
         if current_row >= 0:
             self.mapping_table.removeRow(current_row)
             self._sync_session_from_table()
+        self._update_actions()
+
+    def _use_selected_column(self):
+        item = self.columns_list.currentItem()
+        if item is None:
+            return
+        self._assign_column_to_mapping(item.text())
+
+    def _apply_selected_column_from_item(self, item: QListWidgetItem):
+        if item is None:
+            return
+        self._assign_column_to_mapping(item.text())
+
+    def _assign_column_to_mapping(self, column_name: str):
+        row = self.mapping_table.currentRow()
+        if row < 0 or row >= self.mapping_table.rowCount():
+            row = self._add_mapping_row(column_name=column_name)
+            self.mapping_table.setCurrentCell(row, 0)
+            return
+
+        combo = self.mapping_table.cellWidget(row, 1)
+        if isinstance(combo, QComboBox):
+            combo.setCurrentText(column_name)
+        self.mapping_table.setCurrentCell(row, 0)
 
     def _sync_session_from_table(self, *_args):
         if self._loading:
@@ -709,8 +877,8 @@ class MappingPage(WorkflowPage):
 
         mappings: list[MappingEntry] = []
         for row in range(self.mapping_table.rowCount()):
-            placeholder_item = self.mapping_table.item(row, 0)
-            placeholder = placeholder_item.text().strip() if placeholder_item else ""
+            placeholder_widget = self.mapping_table.cellWidget(row, 0)
+            placeholder = placeholder_widget.text().strip() if isinstance(placeholder_widget, QLineEdit) else ""
             combo = self.mapping_table.cellWidget(row, 1)
             column_name = combo.currentText().strip() if isinstance(combo, QComboBox) else ""
 
@@ -719,15 +887,21 @@ class MappingPage(WorkflowPage):
 
         self.session.mappings = mappings
         self._refresh_validation()
+        self._update_actions()
         self.session_changed.emit()
 
     def _refresh_validation(self):
         errors = self.generator.validate_session(self.session)
         if errors:
             translated = [self.localization.translate_runtime_text(error) for error in errors]
+            self.validation_summary.setText(
+                self.localization.t("status.validation_issues", count=len(translated))
+            )
             self.validation_output.setPlainText("\n".join(f"- {error}" for error in translated))
         else:
-            self.validation_output.setPlainText(self.localization.t("status.ready_to_generate"))
+            ready_text = self.localization.t("status.ready_to_generate")
+            self.validation_summary.setText(ready_text)
+            self.validation_output.setPlainText(self.localization.t("status.validation_ready_detail"))
 
     def _go_next(self):
         self._sync_session_from_table()
@@ -749,6 +923,25 @@ class MappingPage(WorkflowPage):
         self._refresh_validation()
         if self.session.excel_path:
             self._load_columns()
+        self._update_actions()
+
+    def _update_actions(self, *_args):
+        has_selected_column = self.columns_list.currentItem() is not None
+        self.use_selected_column_button.setEnabled(has_selected_column)
+        has_selected_row = self.mapping_table.currentRow() >= 0 and self.mapping_table.rowCount() > 0
+        self.remove_button.setEnabled(has_selected_row)
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QEvent.FocusIn, QEvent.MouseButtonPress):
+            self._select_row_for_editor(watched)
+        return super().eventFilter(watched, event)
+
+    def _select_row_for_editor(self, editor):
+        for row in range(self.mapping_table.rowCount()):
+            for column in range(self.mapping_table.columnCount()):
+                if self.mapping_table.cellWidget(row, column) is editor:
+                    self.mapping_table.setCurrentCell(row, column)
+                    return
 
 
 class GenerationWorker(QObject):
@@ -784,7 +977,7 @@ class GeneratePage(WorkflowPage):
         self._worker: GenerationWorker | None = None
 
         self.summary_box = QGroupBox()
-        self._bind_translation(self.summary_box, "title", "group.batch_summary")
+        self._bind_translation(self.summary_box, "upper_title", "group.batch_summary")
         summary_layout = QVBoxLayout(self.summary_box)
         summary_layout.setContentsMargins(12, 12, 12, 12)
         self.summary_box.setMinimumHeight(PANEL_MIN_HEIGHT)
@@ -795,7 +988,7 @@ class GeneratePage(WorkflowPage):
         self.body_layout.addWidget(self.summary_box)
 
         self.log_box = QGroupBox()
-        self._bind_translation(self.log_box, "title", "group.generation_log")
+        self._bind_translation(self.log_box, "upper_title", "group.generation_log")
         log_layout = QVBoxLayout(self.log_box)
         log_layout.setContentsMargins(12, 12, 12, 12)
         self.log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
@@ -906,7 +1099,7 @@ class ResultsPage(WorkflowPage):
         self.body_layout.addWidget(self.summary_label)
 
         self.files_box = QGroupBox()
-        self._bind_translation(self.files_box, "title", "group.generated_files")
+        self._bind_translation(self.files_box, "upper_title", "group.generated_files")
         files_layout = QVBoxLayout(self.files_box)
         files_layout.setContentsMargins(12, 12, 12, 12)
         self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
@@ -917,7 +1110,7 @@ class ResultsPage(WorkflowPage):
         self.body_layout.addWidget(self.files_box, stretch=1)
 
         self.errors_box = QGroupBox()
-        self._bind_translation(self.errors_box, "title", "group.errors")
+        self._bind_translation(self.errors_box, "upper_title", "group.errors")
         errors_layout = QVBoxLayout(self.errors_box)
         errors_layout.setContentsMargins(12, 12, 12, 12)
         self.errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
