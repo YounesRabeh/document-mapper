@@ -150,8 +150,8 @@ class GuiFlowTestCase(unittest.TestCase):
 
             self.assertEqual(window.session.excel_path, str(workbook))
             self.assertEqual(window.session.template_path, str(template))
-            self.assertEqual(window.setup_page.output_naming_schema_input.text(), DEFAULT_OUTPUT_NAMING_SCHEMA)
             self.assertEqual(window.session.output_naming_schema, DEFAULT_OUTPUT_NAMING_SCHEMA)
+            self.assertFalse(hasattr(window.setup_page, "output_naming_schema_input"))
             self.assertEqual(window.stage_manager.currentIndex(), 0)
             self.assert_stage_state(window, 3, blocked=True)
 
@@ -161,6 +161,11 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assert_stage_state(window, 1, completed=True)
             self.assert_stage_state(window, 4, blocked=True)
             self.assertEqual(window.mapping_page.delimiter_input.text(), "<<")
+            self.assertEqual(window.mapping_page.output_naming_schema_input.text(), DEFAULT_OUTPUT_NAMING_SCHEMA)
+            self.assertEqual(
+                window.mapping_page.output_naming_schema_input.available_tokens(),
+                ["NOME", "COGNOME", "ROW", "CERTIFICATE_TYPE"],
+            )
 
             window.stage_cards[4].clicked.emit(4)
             self.assertEqual(window.stage_manager.currentIndex(), 1)
@@ -178,10 +183,25 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assertEqual(window.session.detected_placeholder_delimiter, "<<")
             self.assertEqual(window.session.detected_placeholder_count, 1)
 
-            window.setup_page.output_naming_schema_input.clear()
+            schema_input = window.mapping_page.output_naming_schema_input
+            schema_input.clear()
             self.assertEqual(window.session.output_naming_schema, "")
             self.assert_stage_state(window, 3, blocked=True)
-            window.setup_page.output_naming_schema_input.setText(DEFAULT_OUTPUT_NAMING_SCHEMA)
+            schema_input.setFocus()
+            QTest.keyClicks(schema_input, "{")
+            QTest.qWait(80)
+            self.assertTrue(schema_input.token_completer.popup().isVisible())
+            schema_input.token_completer.activated[str].emit("NOME")
+            self.assertEqual(schema_input.text(), "{NOME}")
+            self.assertEqual(schema_input.cursorPosition(), len("{NOME}"))
+            QTest.keyClicks(schema_input, "(mytext){")
+            QTest.qWait(80)
+            schema_input.token_completer.activated[str].emit("COGNOME")
+            self.assertEqual(schema_input.text(), "{NOME}(mytext){COGNOME}")
+            self.assertEqual(window.session.output_naming_schema, "{NOME}(mytext){COGNOME}")
+            self.assert_stage_state(window, 3, blocked=False)
+
+            schema_input.setText(DEFAULT_OUTPUT_NAMING_SCHEMA)
             self.assertEqual(window.session.output_naming_schema, DEFAULT_OUTPUT_NAMING_SCHEMA)
             self.assert_stage_state(window, 3, blocked=False)
 
@@ -250,7 +270,7 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assertEqual(window.view_menu.title(), "Visualizza")
             self.assertEqual(window.setup_page.next_button.text(), "Avanti: Mappatura")
             self.assertIn("esempio", window.mapping_page.mapping_hint.text())
-            self.assertIn("Schema nome output", window.setup_page.status_label.text())
+            self.assertEqual(window.mapping_page.output_naming_schema_label.text(), "Schema nome output")
             self.assertIn("Creati 1 certificati DOCX su 1.", window.results_page.summary_label.text())
             self.assert_stage_state(window, 4, active=True, blocked=False)
 

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, QSize, QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QEvent, QObject, QSize, QStringListModel, QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
+    QCompleter,
     QComboBox,
     QFileDialog,
     QFrame,
@@ -207,6 +208,29 @@ QComboBox QAbstractItemView::item:hover {
 QComboBox QAbstractItemView::item:selected,
 QComboBox QAbstractItemView::item:selected:active,
 QComboBox QAbstractItemView::item:selected:!active {
+    background: palette(button);
+    color: palette(text);
+}
+
+QListView#tokenSuggestionPopup {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 10px;
+    color: palette(text);
+    outline: none;
+    padding: 4px;
+}
+
+QListView#tokenSuggestionPopup::item {
+    padding: 6px 10px;
+}
+
+QListView#tokenSuggestionPopup::item:hover {
+    background: palette(alternate-base);
+    color: palette(window-text);
+}
+
+QListView#tokenSuggestionPopup::item:selected {
     background: palette(button);
     color: palette(text);
 }
@@ -470,6 +494,100 @@ def _workflow_combo_arrow_path() -> str:
     return (Path(__file__).resolve().parents[2] / "resources" / "icons" / "sys" / "chevron_down.svg").as_posix()
 
 
+class TokenSuggestingLineEdit(QLineEdit):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+        self._token_options: list[str] = []
+        self._suspend_completion = False
+        self.token_model = QStringListModel(self)
+        self.token_completer = QCompleter(self.token_model, self)
+        self.token_completer.setWidget(self)
+        self.token_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.token_completer.setFilterMode(Qt.MatchContains)
+        self.token_completer.setCompletionMode(QCompleter.PopupCompletion)
+        self.token_completer.popup().setObjectName("tokenSuggestionPopup")
+        self.token_completer.activated[str].connect(self.insert_token)
+        self.textEdited.connect(self._update_token_popup)
+
+    def set_token_options(self, options: list[str]):
+        unique_options: list[str] = []
+        seen: set[str] = set()
+        for option in options:
+            value = str(option or "").strip()
+            if not value:
+                continue
+            key = value.casefold()
+            if key in seen:
+                continue
+            unique_options.append(value)
+            seen.add(key)
+        self._token_options = unique_options
+        self.token_model.setStringList(unique_options)
+        if not unique_options:
+            self.token_completer.popup().hide()
+
+    def available_tokens(self) -> list[str]:
+        return list(self._token_options)
+
+    def insert_token(self, token: str):
+        token_value = str(token or "").strip()
+        if not token_value:
+            return
+        token_range = self._current_token_range()
+        if token_range is None:
+            return
+
+        open_index, cursor_position, _prefix = token_range
+        suffix_start = cursor_position + 1 if cursor_position < len(self.text()) and self.text()[cursor_position] == "}" else cursor_position
+        updated = f"{self.text()[:open_index]}{{{token_value}}}{self.text()[suffix_start:]}"
+
+        self._suspend_completion = True
+        try:
+            self.setText(updated)
+            self.setCursorPosition(open_index + len(token_value) + 2)
+        finally:
+            self._suspend_completion = False
+        self.token_completer.popup().hide()
+
+    def focusOutEvent(self, event):
+        self.token_completer.popup().hide()
+        super().focusOutEvent(event)
+
+    def _current_token_range(self) -> tuple[int, int, str] | None:
+        cursor_position = self.cursorPosition()
+        text_before_cursor = self.text()[:cursor_position]
+        open_index = text_before_cursor.rfind("{")
+        if open_index < 0:
+            return None
+
+        token_prefix = text_before_cursor[open_index + 1 :]
+        if "}" in token_prefix:
+            return None
+        return open_index, cursor_position, token_prefix
+
+    def _update_token_popup(self, _text: str):
+        if self._suspend_completion:
+            return
+
+        token_range = self._current_token_range()
+        if token_range is None or not self._token_options:
+            self.token_completer.popup().hide()
+            return
+
+        _open_index, _cursor_position, token_prefix = token_range
+        self.token_completer.setCompletionPrefix(token_prefix)
+        popup = self.token_completer.popup()
+        popup.setCurrentIndex(self.token_completer.completionModel().index(0, 0))
+        if self.token_completer.completionCount() <= 0:
+            popup.hide()
+            return
+
+        popup_width = max(popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width() + 24, 240)
+        completion_rect = self.cursorRect()
+        completion_rect.setWidth(popup_width)
+        self.token_completer.complete(completion_rect)
+
+
 class WorkflowPage(QWidget):
     next_requested = Signal()
     prev_requested = Signal()
@@ -641,24 +759,11 @@ class SetupPage(WorkflowPage):
         form.addWidget(self._create_field_label("field.certificate_type"), 3, 0)
         form.addWidget(self.certificate_type_input, 3, 1, 1, 2)
 
-        self.output_naming_schema_input = QLineEdit()
-        self.output_naming_schema_input.setClearButtonEnabled(True)
-        self.output_naming_schema_input.setMinimumHeight(40)
-        self.output_naming_schema_input.setPlaceholderText(DEFAULT_OUTPUT_NAMING_SCHEMA)
-        form.addWidget(self._create_field_label("field.output_naming_schema"), 4, 0)
-        form.addWidget(self.output_naming_schema_input, 4, 1, 1, 2)
-
         self.certificate_type_hint = QLabel()
         self.certificate_type_hint.setWordWrap(True)
         self.certificate_type_hint.setObjectName("workflowHint")
         self._bind_translation(self.certificate_type_hint, "text", "hint.certificate_type")
-        form_card_layout.addWidget(self.certificate_type_hint)
-
-        self.output_naming_schema_hint = QLabel()
-        self.output_naming_schema_hint.setWordWrap(True)
-        self.output_naming_schema_hint.setObjectName("workflowHint")
-        self._bind_translation(self.output_naming_schema_hint, "text", "hint.output_naming_schema")
-        form_card_layout.addWidget(self.output_naming_schema_hint)
+        form.addWidget(self.certificate_type_hint, 4, 1, 1, 2)
 
         options_card, options_layout = self._create_card("card.export_options")
 
@@ -699,7 +804,6 @@ class SetupPage(WorkflowPage):
         self.nav_layout.addWidget(self.next_button)
 
         self.certificate_type_input.currentTextChanged.connect(self._sync_session)
-        self.output_naming_schema_input.textChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
         self.retranslate_ui()
@@ -754,7 +858,6 @@ class SetupPage(WorkflowPage):
             self._ensure_certificate_type_option(self.session.certificate_type)
             current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
             self.certificate_type_input.setCurrentText(current_certificate_type)
-            self.output_naming_schema_input.setText(self.session.output_naming_schema)
             self.export_pdf_checkbox.setChecked(self.session.export_pdf)
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
         finally:
@@ -770,10 +873,6 @@ class SetupPage(WorkflowPage):
                 "summary.certificate_type",
                 value=self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE,
             ),
-            self.localization.t(
-                "summary.output_naming_schema",
-                value=self.session.output_naming_schema or self.output_naming_schema_input.placeholderText(),
-            ),
             self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
         ]
         self.status_label.setText("\n".join(lines))
@@ -786,7 +885,6 @@ class SetupPage(WorkflowPage):
         self.session.template_path = self.template_input["input"].text().strip()
         self.session.output_dir = self.output_input["input"].text().strip()
         self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
-        self.session.output_naming_schema = self.output_naming_schema_input.text().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
         self._refresh_status()
@@ -909,6 +1007,29 @@ class MappingPage(WorkflowPage):
         self.template_status = QLabel()
         self.template_status.setWordWrap(True)
         self.template_status.setObjectName("workflowStatus")
+
+        self.output_naming_group = QGroupBox()
+        self._bind_translation(self.output_naming_group, "upper_title", "group.output_naming_schema")
+        output_naming_layout = QGridLayout(self.output_naming_group)
+        output_naming_layout.setContentsMargins(16, 18, 16, 16)
+        output_naming_layout.setHorizontalSpacing(12)
+        output_naming_layout.setVerticalSpacing(10)
+        output_naming_layout.setColumnMinimumWidth(0, 128)
+        output_naming_layout.setColumnStretch(1, 1)
+        self.output_naming_schema_label = self._create_field_label("field.output_naming_schema")
+        self.output_naming_schema_input = TokenSuggestingLineEdit()
+        self.output_naming_schema_input.setClearButtonEnabled(True)
+        self.output_naming_schema_input.setMinimumHeight(40)
+        self.output_naming_schema_input.setPlaceholderText(DEFAULT_OUTPUT_NAMING_SCHEMA)
+        self.output_naming_schema_input.textChanged.connect(self._sync_output_naming_schema)
+        self.output_naming_schema_hint = QLabel()
+        self.output_naming_schema_hint.setWordWrap(True)
+        self.output_naming_schema_hint.setObjectName("workflowHint")
+        self._bind_translation(self.output_naming_schema_hint, "text", "hint.output_naming_schema")
+        output_naming_layout.addWidget(self.output_naming_schema_label, 0, 0)
+        output_naming_layout.addWidget(self.output_naming_schema_input, 0, 1)
+        output_naming_layout.addWidget(self.output_naming_schema_hint, 1, 1)
+
         self.mapping_table = QTableWidget(0, 2)
         self.mapping_table.setObjectName("mappingTable")
         self.mapping_table.setAlternatingRowColors(False)
@@ -948,6 +1069,7 @@ class MappingPage(WorkflowPage):
         right_layout.addWidget(self.mapping_hint)
         right_layout.addLayout(delimiter_row)
         right_layout.addWidget(self.template_status)
+        right_layout.addWidget(self.output_naming_group)
         right_layout.addLayout(mapping_buttons)
         right_layout.addWidget(self.mapping_table, stretch=1)
         right_layout.addWidget(self.validation_label)
@@ -971,6 +1093,7 @@ class MappingPage(WorkflowPage):
         self._loading = True
         try:
             self.delimiter_input.setText(self.session.placeholder_delimiter)
+            self.output_naming_schema_input.setText(self.session.output_naming_schema)
         finally:
             self._loading = False
         self._last_detected_delimiters = (
@@ -1043,12 +1166,14 @@ class MappingPage(WorkflowPage):
         self.columns_list.clear()
         if not self.session.excel_path:
             self.columns_label.setText(self.localization.t("status.select_workbook_for_columns"))
+            self._refresh_output_naming_tokens()
             return
 
         try:
             preview = self.excel_service.inspect(self.session.excel_path)
         except Exception as exc:
             self.columns_label.setText(self.localization.t("status.could_not_inspect_workbook", error=exc))
+            self._refresh_output_naming_tokens()
             return
 
         self.columns = preview.columns
@@ -1061,6 +1186,23 @@ class MappingPage(WorkflowPage):
         )
         for column in self.columns:
             self._add_column_entry(column)
+        self._refresh_output_naming_tokens()
+
+    def _output_naming_tokens(self) -> list[str]:
+        tokens = list(self.columns)
+        tokens.extend(["ROW", "CERTIFICATE_TYPE"])
+        return tokens
+
+    def _refresh_output_naming_tokens(self):
+        self.output_naming_schema_input.set_token_options(self._output_naming_tokens())
+
+    def _sync_output_naming_schema(self, *_args):
+        if self._loading:
+            return
+
+        self.session.output_naming_schema = self.output_naming_schema_input.text().strip()
+        self._refresh_validation()
+        self.session_changed.emit()
 
     def _add_column_entry(self, column_name: str):
         item = QListWidgetItem()
