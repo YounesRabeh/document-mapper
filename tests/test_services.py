@@ -11,6 +11,7 @@ import pandas as pd
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
+    DEFAULT_OUTPUT_NAMING_SCHEMA,
     DEFAULT_PLACEHOLDER_DELIMITER,
     MappingEntry,
     ProjectSession,
@@ -198,6 +199,7 @@ class ServicesTestCase(unittest.TestCase):
             template_path="/tmp/template.docx",
             output_dir="/tmp/out",
             certificate_type="attestato",
+            output_naming_schema="{COGNOME}_{ROW}",
             placeholder_delimiter="{{",
             export_pdf=True,
             mappings=[MappingEntry(placeholder="<<NAME>>", column_name="NOME")],
@@ -213,6 +215,7 @@ class ServicesTestCase(unittest.TestCase):
     def test_session_defaults_placeholder_delimiters(self):
         session = ProjectSession()
 
+        self.assertEqual(session.output_naming_schema, DEFAULT_OUTPUT_NAMING_SCHEMA)
         self.assertEqual(session.placeholder_delimiter, DEFAULT_PLACEHOLDER_DELIMITER)
         self.assertEqual(session.placeholder_start, "<<")
         self.assertEqual(session.placeholder_end, ">>")
@@ -366,6 +369,76 @@ class ServicesTestCase(unittest.TestCase):
             "ADA_LOVELACE_attestato_MODELLO_ATTESTATO_integrale_PS_12_ORE_tipo_B_e_C.docx",
         )
 
+    def test_generator_resolves_output_naming_schema_tokens(self):
+        dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
+        generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = generator._build_docx_output_path(
+                ProjectSession(
+                    output_dir=temp_dir,
+                    certificate_type="MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+                    output_naming_schema="{COGNOME}_{NOME}_{ROW}_{CERTIFICATE_TYPE}",
+                ),
+                dataframe.iloc[0],
+                0,
+                Path(temp_dir),
+                {"NOME": "NOME", "COGNOME": "COGNOME"},
+            )
+
+        self.assertEqual(
+            output_path.name,
+            "LOVELACE_ADA_1_MODELLO_ATTESTATO_integrale_PS_12_ORE_tipo_B_e_C.docx",
+        )
+
+    def test_generator_falls_back_to_row_name_when_schema_resolves_empty(self):
+        dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
+        generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = generator._build_docx_output_path(
+                ProjectSession(
+                    output_dir=temp_dir,
+                    output_naming_schema="///",
+                ),
+                dataframe.iloc[0],
+                0,
+                Path(temp_dir),
+                {"NOME": "NOME", "COGNOME": "COGNOME"},
+            )
+
+        self.assertEqual(output_path.name, "row_001.docx")
+
+    def test_generator_appends_counter_for_duplicate_output_names(self):
+        dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
+        generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            used_output_basenames: dict[str, int] = {}
+            session = ProjectSession(
+                output_dir=temp_dir,
+                output_naming_schema="{NOME}",
+            )
+            first_path = generator._build_docx_output_path(
+                session,
+                dataframe.iloc[0],
+                0,
+                Path(temp_dir),
+                {"NOME": "NOME", "COGNOME": "COGNOME"},
+                used_output_basenames,
+            )
+            second_path = generator._build_docx_output_path(
+                session,
+                dataframe.iloc[0],
+                1,
+                Path(temp_dir),
+                {"NOME": "NOME", "COGNOME": "COGNOME"},
+                used_output_basenames,
+            )
+
+        self.assertEqual(first_path.name, "ADA.docx")
+        self.assertEqual(second_path.name, "ADA_2.docx")
+
     def test_validate_session_reports_missing_columns(self):
         generator = CertificateGenerator(
             excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada"}]))
@@ -387,6 +460,55 @@ class ServicesTestCase(unittest.TestCase):
             errors = generator.validate_session(session)
 
             self.assertTrue(any("COGNOME" in error for error in errors))
+
+    def test_validate_session_requires_output_naming_schema(self):
+        generator = CertificateGenerator(
+            excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}]))
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.docx"
+            excel_path = Path(temp_dir) / "data.xlsx"
+            template_path.write_text("template", encoding="utf-8")
+            excel_path.write_text("placeholder", encoding="utf-8")
+            session = ProjectSession(
+                excel_path=str(excel_path),
+                template_path=str(template_path),
+                output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=1,
+                output_naming_schema="",
+                mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
+            )
+
+            errors = generator.validate_session(session)
+
+            self.assertIn("Set an output naming schema before continuing.", errors)
+
+    def test_validate_session_reports_unknown_output_naming_schema_token(self):
+        generator = CertificateGenerator(
+            excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}]))
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            template_path = Path(temp_dir) / "template.docx"
+            excel_path = Path(temp_dir) / "data.xlsx"
+            template_path.write_text("template", encoding="utf-8")
+            excel_path.write_text("placeholder", encoding="utf-8")
+            session = ProjectSession(
+                excel_path=str(excel_path),
+                template_path=str(template_path),
+                output_dir=temp_dir,
+                detected_placeholder_delimiter="<<",
+                detected_placeholder_count=1,
+                output_naming_schema="{UNKNOWN}_{NOME}",
+                mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
+            )
+
+            errors = generator.validate_session(session)
+
+            self.assertIn(
+                "Output naming schema token 'UNKNOWN' is not available as a workbook column or built-in value.",
+                errors,
+            )
 
     def test_validate_session_requires_placeholder_delimiter(self):
         generator = CertificateGenerator(

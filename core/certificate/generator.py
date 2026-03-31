@@ -11,10 +11,21 @@ from typing import Callable
 import pandas as pd
 
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
-from core.certificate.models import GenerationResult, MappingEntry, ProjectSession, normalize_placeholder_delimiter
+from core.certificate.models import (
+    GenerationResult,
+    MappingEntry,
+    ProjectSession,
+    normalize_output_naming_schema,
+    normalize_placeholder_delimiter,
+)
 from core.util.logger import Logger
 
 LogCallback = Callable[[str], None]
+OUTPUT_SCHEMA_TOKEN_PATTERN = re.compile(r"\{([^{}]+)\}")
+OUTPUT_SCHEMA_BUILTINS = {
+    "ROW",
+    "CERTIFICATE_TYPE",
+}
 
 
 class CertificateGenerator:
@@ -58,6 +69,9 @@ class CertificateGenerator:
             if detected_delimiter != active_delimiter or session.detected_placeholder_count <= 0:
                 errors.append("Refresh and detect at least one placeholder before continuing.")
 
+        if not normalize_output_naming_schema(session.output_naming_schema):
+            errors.append("Set an output naming schema before continuing.")
+
         if not session.mappings:
             errors.append("Add at least one placeholder mapping.")
 
@@ -69,7 +83,9 @@ class CertificateGenerator:
         except Exception as exc:
             return [f"Cannot read Excel workbook: {exc}"]
 
-        return self.excel_service.validate_mappings(preview.columns, session.mappings)
+        errors.extend(self.excel_service.validate_mappings(preview.columns, session.mappings))
+        errors.extend(self._validate_output_naming_schema(session.output_naming_schema, preview.columns))
+        return errors
 
     def generate(
         self,
@@ -100,13 +116,21 @@ class CertificateGenerator:
         generated_pdf_paths: list[str] = []
         generation_errors: list[str] = []
         last_certificate_number: str | None = None
+        used_output_basenames: dict[str, int] = {}
 
         document_cls, file_format = self._load_spire_dependencies()
         licensed = self._activate_license(document_cls, session.license_path, log_path, progress_callback)
 
         for index, row in dataframe.iterrows():
             try:
-                output_path = self._build_docx_output_path(session, row, index, docx_dir, column_lookup)
+                output_path = self._build_docx_output_path(
+                    session,
+                    row,
+                    index,
+                    docx_dir,
+                    column_lookup,
+                    used_output_basenames,
+                )
                 replacements = self._build_replacements(row, session.mappings, column_lookup)
                 participant_name = self._participant_name(row, column_lookup, index)
 
@@ -263,17 +287,101 @@ class CertificateGenerator:
         row_index: int,
         output_dir: Path,
         column_lookup: dict[str, str],
+        used_output_basenames: dict[str, int] | None = None,
     ) -> Path:
-        first_name = self._sanitize_filename_fragment(self._row_value(row, column_lookup, "NOME").upper())
-        last_name = self._sanitize_filename_fragment(self._row_value(row, column_lookup, "COGNOME").upper())
-        if not first_name and not last_name:
-            fallback = self._sanitize_filename_fragment(f"row_{row_index + 1:03d}")
-            first_name = fallback
+        basename = self._build_output_basename(session, row, row_index, column_lookup)
+        if used_output_basenames is None:
+            used_output_basenames = {}
+        unique_basename = self._ensure_unique_output_basename(
+            basename,
+            used_output_basenames,
+        )
+        return output_dir / f"{unique_basename}.docx"
 
-        certificate_type_part = self._sanitize_filename_fragment(Path(session.certificate_type).stem or session.certificate_type)
-        parts = [part for part in (first_name, last_name, "attestato", certificate_type_part) if part]
-        filename = "_".join(parts) + ".docx"
-        return output_dir / filename
+    def _build_output_basename(
+        self,
+        session: ProjectSession,
+        row: pd.Series,
+        row_index: int,
+        column_lookup: dict[str, str],
+    ) -> str:
+        resolved_name = self._resolve_output_naming_schema(session, row, row_index, column_lookup)
+        sanitized = self._sanitize_output_basename(resolved_name)
+        if sanitized:
+            return sanitized
+        return self._sanitize_output_basename(f"row_{row_index + 1:03d}")
+
+    def _resolve_output_naming_schema(
+        self,
+        session: ProjectSession,
+        row: pd.Series,
+        row_index: int,
+        column_lookup: dict[str, str],
+    ) -> str:
+        schema = normalize_output_naming_schema(session.output_naming_schema)
+        if not schema:
+            return ""
+
+        def replace_token(match: re.Match[str]) -> str:
+            token = match.group(1).strip()
+            return self._resolve_output_schema_token(session, row, row_index, column_lookup, token)
+
+        return OUTPUT_SCHEMA_TOKEN_PATTERN.sub(replace_token, schema)
+
+    def _resolve_output_schema_token(
+        self,
+        session: ProjectSession,
+        row: pd.Series,
+        row_index: int,
+        column_lookup: dict[str, str],
+        token: str,
+    ) -> str:
+        normalized = normalize_column_name(token)
+        if normalized == "ROW":
+            return str(row_index + 1)
+        if normalized == "CERTIFICATE_TYPE":
+            return session.certificate_type
+
+        column_name = column_lookup.get(normalized)
+        if not column_name:
+            return ""
+        value = row.get(column_name)
+        return self._format_cell_value(column_name, value)
+
+    def _validate_output_naming_schema(self, schema: str, columns: list[str]) -> list[str]:
+        normalized_schema = normalize_output_naming_schema(schema)
+        if not normalized_schema:
+            return []
+
+        column_lookup = self.excel_service.build_column_lookup(columns)
+        errors: list[str] = []
+        for token in self._extract_output_schema_tokens(normalized_schema):
+            normalized_token = normalize_column_name(token)
+            if normalized_token in OUTPUT_SCHEMA_BUILTINS:
+                continue
+            if normalized_token in column_lookup:
+                continue
+            errors.append(
+                f"Output naming schema token '{token}' is not available as a workbook column or built-in value."
+            )
+        return errors
+
+    def _extract_output_schema_tokens(self, schema: str) -> list[str]:
+        tokens: list[str] = []
+        seen: set[str] = set()
+        for match in OUTPUT_SCHEMA_TOKEN_PATTERN.finditer(schema):
+            token = match.group(1).strip()
+            if token and token not in seen:
+                tokens.append(token)
+                seen.add(token)
+        return tokens
+
+    def _ensure_unique_output_basename(self, basename: str, used_output_basenames: dict[str, int]) -> str:
+        current_count = used_output_basenames.get(basename, 0) + 1
+        used_output_basenames[basename] = current_count
+        if current_count == 1:
+            return basename
+        return f"{basename}_{current_count}"
 
     def _row_value(self, row: pd.Series, column_lookup: dict[str, str], logical_name: str) -> str:
         actual_column = column_lookup.get(normalize_column_name(logical_name))
@@ -288,6 +396,11 @@ class CertificateGenerator:
         sanitized = re.sub(r"[^\w.-]+", "_", value.strip(), flags=re.ASCII)
         sanitized = sanitized.strip("._")
         return sanitized
+
+    def _sanitize_output_basename(self, value: str) -> str:
+        sanitized = self._sanitize_filename_fragment(value)
+        sanitized = re.sub(r"_+", "_", sanitized)
+        return sanitized.strip("._")
 
     def _resolve_log_path(self, session: ProjectSession) -> Path:
         base_dir = Path(session.output_dir).resolve() if session.output_dir else Path.cwd()

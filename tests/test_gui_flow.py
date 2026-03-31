@@ -10,7 +10,7 @@ from PySide6.QtCore import QSettings
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QComboBox
 
-from core.certificate.models import GenerationResult, MappingEntry, ProjectSession
+from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, MappingEntry, ProjectSession
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -42,6 +42,8 @@ class FakeGenerator:
             errors.append("Select a Word certificate template.")
         if not session.output_dir:
             errors.append("Choose an output folder.")
+        if not session.output_naming_schema.strip():
+            errors.append("Set an output naming schema before continuing.")
         if not session.placeholder_delimiter.strip():
             errors.append("Set a placeholder delimiter before continuing.")
         elif (
@@ -148,6 +150,8 @@ class GuiFlowTestCase(unittest.TestCase):
 
             self.assertEqual(window.session.excel_path, str(workbook))
             self.assertEqual(window.session.template_path, str(template))
+            self.assertEqual(window.setup_page.output_naming_schema_input.text(), DEFAULT_OUTPUT_NAMING_SCHEMA)
+            self.assertEqual(window.session.output_naming_schema, DEFAULT_OUTPUT_NAMING_SCHEMA)
             self.assertEqual(window.stage_manager.currentIndex(), 0)
             self.assert_stage_state(window, 3, blocked=True)
 
@@ -173,6 +177,13 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assert_stage_state(window, 3, blocked=False, completed=False)
             self.assertEqual(window.session.detected_placeholder_delimiter, "<<")
             self.assertEqual(window.session.detected_placeholder_count, 1)
+
+            window.setup_page.output_naming_schema_input.clear()
+            self.assertEqual(window.session.output_naming_schema, "")
+            self.assert_stage_state(window, 3, blocked=True)
+            window.setup_page.output_naming_schema_input.setText(DEFAULT_OUTPUT_NAMING_SCHEMA)
+            self.assertEqual(window.session.output_naming_schema, DEFAULT_OUTPUT_NAMING_SCHEMA)
+            self.assert_stage_state(window, 3, blocked=False)
 
             window.mapping_page.delimiter_input.setText("<   ")
             QTest.qWait(250)
@@ -239,6 +250,7 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assertEqual(window.view_menu.title(), "Visualizza")
             self.assertEqual(window.setup_page.next_button.text(), "Avanti: Mappatura")
             self.assertIn("esempio", window.mapping_page.mapping_hint.text())
+            self.assertIn("Schema nome output", window.setup_page.status_label.text())
             self.assertIn("Creati 1 certificati DOCX su 1.", window.results_page.summary_label.text())
             self.assert_stage_state(window, 4, active=True, blocked=False)
 

@@ -12,6 +12,7 @@ CERTIFICATE_TYPE_OPTIONS = (
 )
 DEFAULT_CERTIFICATE_TYPE = CERTIFICATE_TYPE_OPTIONS[0]
 DEFAULT_PLACEHOLDER_DELIMITER = "<<"
+DEFAULT_OUTPUT_NAMING_SCHEMA = "{NOME}_{COGNOME}_attestato_{CERTIFICATE_TYPE}"
 DELIMITER_CLOSING_MAP = {
     "<": ">",
     "{": "}",
@@ -30,6 +31,10 @@ def normalize_certificate_type(value: str) -> str:
 
 
 def normalize_placeholder_delimiter(value: str) -> str:
+    return str(value or "").strip()
+
+
+def normalize_output_naming_schema(value: str) -> str:
     return str(value or "").strip()
 
 
@@ -85,6 +90,7 @@ class ProjectSession:
     license_path: str = ""
     certificate_type: str = DEFAULT_CERTIFICATE_TYPE
     placeholder_delimiter: str = DEFAULT_PLACEHOLDER_DELIMITER
+    output_naming_schema: str = DEFAULT_OUTPUT_NAMING_SCHEMA
     detected_placeholder_delimiter: str = ""
     detected_placeholder_count: int = 0
     export_pdf: bool = False
@@ -97,6 +103,7 @@ class ProjectSession:
         if not delimiter:
             delimiter = infer_placeholder_delimiter_from_mappings(self.mappings)
         self.placeholder_delimiter = delimiter
+        self.output_naming_schema = normalize_output_naming_schema(self.output_naming_schema)
         self.detected_placeholder_delimiter = normalize_placeholder_delimiter(self.detected_placeholder_delimiter)
         try:
             self.detected_placeholder_count = max(0, int(self.detected_placeholder_count))
@@ -119,6 +126,7 @@ class ProjectSession:
             "license_path": self.license_path,
             "certificate_type": self.certificate_type,
             "placeholder_delimiter": self.placeholder_delimiter,
+            "output_naming_schema": self.output_naming_schema,
             "detected_placeholder_delimiter": self.detected_placeholder_delimiter,
             "detected_placeholder_count": self.detected_placeholder_count,
             "export_pdf": self.export_pdf,
@@ -136,6 +144,11 @@ class ProjectSession:
             timeout = 300
 
         raw_delimiter = str(payload.get("placeholder_delimiter", "")).strip()
+        raw_output_naming_schema = (
+            normalize_output_naming_schema(payload.get("output_naming_schema", ""))
+            if "output_naming_schema" in payload
+            else DEFAULT_OUTPUT_NAMING_SCHEMA
+        )
         if not raw_delimiter:
             legacy_start = str(payload.get("placeholder_start", "")).strip()
             legacy_end = str(payload.get("placeholder_end", "")).strip()
@@ -152,6 +165,7 @@ class ProjectSession:
             license_path=str(payload.get("license_path", "")).strip(),
             certificate_type=normalize_certificate_type(payload.get("certificate_type", DEFAULT_CERTIFICATE_TYPE)),
             placeholder_delimiter=raw_delimiter,
+            output_naming_schema=raw_output_naming_schema,
             detected_placeholder_delimiter=str(payload.get("detected_placeholder_delimiter", "")).strip(),
             detected_placeholder_count=payload.get("detected_placeholder_count", 0),
             export_pdf=bool(payload.get("export_pdf", False)),

@@ -34,6 +34,7 @@ from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
     CERTIFICATE_TYPE_OPTIONS,
     DEFAULT_CERTIFICATE_TYPE,
+    DEFAULT_OUTPUT_NAMING_SCHEMA,
     DEFAULT_PLACEHOLDER_DELIMITER,
     GenerationResult,
     MappingEntry,
@@ -640,11 +641,24 @@ class SetupPage(WorkflowPage):
         form.addWidget(self._create_field_label("field.certificate_type"), 3, 0)
         form.addWidget(self.certificate_type_input, 3, 1, 1, 2)
 
+        self.output_naming_schema_input = QLineEdit()
+        self.output_naming_schema_input.setClearButtonEnabled(True)
+        self.output_naming_schema_input.setMinimumHeight(40)
+        self.output_naming_schema_input.setPlaceholderText(DEFAULT_OUTPUT_NAMING_SCHEMA)
+        form.addWidget(self._create_field_label("field.output_naming_schema"), 4, 0)
+        form.addWidget(self.output_naming_schema_input, 4, 1, 1, 2)
+
         self.certificate_type_hint = QLabel()
         self.certificate_type_hint.setWordWrap(True)
         self.certificate_type_hint.setObjectName("workflowHint")
         self._bind_translation(self.certificate_type_hint, "text", "hint.certificate_type")
         form_card_layout.addWidget(self.certificate_type_hint)
+
+        self.output_naming_schema_hint = QLabel()
+        self.output_naming_schema_hint.setWordWrap(True)
+        self.output_naming_schema_hint.setObjectName("workflowHint")
+        self._bind_translation(self.output_naming_schema_hint, "text", "hint.output_naming_schema")
+        form_card_layout.addWidget(self.output_naming_schema_hint)
 
         options_card, options_layout = self._create_card("card.export_options")
 
@@ -685,6 +699,7 @@ class SetupPage(WorkflowPage):
         self.nav_layout.addWidget(self.next_button)
 
         self.certificate_type_input.currentTextChanged.connect(self._sync_session)
+        self.output_naming_schema_input.textChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
         self.retranslate_ui()
@@ -739,6 +754,7 @@ class SetupPage(WorkflowPage):
             self._ensure_certificate_type_option(self.session.certificate_type)
             current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
             self.certificate_type_input.setCurrentText(current_certificate_type)
+            self.output_naming_schema_input.setText(self.session.output_naming_schema)
             self.export_pdf_checkbox.setChecked(self.session.export_pdf)
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
         finally:
@@ -754,6 +770,10 @@ class SetupPage(WorkflowPage):
                 "summary.certificate_type",
                 value=self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE,
             ),
+            self.localization.t(
+                "summary.output_naming_schema",
+                value=self.session.output_naming_schema or self.output_naming_schema_input.placeholderText(),
+            ),
             self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
         ]
         self.status_label.setText("\n".join(lines))
@@ -766,6 +786,7 @@ class SetupPage(WorkflowPage):
         self.session.template_path = self.template_input["input"].text().strip()
         self.session.output_dir = self.output_input["input"].text().strip()
         self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
+        self.session.output_naming_schema = self.output_naming_schema_input.text().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
         self._refresh_status()
@@ -1487,6 +1508,10 @@ class GeneratePage(WorkflowPage):
             self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
             self.localization.t("summary.template", value=self._display_path(self.session.template_path)),
             self.localization.t("summary.output", value=self._display_path(self.session.output_dir)),
+            self.localization.t(
+                "summary.output_naming_schema",
+                value=self.session.output_naming_schema or DEFAULT_OUTPUT_NAMING_SCHEMA,
+            ),
             self.localization.t("summary.mappings", count=len(self.session.mappings)),
             self.localization.t(
                 "summary.export_pdf_enabled",
