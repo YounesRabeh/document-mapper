@@ -4,6 +4,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from core.util.app_paths import AppPaths
 from core.enums.log_level import LogLevel
 
 
@@ -55,8 +56,10 @@ class Logger:
     # Initialization
     # ---------------------------
     @classmethod
-    def configure_from_env(cls, project_root:Path = Path.cwd()):
+    def configure_from_env(cls, project_root: Path | None = None):
         """Configure logger behavior from environment variables."""
+        if project_root is None:
+            project_root = AppPaths.project_root()
         cls.CONSOLE_OUTPUT_ENABLED = cls._truthy(os.getenv("CONSOLE_OUTPUT_ENABLED", ""))
         logging = cls._truthy(os.getenv("PERSISTENCE_LOGGING", ""))
         cls.CONSOLE_FORCE_COLORED = cls._truthy(os.getenv("CONSOLE_FORCE_COLORED", ""))

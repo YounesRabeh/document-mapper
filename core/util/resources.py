@@ -3,6 +3,7 @@ from pathlib import Path
 from types import MethodType
 from typing import Optional
 
+from core.util.app_paths import AppPaths
 from core.util.logger import Logger
 
 
@@ -61,11 +62,7 @@ class Resources:
     @classmethod
     def _get_base_path(cls):
         if cls._base_path is None:
-            cls._base_path = (
-                Path(sys._MEIPASS) / cls._resource_key
-                if cls._is_bundled
-                else Path.cwd() / cls._resource_key
-            )
+            cls._base_path = AppPaths.resource_root(cls._resource_key)
         return cls._base_path
 
     @classmethod
@@ -126,6 +123,7 @@ class Resources:
                 if k.startswith("RESOURCES_")
             }
             cls._resource_key = cls._cfg.get("base", "resources")
+            cls._base_path = None
         elif not cls._cfg:
             Logger.error("No configuration provided and 'Resources._cfg' is empty!")
             return

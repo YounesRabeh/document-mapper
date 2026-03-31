@@ -21,6 +21,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from core.util.logger import Logger
+from core.util.app_paths import AppPaths
 
 # TOML: built-in in Python 3.11+, fallback to tomli for older versions
 try:
@@ -67,8 +68,8 @@ class EnvironmentSetup:
             self.is_dev = False
         else:
             # Normal dev run
-            self.project_root = Path.cwd().resolve()
-            self.is_dev = True  # True is correct, but we disable dev mode for testing
+            self.project_root = AppPaths.project_root()
+            self.is_dev = True
 
         self.toml_path = (self.project_root / toml_path).resolve()
         self.env_path = (self.project_root / env_path).resolve()
@@ -81,7 +82,7 @@ class EnvironmentSetup:
         if self.is_dev and self.env_path.exists():
             load_dotenv(dotenv_path=self.env_path)
             self.env_loaded = True
-            Logger.configure_from_env()
+            Logger.configure_from_env(self.project_root)
         elif self.is_dev:
             Logger.warning(f".env not found at {self.env_path}, skipping...")
         else:

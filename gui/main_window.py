@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
@@ -25,6 +24,7 @@ from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.certificate.session_store import ProjectSessionStore
 from core.manager.theme_manager import ThemeManager
+from core.util.app_paths import AppPaths
 from core.util.logger import Logger
 from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 
@@ -491,7 +491,7 @@ class MainWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(
             self,
             self.localization.t("dialog.save_project.title"),
-            self.current_project_path or str(Path.cwd() / "document-mapper-project.json"),
+            self.current_project_path or str(AppPaths.default_project_path()),
             self.localization.t("dialog.project_files"),
         )
         if not path:

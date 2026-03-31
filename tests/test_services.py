@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 import zipfile
 
 import pandas as pd
 
+from core.config.environment_setup import EnvironmentSetup
 from core.certificate.excel_service import ExcelDataService, normalize_column_name
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
@@ -19,6 +22,8 @@ from core.certificate.models import (
 )
 from core.certificate.session_store import ProjectSessionStore
 from core.certificate.template_service import TemplatePlaceholderService
+from core.util.app_paths import AppPaths
+from core.util.resources import Resources
 
 
 class FakeExcelService:
@@ -273,6 +278,92 @@ class ServicesTestCase(unittest.TestCase):
         self.assertEqual(len(session.mappings), 2)
         self.assertEqual(session.mappings[0].placeholder, "<<NOME>>")
         self.assertEqual(session.mappings[0].column_name, "NOME")
+
+    def test_session_store_migrates_legacy_last_session_into_state_dir(self):
+        session = ProjectSession(excel_path="/tmp/data.xlsx")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "state"
+            legacy_dir = Path(temp_dir) / "legacy"
+            state_dir.mkdir(parents=True, exist_ok=True)
+            legacy_dir.mkdir(parents=True, exist_ok=True)
+            legacy_path = legacy_dir / "last_session.json"
+            legacy_path.write_text(
+                '{"excel_path": "/tmp/data.xlsx", "output_naming_schema": "{ROW}"}',
+                encoding="utf-8",
+            )
+
+            with patch.object(AppPaths, "state_dir", return_value=state_dir), patch.object(
+                AppPaths,
+                "legacy_last_session_path",
+                return_value=legacy_path,
+            ):
+                store = ProjectSessionStore()
+                loaded = store.load_last_session()
+                self.assertEqual(store.last_session_path.parent, state_dir)
+                self.assertEqual(loaded.excel_path, session.excel_path)
+                self.assertFalse(legacy_path.exists())
+                self.assertTrue(store.last_session_path.exists())
+
+    def test_session_store_quarantines_invalid_last_session(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "state"
+            state_dir.mkdir(parents=True, exist_ok=True)
+            last_session_path = state_dir / "last_session.json"
+            last_session_path.write_text("{invalid", encoding="utf-8")
+            legacy_path = Path(temp_dir) / "missing_legacy.json"
+
+            with patch.object(AppPaths, "state_dir", return_value=state_dir), patch.object(
+                AppPaths,
+                "legacy_last_session_path",
+                return_value=legacy_path,
+            ):
+                store = ProjectSessionStore()
+                loaded = store.load_last_session()
+                self.assertEqual(loaded.to_dict(), ProjectSession().to_dict())
+                self.assertFalse(last_session_path.exists())
+                self.assertEqual(len(list(state_dir.glob("last_session.invalid-*.json"))), 1)
+
+    def test_environment_setup_uses_project_root_not_cwd(self):
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+            try:
+                setup = EnvironmentSetup()
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(setup.project_root, AppPaths.project_root())
+        self.assertTrue(setup.toml_path.exists())
+
+    def test_resources_resolve_from_project_root_not_cwd(self):
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+            try:
+                Resources.initialize(
+                    {
+                        "RESOURCES_BASE": "resources",
+                        "RESOURCES_QSS": "resources/qss",
+                        "RESOURCES_ICONS": "resources/icons",
+                        "RESOURCES_IMAGES": "resources/images",
+                        "RESOURCES_FONTS": "resources/fonts",
+                    }
+                )
+                qss_path = Resources.get_in_qss("elements/file_entry/default.qss")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertTrue(Path(qss_path).exists())
+        self.assertTrue(str(Path(qss_path)).startswith(str(AppPaths.project_root())))
+
+    def test_generator_uses_app_logs_dir_when_output_dir_missing(self):
+        generator = CertificateGenerator(excel_service=FakeExcelService(pd.DataFrame([{"NOME": "Ada"}])))
+
+        with tempfile.TemporaryDirectory() as temp_dir, patch.object(AppPaths, "logs_dir", return_value=Path(temp_dir)):
+            log_path = generator._resolve_log_path(ProjectSession(output_dir=""))
+
+        self.assertEqual(log_path, Path(temp_dir) / "certificate_generation.log")
 
     def test_generator_formats_dates_and_creates_docx(self):
         dataframe = pd.DataFrame(

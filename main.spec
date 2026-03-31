@@ -1,13 +1,11 @@
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-import PySide6
-import os
 import toml
 import ast
 
 # --- Paths ---
-project_root = Path(os.getcwd())
+project_root = Path(__file__).resolve().parent
 
 config_path = project_root / "config.toml"
 if not config_path.exists():
@@ -52,7 +50,6 @@ hiddenimports += [
 # --- Data files (config + gui + resources) ---
 datas = [
     (str(project_root / "config.toml"), "."),
-    (str(project_root / "gui"), "gui"),
 ]
 
 # Add ONLY the specific resource subfolders from config (not the base folder)

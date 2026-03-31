@@ -296,6 +296,41 @@ class GuiFlowTestCase(unittest.TestCase):
             self.assert_stage_state(window, 3, active=False, blocked=False, completed=False)
             self.assert_stage_state(window, 4, active=False, blocked=True, completed=False)
 
+    def test_save_project_defaults_to_documents_path(self):
+        from gui import main_window as main_window_module
+
+        fake_store = FakeSessionStore()
+        config = {
+            "APP_NAME": "Document Mapper Test",
+            "APP_ORGANIZATION": "Document Mapper Tests",
+            "APP_LANGUAGE": "en",
+            "WINDOW_WIDTH": 900,
+            "WINDOW_HEIGHT": 600,
+            "WINDOW_MIN_WIDTH": 800,
+            "WINDOW_MIN_HEIGHT": 500,
+            "WINDOW_TITLE": "Document Mapper",
+            "WINDOW_THEME_MODE": "AUTO",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            default_project_path = Path(temp_dir) / "Documents" / "document-mapper-project.json"
+            default_project_path.parent.mkdir(parents=True, exist_ok=True)
+            QSettings(config["APP_ORGANIZATION"], config["APP_NAME"]).clear()
+
+            with patch.object(main_window_module, "ProjectSessionStore", return_value=fake_store), patch.object(
+                main_window_module, "ExcelDataService", return_value=FakeExcelService()
+            ), patch.object(main_window_module, "CertificateGenerator", side_effect=lambda _excel: FakeGenerator()):
+                window = main_window_module.MainWindow(config)
+
+            with patch.object(main_window_module.AppPaths, "default_project_path", return_value=default_project_path), patch.object(
+                main_window_module.QFileDialog,
+                "getSaveFileName",
+                return_value=("", ""),
+            ) as save_dialog:
+                window._save_project_as()
+
+            self.assertEqual(save_dialog.call_args.args[2], str(default_project_path))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,6 +18,7 @@ from core.certificate.models import (
     normalize_output_naming_schema,
     normalize_placeholder_delimiter,
 )
+from core.util.app_paths import AppPaths
 from core.util.logger import Logger
 
 LogCallback = Callable[[str], None]
@@ -53,10 +54,9 @@ class CertificateGenerator:
         if not session.output_dir:
             errors.append("Choose an output folder.")
         else:
-            try:
-                Path(session.output_dir).mkdir(parents=True, exist_ok=True)
-            except OSError as exc:
-                errors.append(f"Output folder is not writable: {exc}")
+            output_dir_error = self._validate_output_dir(session.output_dir)
+            if output_dir_error:
+                errors.append(f"Output folder is not writable: {output_dir_error}")
 
         if session.license_path and not Path(session.license_path).exists():
             errors.append(f"License file not found: {session.license_path}")
@@ -403,9 +403,29 @@ class CertificateGenerator:
         return sanitized.strip("._")
 
     def _resolve_log_path(self, session: ProjectSession) -> Path:
-        base_dir = Path(session.output_dir).resolve() if session.output_dir else Path.cwd()
+        base_dir = Path(session.output_dir).resolve() if session.output_dir else AppPaths.logs_dir()
         base_dir.mkdir(parents=True, exist_ok=True)
         return base_dir / "certificate_generation.log"
+
+    def _validate_output_dir(self, output_dir: str) -> str | None:
+        target = Path(output_dir).expanduser()
+        if target.exists():
+            if not target.is_dir():
+                return f"{target} is not a directory"
+            if not os.access(target, os.W_OK):
+                return f"permission denied for {target}"
+            return None
+
+        parent = target.parent if str(target.parent) not in ("", ".") else Path.cwd()
+        existing_parent = parent
+        while not existing_parent.exists() and existing_parent != existing_parent.parent:
+            existing_parent = existing_parent.parent
+
+        if not existing_parent.exists():
+            return f"parent directory does not exist for {target}"
+        if not os.access(existing_parent, os.W_OK):
+            return f"permission denied for {existing_parent}"
+        return None
 
     def _initialize_log(self, log_path: Path):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

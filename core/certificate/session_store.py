@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
+import shutil
 
 from core.certificate.models import (
     DEFAULT_CERTIFICATE_TYPE,
@@ -9,18 +11,20 @@ from core.certificate.models import (
     ProjectSession,
     normalize_certificate_type,
 )
-from core.util.resources import Resources
+from core.util.app_paths import AppPaths
 
 
 class ProjectSessionStore:
     last_session_filename = "last_session.json"
 
     def __init__(self, base_dir: str | Path | None = None):
+        self._default_location = base_dir is None
         if base_dir is None:
-            configured_temp = getattr(Resources, "temp", None)
-            base_dir = configured_temp or (Path.cwd() / "resources" / "temp")
+            base_dir = AppPaths.state_dir()
         self.base_dir = Path(base_dir).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
+        if self._default_location:
+            self._migrate_legacy_last_session()
 
     @property
     def last_session_path(self) -> Path:
@@ -88,4 +92,49 @@ class ProjectSessionStore:
     def load_last_session(self) -> ProjectSession:
         if not self.last_session_path.exists():
             return ProjectSession()
-        return self.load(self.last_session_path)
+        try:
+            return self.load(self.last_session_path)
+        except (json.JSONDecodeError, OSError, ValueError, TypeError) as exc:
+            self._quarantine_invalid_last_session(exc)
+            return ProjectSession()
+
+    def _migrate_legacy_last_session(self):
+        if self.last_session_path.exists():
+            return
+
+        legacy_path = AppPaths.legacy_last_session_path(self.last_session_filename)
+        if not legacy_path.exists():
+            return
+
+        try:
+            session = self.load(legacy_path)
+        except (json.JSONDecodeError, OSError, ValueError, TypeError) as exc:
+            self._quarantine_legacy_last_session(legacy_path, exc)
+            return
+
+        self.save_last_session(session)
+        try:
+            legacy_path.unlink()
+        except OSError:
+            pass
+
+    def _quarantine_invalid_last_session(self, _exc: Exception):
+        quarantine_path = self._invalid_session_backup_path(self.last_session_path)
+        self._safe_move_to_quarantine(self.last_session_path, quarantine_path)
+
+    def _quarantine_legacy_last_session(self, legacy_path: Path, _exc: Exception):
+        quarantine_path = self._invalid_session_backup_path(legacy_path)
+        self._safe_move_to_quarantine(legacy_path, quarantine_path)
+
+    def _invalid_session_backup_path(self, source: Path) -> Path:
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        return source.with_name(f"{source.stem}.invalid-{timestamp}{source.suffix}")
+
+    def _safe_move_to_quarantine(self, source: Path, destination: Path):
+        try:
+            shutil.move(str(source), str(destination))
+        except OSError:
+            try:
+                source.unlink(missing_ok=True)
+            except OSError:
+                pass
