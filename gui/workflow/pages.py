@@ -277,6 +277,12 @@ class WorkflowPage(QWidget):
             return self.localization.t("common.not_selected")
         return str(Path(path))
 
+    def _display_file_name(self, path: str) -> str:
+        if not path:
+            return self.localization.t("common.not_selected")
+        resolved = Path(path)
+        return resolved.name or str(resolved)
+
 
 class SetupPage(WorkflowPage):
     def __init__(self, localization: LocalizationManager):
@@ -744,7 +750,7 @@ class MappingPage(WorkflowPage):
             self.localization.t(
                 "status.rows_detected",
                 row_count=preview.row_count,
-                path=self._display_path(self.session.excel_path),
+                path=self._display_file_name(self.session.excel_path),
             )
         )
         for column in self.columns:
