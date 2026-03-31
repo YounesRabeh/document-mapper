@@ -4,10 +4,13 @@ PySide6 desktop app for generating certificate `.docx` files from Excel data wit
 
 ## Testing
 
-Run the full suite with:
+Test documentation lives in [tests/README.md](/home/yuyu/Desktop/DEV/Python%20Projects/document-mapper/tests/README.md).
+
+Quick start:
 
 ```bash
-QT_QPA_PLATFORM=offscreen pytest -q
+python -m pip install -r requirements.txt
+python -m pytest
 ```
 
-The tests are split by feature under `tests/services/` and `tests/gui/`, with shared fixtures in `tests/conftest.py` and reusable fakes in `tests/helpers/`.
+For GUI/headless environments, see the dedicated test guide for the `offscreen` command and the split between `tests/services/` and `tests/gui/`.
