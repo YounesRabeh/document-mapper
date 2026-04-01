@@ -50,7 +50,7 @@ def clear_test_settings(window_config):
 
 @pytest.fixture
 def main_window_factory(qapp, window_config, clear_test_settings):
-    from gui import main_window as main_window_module
+    from gui.windows import main_window as main_window_module
 
     resources: list[tuple[object, ExitStack]] = []
 

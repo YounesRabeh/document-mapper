@@ -9,7 +9,8 @@ from PySide6.QtCore import QCoreApplication, QStandardPaths
 
 class AppPaths:
     DEFAULT_APP_SLUG = "document-mapper"
-    DEFAULT_PROJECT_FILENAME = "document-mapper-project.json"
+    DEFAULT_PROJECT_DIRNAME = "document-mapper-project"
+    DEFAULT_PROJECT_FILENAME = "project.json"
     DEFAULT_LOG_FILENAME = "certificate_generation.log"
     DEFAULT_RESOURCES_DIRNAME = "resources"
 
@@ -81,7 +82,7 @@ class AppPaths:
 
     @classmethod
     def default_project_path(cls) -> Path:
-        return cls.documents_dir() / cls.DEFAULT_PROJECT_FILENAME
+        return cls.documents_dir() / cls.DEFAULT_PROJECT_DIRNAME
 
     @classmethod
     def default_log_path(cls) -> Path:

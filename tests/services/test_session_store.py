@@ -3,17 +3,27 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from core.certificate.models import MappingEntry, ProjectSession
+from core.certificate.models import MappingEntry, ProjectSession, ProjectTemplateEntry, ProjectTemplateType
 from core.certificate.session_store import ProjectSessionStore
 from core.util.app_paths import AppPaths
 
 
 def test_session_store_round_trip(tmp_path):
+    source_template = tmp_path / "source_template.docx"
+    source_template.write_text("Hello <<NAME>>", encoding="utf-8")
+    template_entry = ProjectTemplateEntry(
+        display_name="attestato",
+        type_name="General",
+        source_path=str(source_template),
+        is_managed=False,
+    )
     session = ProjectSession(
         excel_path="/tmp/data.xlsx",
-        template_path="/tmp/template.docx",
         output_dir="/tmp/out",
-        certificate_type="attestato",
+        selected_template_type="General",
+        selected_template=template_entry.id,
+        template_types=[ProjectTemplateType("General")],
+        templates=[template_entry],
         output_naming_schema="{COGNOME}_{ROW}",
         placeholder_delimiter="{{",
         export_pdf=True,
@@ -21,10 +31,17 @@ def test_session_store_round_trip(tmp_path):
     )
 
     store = ProjectSessionStore(tmp_path)
-    saved_path = store.save(session, tmp_path / "project.json")
-    loaded = store.load(saved_path)
+    project_dir = tmp_path / "project"
+    saved_path = store.save(session, project_dir)
+    loaded = store.load(project_dir)
 
-    assert loaded.to_dict() == session.to_dict()
+    assert saved_path == project_dir / "project.json"
+    assert loaded.selected_template_type == "General"
+    assert loaded.selected_template_entry() is not None
+    assert loaded.selected_template_entry().is_managed is True
+    assert Path(loaded.template_path).exists()
+    assert loaded.output_naming_schema == "{COGNOME}_{ROW}"
+    assert loaded.placeholder_delimiter == "{{"
 
 
 def test_session_store_loads_legacy_files(tmp_path):
@@ -57,7 +74,9 @@ def test_session_store_loads_legacy_files(tmp_path):
     assert session.template_path == "/tmp/template.docx"
     assert session.output_dir == "/tmp/out"
     assert session.license_path == "/tmp/license.xml"
-    assert session.certificate_type == "attestato"
+    assert session.selected_template_type == "Imported"
+    assert session.selected_template_entry() is not None
+    assert session.selected_template_entry().label == "attestato"
     assert session.placeholder_delimiter == "<<"
     assert session.placeholder_start == "<<"
     assert session.placeholder_end == ">>"

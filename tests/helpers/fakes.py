@@ -46,7 +46,7 @@ class FakeGenerator:
         if not session.excel_path:
             errors.append("Select an Excel workbook.")
         if not session.template_path:
-            errors.append("Select a Word certificate template.")
+            errors.append("Select a project template or set a template override.")
         if not session.output_dir:
             errors.append("Choose an output folder.")
         if not session.output_naming_schema.strip():
@@ -82,12 +82,29 @@ class FakeSessionStore:
 
     def save(self, session, path):
         self.session = session.clone()
-        return Path(path)
+        resolved = Path(path)
+        if resolved.suffix.lower() == ".json":
+            return resolved
+        return resolved / "project.json"
 
     def load(self, _path):
         if self.loaded_session is not None:
-            return self.loaded_session.clone()
-        return ProjectSession()
+            session = self.loaded_session.clone()
+        else:
+            session = ProjectSession()
+        session.template_path = self.resolve_effective_template_path(session, None)
+        return session
+
+    def resolve_effective_template_path(self, session: ProjectSession, _project_dir):
+        if session.template_override_path:
+            return session.template_override_path
+        selected_entry = session.selected_template_entry()
+        if selected_entry is not None:
+            if selected_entry.source_path:
+                return selected_entry.source_path
+            if selected_entry.relative_path:
+                return selected_entry.relative_path
+        return session.template_path
 
 
 class FakeDocument:
@@ -116,4 +133,3 @@ class FakeDocument:
 
 def fake_spire_dependencies():
     return FakeDocument, SimpleNamespace(Docx2016="Docx2016")
-

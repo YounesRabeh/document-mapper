@@ -25,6 +25,7 @@ LogCallback = Callable[[str], None]
 OUTPUT_SCHEMA_TOKEN_PATTERN = re.compile(r"\{([^{}]+)\}")
 OUTPUT_SCHEMA_BUILTINS = {
     "ROW",
+    "TEMPLATE",
     "CERTIFICATE_TYPE",
 }
 
@@ -47,7 +48,7 @@ class CertificateGenerator:
             errors.append(f"Excel file not found: {session.excel_path}")
 
         if not session.template_path:
-            errors.append("Select a Word certificate template.")
+            errors.append("Select a project template or set a template override.")
         elif not Path(session.template_path).exists():
             errors.append(f"Template file not found: {session.template_path}")
 
@@ -136,7 +137,7 @@ class CertificateGenerator:
 
                 self._write_log(
                     log_path,
-                    f"PROCESS | Generating certificate for {participant_name} ({index + 1}/{total_rows})",
+                    f"PROCESS | Generating document for {participant_name} ({index + 1}/{total_rows})",
                     progress_callback,
                 )
 
@@ -199,7 +200,7 @@ class CertificateGenerator:
             from spire.doc import Document, FileFormat
         except ImportError as exc:
             raise RuntimeError(
-                "Spire.Doc is not installed. Install the runtime dependency before generating certificates."
+                "Spire.Doc is not installed. Install the runtime dependency before generating documents."
             ) from exc
         return Document, FileFormat
 
@@ -339,8 +340,8 @@ class CertificateGenerator:
         normalized = normalize_column_name(token)
         if normalized == "ROW":
             return str(row_index + 1)
-        if normalized == "CERTIFICATE_TYPE":
-            return session.certificate_type
+        if normalized in {"TEMPLATE", "CERTIFICATE_TYPE"}:
+            return session.active_template_name
 
         column_name = column_lookup.get(normalized)
         if not column_name:

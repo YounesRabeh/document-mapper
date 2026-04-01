@@ -1,8 +1,13 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
+from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import (
+    QComboBox,
+    QDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -19,158 +24,28 @@ from PySide6.QtWidgets import (
 
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
-from core.certificate.models import GenerationResult, ProjectSession
+from core.certificate.models import (
+    DEFAULT_IMPORTED_TEMPLATE_TYPE,
+    GenerationResult,
+    ProjectSession,
+    ProjectTemplateEntry,
+    ProjectTemplateType,
+    normalize_template_name,
+)
+from core.certificate.session_store import ProjectSessionStore
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
-from core.certificate.session_store import ProjectSessionStore
 from core.manager.theme_manager import ThemeManager
 from core.util.app_paths import AppPaths
 from core.util.logger import Logger
+from gui.dialogs import TemplateManagerDialog
+from gui.styles import MAIN_WINDOW_QSS
 from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 
 SIDEBAR_WIDTH = 296
 CONTENT_MIN_WIDTH = 860
-WINDOW_MIN_WIDTH = 1180
-WINDOW_MIN_HEIGHT = 640
-
-MAIN_WINDOW_QSS = """
-QWidget#windowRoot {
-    background: palette(window);
-}
-
-QScrollArea#workflowSidebarScroll {
-    background: palette(alternate-base);
-    border: none;
-    border-right: 1px solid palette(midlight);
-}
-
-QScrollArea#workflowSidebarScroll > QWidget > QWidget {
-    background: palette(alternate-base);
-}
-
-QFrame#workflowSidebar {
-    background: palette(alternate-base);
-    border: none;
-}
-
-QLabel#sidebarEyebrow {
-    color: palette(mid);
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.1px;
-}
-
-QLabel#sidebarTitle {
-    color: palette(window-text);
-    font-size: 22px;
-    font-weight: 800;
-}
-
-QLabel#sidebarSubtitle {
-    color: palette(text);
-    font-size: 13px;
-    line-height: 1.45;
-}
-
-QFrame#sidebarStageCard {
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 16px;
-}
-
-QFrame#sidebarStageCard:hover {
-    background: palette(window);
-    border-color: palette(midlight);
-}
-
-QFrame#sidebarStageCard[completed="true"] {
-    background: palette(window);
-    border-color: palette(midlight);
-}
-
-QFrame#sidebarStageCard[completed="true"]:hover {
-    background: palette(button);
-    border-color: palette(midlight);
-}
-
-QFrame#sidebarStageCard[active="true"] {
-    background: palette(button);
-    border-color: palette(highlight);
-}
-
-QFrame#sidebarStageCard[blocked="true"],
-QFrame#sidebarStageCard[blocked="true"]:hover {
-    background: transparent;
-    border-color: transparent;
-}
-
-QLabel#sidebarStageIndex {
-    background: palette(button);
-    color: palette(text);
-    border-radius: 14px;
-    padding: 6px 0;
-    font-size: 11px;
-    font-weight: 800;
-}
-
-QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageIndex {
-    background: palette(highlight);
-    color: palette(highlighted-text);
-}
-
-QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageIndex {
-    background: palette(midlight);
-    color: palette(window-text);
-}
-
-QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageIndex {
-    background: palette(window);
-    color: palette(mid);
-}
-
-QLabel#sidebarStageTitle {
-    color: palette(window-text);
-    font-size: 15px;
-    font-weight: 800;
-}
-
-QLabel#sidebarStageDetail {
-    color: palette(text);
-    font-size: 12px;
-    opacity: 0.85;
-}
-
-QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageDetail {
-    color: palette(window-text);
-}
-
-QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
-    color: palette(window-text);
-}
-
-QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
-    color: palette(window-text);
-}
-
-QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageTitle,
-QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageDetail {
-    color: palette(mid);
-}
-
-QPushButton#sidebarUtilityButton {
-    background: palette(window);
-    border: 1px solid palette(midlight);
-    border-radius: 12px;
-    color: palette(button-text);
-    font-weight: 600;
-    padding: 10px 12px;
-}
-
-QPushButton#sidebarUtilityButton:hover {
-    border-color: palette(highlight);
-    background: palette(button);
-}
-"""
+WINDOW_MIN_WIDTH = 1240
+WINDOW_MIN_HEIGHT = 680
 
 
 @dataclass(slots=True)
@@ -252,12 +127,13 @@ class SidebarStageCard(QFrame):
 
 
 class MainWindow(QMainWindow):
-    """Main window for the certificate mail-merge workflow."""
+    """Main window for the template-based document merge workflow."""
 
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
         self.current_project_path: str | None = None
+
         self.session_store = ProjectSessionStore()
         self.excel_service = ExcelDataService()
         self.template_service = TemplatePlaceholderService()
@@ -289,9 +165,18 @@ class MainWindow(QMainWindow):
         self.sidebar = self._create_sidebar()
         root_layout.addWidget(self.sidebar)
 
+        self.content_root = QWidget()
+        content_layout = QVBoxLayout(self.content_root)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        root_layout.addWidget(self.content_root, stretch=1)
+
+        self.template_toolbar = self._create_template_toolbar()
+        content_layout.addWidget(self.template_toolbar)
+
         self.stage_manager = QStackedWidget()
         self.stage_manager.setMinimumSize(CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT)
-        root_layout.addWidget(self.stage_manager, stretch=1)
+        content_layout.addWidget(self.stage_manager, stretch=1)
 
         self.setup_page = SetupPage(self.localization)
         self.mapping_page = MappingPage(
@@ -386,6 +271,49 @@ class MainWindow(QMainWindow):
 
         return sidebar_scroll
 
+    def _create_template_toolbar(self) -> QFrame:
+        toolbar = QFrame()
+        toolbar.setObjectName("templateToolbar")
+
+        layout = QVBoxLayout(toolbar)
+        layout.setContentsMargins(24, 16, 24, 14)
+        layout.setSpacing(10)
+
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(12)
+
+        self.template_type_label = QLabel()
+        self.template_type_label.setObjectName("templateToolbarLabel")
+        self.template_type_combo = QComboBox()
+        self.template_type_combo.setObjectName("templateToolbarCombo")
+        self.template_type_combo.currentIndexChanged.connect(self._handle_template_type_changed)
+
+        self.template_label = QLabel()
+        self.template_label.setObjectName("templateToolbarLabel")
+        self.template_combo = QComboBox()
+        self.template_combo.setObjectName("templateToolbarCombo")
+        self.template_combo.currentIndexChanged.connect(self._handle_template_selection_changed)
+
+        self.manage_templates_button = QPushButton()
+        self.manage_templates_button.setObjectName("templateToolbarButton")
+        self.manage_templates_button.clicked.connect(self._manage_templates)
+
+        row.addWidget(self.template_type_label)
+        row.addWidget(self.template_type_combo)
+        row.addWidget(self.template_label)
+        row.addWidget(self.template_combo)
+        row.addStretch(1)
+        row.addWidget(self.manage_templates_button)
+
+        self.template_toolbar_status = QLabel()
+        self.template_toolbar_status.setObjectName("templateToolbarStatus")
+        self.template_toolbar_status.setWordWrap(True)
+
+        layout.addLayout(row)
+        layout.addWidget(self.template_toolbar_status)
+        return toolbar
+
     def _create_menu_bar(self):
         self.file_menu = self.menuBar().addMenu("")
         self.view_menu = self.menuBar().addMenu("")
@@ -430,6 +358,8 @@ class MainWindow(QMainWindow):
         self.language_menu.addAction(self.language_it_action)
 
     def _refresh_pages(self):
+        self._sync_effective_template_path()
+        self._refresh_template_toolbar()
         self.setup_page.bind_session(self.session)
         self.mapping_page.bind_session(self.session)
         self.generate_page.bind_session(self.session)
@@ -437,8 +367,11 @@ class MainWindow(QMainWindow):
         self._refresh_workflow_state()
 
     def _persist_last_session(self):
+        self._sync_effective_template_path()
         self.session_store.save_last_session(self.session)
+        self._refresh_template_toolbar()
         self.generate_page.bind_session(self.session)
+        self.results_page.bind_result(self.last_result, self.session)
         self._refresh_workflow_state()
 
     def goto_stage(self, index: int):
@@ -458,24 +391,32 @@ class MainWindow(QMainWindow):
         self.current_project_path = None
         self.last_result = GenerationResult()
         self.session = ProjectSession()
-        self._persist_last_session()
+        self.session_store.save_last_session(self.session)
         self._refresh_pages()
         self.goto_stage(1)
 
     def _open_project(self):
-        path, _ = QFileDialog.getOpenFileName(
+        start_dir = self.current_project_path or str(AppPaths.documents_dir())
+        path = QFileDialog.getExistingDirectory(
             self,
             self.localization.t("dialog.open_project.title"),
-            "",
-            self.localization.t("dialog.project_files"),
+            start_dir,
         )
+        if not path:
+            path, _ = QFileDialog.getOpenFileName(
+                self,
+                self.localization.t("dialog.open_project.title"),
+                start_dir,
+                self.localization.t("dialog.project_files"),
+            )
         if not path:
             return
         try:
             self.session = self.session_store.load(path)
-            self.current_project_path = path
+            selected_path = Path(path).expanduser().resolve()
+            self.current_project_path = str(selected_path if selected_path.is_dir() else selected_path.parent)
             self.last_result = GenerationResult()
-            self._persist_last_session()
+            self.session_store.save_last_session(self.session)
             self._refresh_pages()
             self.goto_stage(1)
         except Exception as exc:
@@ -483,20 +424,223 @@ class MainWindow(QMainWindow):
 
     def _save_project(self):
         if self.current_project_path:
-            self.session_store.save(self.session, self.current_project_path)
+            self._save_project_to_path(self.current_project_path)
             return
         self._save_project_as()
 
     def _save_project_as(self):
-        path, _ = QFileDialog.getSaveFileName(
+        path = QFileDialog.getExistingDirectory(
             self,
             self.localization.t("dialog.save_project.title"),
             self.current_project_path or str(AppPaths.default_project_path()),
-            self.localization.t("dialog.project_files"),
         )
         if not path:
             return
-        self.current_project_path = str(self.session_store.save(self.session, path))
+        self._save_project_to_path(path)
+
+    def _save_project_to_path(self, path: str | Path):
+        project_dir = Path(path).expanduser().resolve()
+        session_to_save = self._prepare_session_for_save(project_dir)
+        if session_to_save is None:
+            return
+
+        saved_path = self.session_store.save(session_to_save, project_dir)
+        self.current_project_path = str(Path(saved_path).parent)
+        self.session = self.session_store.load(self.current_project_path)
+        self.session_store.save_last_session(self.session)
+        self._refresh_pages()
+
+    def _prepare_session_for_save(self, project_dir: Path) -> ProjectSession | None:
+        session_to_save = self.session.clone()
+        if not session_to_save.template_override_path:
+            self._sync_effective_template_path(session_to_save)
+            return session_to_save
+
+        override_path = Path(session_to_save.template_override_path).expanduser()
+        if not override_path.exists():
+            self._sync_effective_template_path(session_to_save)
+            return session_to_save
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Question)
+        message_box.setWindowTitle(self.localization.t("dialog.template_override_save.title"))
+        message_box.setText(
+            self.localization.t(
+                "dialog.template_override_save.body",
+                path=override_path.name,
+            )
+        )
+        store_button = message_box.addButton(
+            self.localization.t("dialog.template_override_save.store"),
+            QMessageBox.AcceptRole,
+        )
+        keep_button = message_box.addButton(
+            self.localization.t("dialog.template_override_save.keep"),
+            QMessageBox.DestructiveRole,
+        )
+        cancel_button = message_box.addButton(
+            self.localization.t("dialog.template_override_save.cancel"),
+            QMessageBox.RejectRole,
+        )
+        message_box.exec()
+
+        clicked_button = message_box.clickedButton()
+        if clicked_button is cancel_button:
+            return None
+        if clicked_button is store_button:
+            self._store_template_override_in_project(session_to_save)
+
+        self._sync_effective_template_path(session_to_save)
+        return session_to_save
+
+    def _store_template_override_in_project(self, session: ProjectSession):
+        if not session.template_override_path:
+            return
+        override_path = Path(session.template_override_path).expanduser().resolve()
+        if not override_path.exists():
+            return
+
+        type_name = session.selected_template_type or DEFAULT_IMPORTED_TEMPLATE_TYPE
+        if type_name not in {entry.name for entry in session.template_types}:
+            session.template_types.append(ProjectTemplateType(type_name))
+
+        display_name = self._unique_template_display_name(
+            session,
+            type_name,
+            normalize_template_name(override_path.stem) or normalize_template_name(override_path.name),
+        )
+        new_entry = ProjectTemplateEntry(
+            display_name=display_name,
+            type_name=type_name,
+            source_path=str(override_path),
+            is_managed=False,
+        )
+        session.templates.append(new_entry)
+        session.selected_template_type = type_name
+        session.selected_template = new_entry.id
+        session.template_override_path = ""
+        session._ensure_template_catalog_consistency()
+
+    def _unique_template_display_name(
+        self,
+        session: ProjectSession,
+        type_name: str,
+        base_name: str,
+        exclude_template_id: str = "",
+    ) -> str:
+        normalized = normalize_template_name(base_name) or "Template"
+        existing = {
+            entry.label.casefold()
+            for entry in session.templates_for_type(type_name)
+            if entry.id != exclude_template_id
+        }
+        candidate = normalized
+        counter = 2
+        while candidate.casefold() in existing:
+            candidate = f"{normalized} {counter}"
+            counter += 1
+        return candidate
+
+    def _current_project_dir(self) -> Path | None:
+        if not self.current_project_path:
+            return None
+        return Path(self.current_project_path).expanduser().resolve()
+
+    def _sync_effective_template_path(self, session: ProjectSession | None = None):
+        target_session = session or self.session
+        target_session.template_path = self.session_store.resolve_effective_template_path(
+            target_session,
+            self._current_project_dir(),
+        )
+
+    def _refresh_template_toolbar(self):
+        selected_type = self.session.selected_template_type
+        type_names = [entry.name for entry in self.session.template_types]
+
+        self.template_type_combo.blockSignals(True)
+        self.template_combo.blockSignals(True)
+        try:
+            self.template_type_combo.clear()
+            for type_name in type_names:
+                self.template_type_combo.addItem(type_name, type_name)
+
+            if selected_type:
+                index = self.template_type_combo.findData(selected_type)
+                if index >= 0:
+                    self.template_type_combo.setCurrentIndex(index)
+            elif self.template_type_combo.count() > 0:
+                self.template_type_combo.setCurrentIndex(0)
+
+            current_type = self.session.selected_template_type
+            template_entries = self.session.templates_for_type(current_type)
+            self.template_combo.clear()
+            for entry in template_entries:
+                self.template_combo.addItem(entry.label, entry.id)
+
+            if self.session.selected_template:
+                index = self.template_combo.findData(self.session.selected_template)
+                if index >= 0:
+                    self.template_combo.setCurrentIndex(index)
+            elif self.template_combo.count() > 0:
+                self.template_combo.setCurrentIndex(0)
+
+            has_types = bool(type_names)
+            has_templates = bool(template_entries)
+            self.template_type_combo.setEnabled(has_types)
+            self.template_combo.setEnabled(has_templates)
+
+            if self.session.template_override_path:
+                self.template_toolbar_status.setText(
+                    self.localization.t(
+                        "status.template_override_active",
+                        name=Path(self.session.template_override_path).name,
+                    )
+                )
+            elif not has_types:
+                self.template_toolbar_status.setText(self.localization.t("status.no_project_templates"))
+            elif not has_templates:
+                self.template_toolbar_status.setText(self.localization.t("status.no_templates_for_selected_type"))
+            else:
+                self.template_toolbar_status.setText(
+                    self.localization.t(
+                        "status.active_template_ready",
+                        name=self.session.active_template_name or self.localization.t("common.not_selected"),
+                    )
+                )
+        finally:
+            self.template_type_combo.blockSignals(False)
+            self.template_combo.blockSignals(False)
+
+    def _handle_template_type_changed(self, _index: int):
+        selected_type = str(self.template_type_combo.currentData() or "").strip()
+        if selected_type == self.session.selected_template_type:
+            return
+
+        self.session.selected_template_type = selected_type
+        template_entries = self.session.templates_for_type(selected_type)
+        self.session.selected_template = template_entries[0].id if template_entries else ""
+        self._persist_last_session()
+        self.setup_page.refresh_from_session()
+        self.mapping_page.bind_session(self.session)
+
+    def _handle_template_selection_changed(self, _index: int):
+        selected_template = str(self.template_combo.currentData() or "").strip()
+        if selected_template == self.session.selected_template:
+            return
+        self.session.selected_template = selected_template
+        self._persist_last_session()
+        self.setup_page.refresh_from_session()
+        self.mapping_page.bind_session(self.session)
+
+    def _manage_templates(self):
+        dialog = TemplateManagerDialog(self.session, self.localization, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        self.session = dialog.edited_session()
+        self._sync_effective_template_path()
+        self.session_store.save_last_session(self.session)
+        self._refresh_pages()
 
     def _handle_generation_result(self, result: GenerationResult):
         self.last_result = result
@@ -529,6 +673,9 @@ class MainWindow(QMainWindow):
         self.sidebar_new_button.setText(self.localization.t("action.new_project"))
         self.sidebar_open_button.setText(self.localization.t("action.open_project"))
         self.sidebar_save_button.setText(self.localization.t("action.save_project"))
+        self.template_type_label.setText(self.localization.t("field.template_type"))
+        self.template_label.setText(self.localization.t("field.template"))
+        self.manage_templates_button.setText(self.localization.t("button.manage_templates"))
 
         self.language_en_action.setText(self.localization.t("menu.language.en"))
         self.language_it_action.setText(self.localization.t("menu.language.it"))
@@ -536,6 +683,7 @@ class MainWindow(QMainWindow):
         self.language_it_action.setChecked(self.localization.current_language == "it")
         for card in self.stage_cards.values():
             card.retranslate()
+        self._refresh_template_toolbar()
         self._refresh_workflow_state()
 
     def _handle_stage_changed(self, current_index: int):

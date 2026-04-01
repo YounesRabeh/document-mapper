@@ -33,21 +33,18 @@ from PySide6.QtWidgets import (
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
-    CERTIFICATE_TYPE_OPTIONS,
-    DEFAULT_CERTIFICATE_TYPE,
     DEFAULT_OUTPUT_NAMING_SCHEMA,
     DEFAULT_PLACEHOLDER_DELIMITER,
     GenerationResult,
     MappingEntry,
     ProjectSession,
     derive_placeholder_boundaries,
-    normalize_certificate_type,
     normalize_placeholder_delimiter,
 )
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
-from gui.workflow.styles import MAPPING_TABLE_VIEWPORT_QSS, build_workflow_page_qss
+from gui.styles import MAPPING_TABLE_VIEWPORT_QSS, build_workflow_page_qss
 
 PAGE_MIN_WIDTH = 860
 PAGE_MIN_HEIGHT = 560
@@ -292,7 +289,7 @@ class SetupPage(WorkflowPage):
             "page.setup.description",
         )
 
-        form_card, form_card_layout = self._create_card("card.certificate_batch")
+        form_card, form_card_layout = self._create_card("card.project_inputs")
         form = QGridLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setHorizontalSpacing(16)
@@ -308,11 +305,6 @@ class SetupPage(WorkflowPage):
             "placeholder.select_excel_workbook",
             self._browse_excel,
         )
-        self.template_input = self._create_browse_row(
-            "button.template",
-            "placeholder.select_word_template",
-            self._browse_template,
-        )
         self.output_input = self._create_browse_row(
             "button.output_folder",
             "placeholder.select_output_folder",
@@ -320,22 +312,46 @@ class SetupPage(WorkflowPage):
         )
 
         self._add_browse_row(form, 0, "field.excel_workbook", self.excel_input)
-        self._add_browse_row(form, 1, "field.word_template", self.template_input)
-        self._add_browse_row(form, 2, "field.output_folder", self.output_input)
+        self._add_browse_row(form, 1, "field.output_folder", self.output_input)
 
-        self.certificate_type_input = self._create_certificate_type_dropdown()
-        self.certificate_type_input.setMinimumHeight(40)
-        form.addWidget(self._create_field_label("field.certificate_type"), 3, 0)
-        form.addWidget(self.certificate_type_input, 3, 1, 1, 2)
+        self.template_override_card, override_layout = self._create_card("card.template_override")
+        override_form = QGridLayout()
+        override_form.setContentsMargins(0, 0, 0, 0)
+        override_form.setHorizontalSpacing(16)
+        override_form.setVerticalSpacing(10)
+        override_form.setColumnMinimumWidth(0, 128)
+        override_form.setColumnStretch(1, 1)
+        override_form.setColumnMinimumWidth(2, 148)
+        override_layout.addLayout(override_form)
+        self.body_layout.addWidget(self.template_override_card)
 
-        self.certificate_type_hint = QLabel()
-        self.certificate_type_hint.setWordWrap(True)
-        self.certificate_type_hint.setObjectName("workflowHint")
-        self._bind_translation(self.certificate_type_hint, "text", "hint.certificate_type")
-        form.addWidget(self.certificate_type_hint, 4, 1, 1, 2)
+        self.template_override_input = self._create_browse_row(
+            "button.template",
+            "placeholder.select_word_template",
+            self._browse_template_override,
+        )
+        override_form.addWidget(self._create_field_label("field.template_override"), 0, 0)
+        override_form.addWidget(self.template_override_input["container"], 0, 1)
+        override_actions = QWidget()
+        override_actions_layout = QHBoxLayout(override_actions)
+        override_actions_layout.setContentsMargins(0, 0, 0, 0)
+        override_actions_layout.setSpacing(8)
+        override_actions_layout.addWidget(self.template_override_input["button"])
+        self.clear_override_button = QPushButton()
+        self._bind_translation(self.clear_override_button, "text", "button.clear_override")
+        self.clear_override_button.setMinimumWidth(110)
+        self.clear_override_button.setMinimumHeight(40)
+        self.clear_override_button.clicked.connect(self._clear_template_override)
+        override_actions_layout.addWidget(self.clear_override_button)
+        override_form.addWidget(override_actions, 0, 2)
+
+        self.template_override_hint = QLabel()
+        self.template_override_hint.setWordWrap(True)
+        self.template_override_hint.setObjectName("workflowHint")
+        self._bind_translation(self.template_override_hint, "text", "hint.template_override")
+        override_form.addWidget(self.template_override_hint, 1, 1, 1, 2)
 
         options_card, options_layout = self._create_card("card.export_options")
-
         self.export_pdf_checkbox = QCheckBox()
         self._bind_translation(self.export_pdf_checkbox, "text", "checkbox.export_pdf")
         self.pdf_timeout_input = QSpinBox()
@@ -347,7 +363,6 @@ class SetupPage(WorkflowPage):
         export_row = QHBoxLayout()
         export_row.setContentsMargins(0, 0, 0, 0)
         export_row.setSpacing(12)
-
         export_row.addWidget(self.export_pdf_checkbox)
         export_row.addStretch()
         export_row.addWidget(self._create_field_label("field.pdf_timeout"))
@@ -359,7 +374,7 @@ class SetupPage(WorkflowPage):
         self.status_label = QLabel()
         self.status_label.setWordWrap(True)
         self.status_label.setObjectName("workflowStatus")
-        self.status_label.setMinimumHeight(72)
+        self.status_label.setMinimumHeight(96)
         status_card_layout.addWidget(self.status_label)
         self.body_layout.addWidget(status_card)
 
@@ -372,17 +387,9 @@ class SetupPage(WorkflowPage):
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(self.next_button)
 
-        self.certificate_type_input.currentTextChanged.connect(self._sync_session)
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
         self.retranslate_ui()
-
-    def _create_certificate_type_dropdown(self):
-        widget = QComboBox()
-        widget.setMinimumWidth(520)
-        for option in CERTIFICATE_TYPE_OPTIONS:
-            widget.addItem(option)
-        return widget
 
     def _add_browse_row(self, grid: QGridLayout, row: int, label_text: str, row_widgets: dict):
         grid.addWidget(self._create_field_label(label_text), row, 0)
@@ -422,11 +429,8 @@ class SetupPage(WorkflowPage):
         self._loading = True
         try:
             self.excel_input["input"].setText(self.session.excel_path)
-            self.template_input["input"].setText(self.session.template_path)
             self.output_input["input"].setText(self.session.output_dir)
-            self._ensure_certificate_type_option(self.session.certificate_type)
-            current_certificate_type = self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE
-            self.certificate_type_input.setCurrentText(current_certificate_type)
+            self.template_override_input["input"].setText(self.session.template_override_path)
             self.export_pdf_checkbox.setChecked(self.session.export_pdf)
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
         finally:
@@ -436,12 +440,15 @@ class SetupPage(WorkflowPage):
     def _refresh_status(self):
         lines = [
             self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
-            self.localization.t("summary.template", value=self._display_path(self.session.template_path)),
-            self.localization.t("summary.output_folder", value=self._display_path(self.session.output_dir)),
             self.localization.t(
-                "summary.certificate_type",
-                value=self.session.certificate_type or DEFAULT_CERTIFICATE_TYPE,
+                "summary.template",
+                value=self.session.active_template_name or self.localization.t("common.not_selected"),
             ),
+            self.localization.t(
+                "summary.template_override",
+                value=self._display_file_name(self.session.template_override_path),
+            ),
+            self.localization.t("summary.output_folder", value=self._display_path(self.session.output_dir)),
             self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
         ]
         self.status_label.setText("\n".join(lines))
@@ -451,20 +458,12 @@ class SetupPage(WorkflowPage):
             return
 
         self.session.excel_path = self.excel_input["input"].text().strip()
-        self.session.template_path = self.template_input["input"].text().strip()
         self.session.output_dir = self.output_input["input"].text().strip()
-        self.session.certificate_type = self.certificate_type_input.currentText().strip() or DEFAULT_CERTIFICATE_TYPE
+        self.session.template_override_path = self.template_override_input["input"].text().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
         self._refresh_status()
         self.session_changed.emit()
-
-    def _ensure_certificate_type_option(self, value: str):
-        normalized = normalize_certificate_type(value)
-        if not normalized:
-            return
-        if self.certificate_type_input.findText(normalized) == -1:
-            self.certificate_type_input.addItem(normalized)
 
     def _set_text_and_sync(self, widget: QLineEdit, value: str):
         widget.setText(value)
@@ -480,7 +479,7 @@ class SetupPage(WorkflowPage):
         if path:
             self._set_text_and_sync(self.excel_input["input"], path)
 
-    def _browse_template(self):
+    def _browse_template_override(self):
         path, _ = QFileDialog.getOpenFileName(
             self,
             self.localization.t("dialog.select_word_template.title"),
@@ -488,7 +487,10 @@ class SetupPage(WorkflowPage):
             self.localization.t("dialog.word_files"),
         )
         if path:
-            self._set_text_and_sync(self.template_input["input"], path)
+            self._set_text_and_sync(self.template_override_input["input"], path)
+
+    def _clear_template_override(self):
+        self._set_text_and_sync(self.template_override_input["input"], "")
 
     def _browse_output_dir(self):
         path = QFileDialog.getExistingDirectory(
@@ -700,7 +702,6 @@ class MappingPage(WorkflowPage):
             self.template_status.setText(
                 self.localization.t(
                     "status.select_template_for_placeholders",
-                    example=self._placeholder_example(),
                 )
             )
             return
@@ -719,14 +720,12 @@ class MappingPage(WorkflowPage):
                 self.template_status.setText(
                     self.localization.t(
                         "status.no_template_placeholders_detected",
-                        example=self._placeholder_pair_label(),
                     )
                 )
             return
         self.template_status.setText(
             self.localization.t(
                 "status.refresh_to_detect_placeholders",
-                example=self._placeholder_example(),
             )
         )
 
@@ -759,7 +758,7 @@ class MappingPage(WorkflowPage):
 
     def _output_naming_tokens(self) -> list[str]:
         tokens = list(self.columns)
-        tokens.extend(["ROW", "CERTIFICATE_TYPE"])
+        tokens.extend(["ROW", "TEMPLATE"])
         return tokens
 
     def _refresh_output_naming_tokens(self):
@@ -872,7 +871,6 @@ class MappingPage(WorkflowPage):
         self.template_status.setText(
             self.localization.t(
                 "status.no_template_placeholders_detected",
-                example=self._placeholder_pair_label(),
             )
         )
 
@@ -1217,7 +1215,14 @@ class GeneratePage(WorkflowPage):
         errors = self.generator.validate_session(self.session)
         summary_lines = [
             self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
-            self.localization.t("summary.template", value=self._display_path(self.session.template_path)),
+            self.localization.t(
+                "summary.template",
+                value=self.session.active_template_name or self.localization.t("common.not_selected"),
+            ),
+            self.localization.t(
+                "summary.template_override",
+                value=self._display_file_name(self.session.template_override_path),
+            ),
             self.localization.t("summary.output", value=self._display_path(self.session.output_dir)),
             self.localization.t(
                 "summary.output_naming_schema",
@@ -1351,7 +1356,20 @@ class ResultsPage(WorkflowPage):
 
     def refresh_from_session(self):
         if not self.result.total_rows and not self.result.generated_docx_paths and not self.result.generated_pdf_paths:
-            self.summary_label.setText(self.localization.t("status.no_generation_results"))
+            if self.result.errors or self.result.log_path:
+                summary_lines = [
+                    self.localization.t("results.no_generated_documents"),
+                    self.localization.t("results.generated_pdfs", count=len(self.result.generated_pdf_paths)),
+                ]
+                if self.result.log_path:
+                    summary_lines.append(self.localization.t("results.log_file", path=self.result.log_path))
+                if self.result.errors:
+                    summary_lines.append(
+                        self.localization.t("results.error_count", count=len(self.result.errors))
+                    )
+                self.summary_label.setText("\n".join(summary_lines))
+            else:
+                self.summary_label.setText(self.localization.t("status.no_generation_results"))
         else:
             total_files = len(self.result.generated_docx_paths) + len(self.result.generated_pdf_paths)
             summary_lines = [

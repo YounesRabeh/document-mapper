@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 def test_save_project_defaults_to_documents_path(main_window_factory, tmp_path):
     window, _fake_store, main_window_module = main_window_factory()
-    default_project_path = tmp_path / "Documents" / "document-mapper-project.json"
-    default_project_path.parent.mkdir(parents=True, exist_ok=True)
+    default_project_path = tmp_path / "Documents" / "document-mapper-project"
+    default_project_path.mkdir(parents=True, exist_ok=True)
 
     with patch.object(main_window_module.AppPaths, "default_project_path", return_value=default_project_path), patch.object(
         main_window_module.QFileDialog,
-        "getSaveFileName",
-        return_value=("", ""),
+        "getExistingDirectory",
+        return_value="",
     ) as save_dialog:
         window._save_project_as()
 

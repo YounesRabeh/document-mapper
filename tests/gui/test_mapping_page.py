@@ -84,7 +84,7 @@ def test_output_naming_schema_token_insertion_updates_session(prepared_window):
         "NOME",
         "COGNOME",
         "ROW",
-        "CERTIFICATE_TYPE",
+        "TEMPLATE",
     ]
 
     schema_input = window.mapping_page.output_naming_schema_input

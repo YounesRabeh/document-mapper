@@ -1,0 +1,168 @@
+from __future__ import annotations
+
+MAIN_WINDOW_QSS = """
+QWidget#windowRoot {
+    background: palette(window);
+}
+
+QScrollArea#workflowSidebarScroll {
+    background: palette(alternate-base);
+    border: none;
+    border-right: 1px solid palette(midlight);
+}
+
+QScrollArea#workflowSidebarScroll > QWidget > QWidget {
+    background: palette(alternate-base);
+}
+
+QFrame#workflowSidebar {
+    background: palette(alternate-base);
+    border: none;
+}
+
+QFrame#templateToolbar {
+    background: palette(base);
+    border-bottom: 1px solid palette(midlight);
+}
+
+QLabel#templateToolbarLabel {
+    color: palette(window-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QLabel#templateToolbarStatus {
+    color: palette(text);
+    font-size: 12px;
+}
+
+QComboBox#templateToolbarCombo {
+    min-height: 38px;
+    min-width: 220px;
+}
+
+QPushButton#templateToolbarButton {
+    min-height: 38px;
+    padding: 0 14px;
+}
+
+QLabel#sidebarEyebrow {
+    color: palette(mid);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+}
+
+QLabel#sidebarTitle {
+    color: palette(window-text);
+    font-size: 22px;
+    font-weight: 800;
+}
+
+QLabel#sidebarSubtitle {
+    color: palette(text);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+QFrame#sidebarStageCard {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 16px;
+}
+
+QFrame#sidebarStageCard:hover {
+    background: palette(window);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[completed="true"] {
+    background: palette(window);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[completed="true"]:hover {
+    background: palette(button);
+    border-color: palette(midlight);
+}
+
+QFrame#sidebarStageCard[active="true"] {
+    background: palette(button);
+    border-color: palette(highlight);
+}
+
+QFrame#sidebarStageCard[blocked="true"],
+QFrame#sidebarStageCard[blocked="true"]:hover {
+    background: transparent;
+    border-color: transparent;
+}
+
+QLabel#sidebarStageIndex {
+    background: palette(button);
+    color: palette(text);
+    border-radius: 14px;
+    padding: 6px 0;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageIndex {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+}
+
+QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageIndex {
+    background: palette(midlight);
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageIndex {
+    background: palette(window);
+    color: palette(mid);
+}
+
+QLabel#sidebarStageTitle {
+    color: palette(window-text);
+    font-size: 15px;
+    font-weight: 800;
+}
+
+QLabel#sidebarStageDetail {
+    color: palette(text);
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageTitle,
+QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageDetail {
+    color: palette(mid);
+}
+
+QPushButton#sidebarUtilityButton {
+    background: palette(window);
+    border: 1px solid palette(midlight);
+    border-radius: 12px;
+    color: palette(button-text);
+    font-weight: 600;
+    padding: 10px 12px;
+}
+
+QPushButton#sidebarUtilityButton:hover {
+    border-color: palette(highlight);
+    background: palette(button);
+}
+"""
+
+TEMPLATE_MANAGER_SECTION_TITLE_QSS = "font-weight: 700;"

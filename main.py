@@ -3,7 +3,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from core.config.configuration import Config
-from gui.main_window import MainWindow
+from gui.windows import MainWindow
 
 
 def main():

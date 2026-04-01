@@ -12,11 +12,12 @@ from tests.helpers.fakes import FakeExcelService
 def test_generator_sanitizes_certificate_type_filename_fragment(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
     generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    template_path = tmp_path / "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx"
 
     output_path = generator._build_docx_output_path(
         ProjectSession(
             output_dir=str(tmp_path),
-            certificate_type="MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
+            template_path=str(template_path),
         ),
         dataframe.iloc[0],
         0,
@@ -24,18 +25,19 @@ def test_generator_sanitizes_certificate_type_filename_fragment(tmp_path):
         {"NOME": "NOME", "COGNOME": "COGNOME"},
     )
 
-    assert output_path.name == "ADA_LOVELACE_attestato_MODELLO_ATTESTATO_integrale_PS_12_ORE_tipo_B_e_C.docx"
+    assert output_path.name == "ADA_LOVELACE_MODELLO_ATTESTATO_integrale_PS_12_ORE_tipo_B_e_C.docx"
 
 
 def test_generator_resolves_output_naming_schema_tokens(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
     generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    template_path = tmp_path / "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx"
 
     output_path = generator._build_docx_output_path(
         ProjectSession(
             output_dir=str(tmp_path),
-            certificate_type="MODELLO ATTESTATO integrale PS 12 ORE tipo B e C",
-            output_naming_schema="{COGNOME}_{NOME}_{ROW}_{CERTIFICATE_TYPE}",
+            template_path=str(template_path),
+            output_naming_schema="{COGNOME}_{NOME}_{ROW}_{TEMPLATE}",
         ),
         dataframe.iloc[0],
         0,
