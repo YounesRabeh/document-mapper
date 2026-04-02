@@ -18,7 +18,7 @@ from tests.helpers.gui import assert_stage_state, mapping_combo
 def _unlock_generate_stage(window):
     window.stage_cards[2].clicked.emit(2)
     column_combo = mapping_combo(window, 0, 1)
-    column_combo.setCurrentText("NOME")
+    column_combo.setCurrentText("NAME")
     window.mapping_page._sync_session_from_table()
     window.mapping_page.refresh_button.click()
 
@@ -61,9 +61,9 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
     _unlock_generate_stage(window)
 
     assert len(window.session.mappings) == 1
-    assert window.session.mappings[0].column_name == "NOME"
+    assert window.session.mappings[0].column_name == "NAME"
     assert_stage_state(window, 3, blocked=False, completed=False)
-    assert window.session.detected_placeholder_delimiter == "<<"
+    assert window.session.detected_placeholder_delimiter == "<"
     assert window.session.detected_placeholder_count == 1
     assert window.session.active_template_name == "template"
 
@@ -90,7 +90,7 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
     window.localization.set_language("it")
 
     assert window.view_menu.title() == "Visualizza"
-    assert window.setup_page.next_button.text() == "Avanti: Mappatura"
+    assert hasattr(window.setup_page, "next_button") is False
     assert "esempio" in window.mapping_page.mapping_hint.text()
     assert window.mapping_page.output_naming_schema_label.text() == "Schema nome output"
     assert window.template_type_label.text() == "Tipo template"
@@ -169,9 +169,10 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
             )
         ],
         selected_template_type="Default template",
-        detected_placeholder_delimiter="<<",
+        placeholder_delimiter="<",
+        detected_placeholder_delimiter="<",
         detected_placeholder_count=1,
-        mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
+        mappings=[MappingEntry(placeholder="<NAME>", column_name="NAME")],
     )
     fake_store.loaded_session.selected_template = fake_store.loaded_session.templates[0].id
     with patch.object(main_window_module.QFileDialog, "getExistingDirectory", return_value=""), patch.object(

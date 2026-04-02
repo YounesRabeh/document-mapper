@@ -18,6 +18,7 @@ def test_generator_sanitizes_certificate_type_filename_fragment(tmp_path):
         ProjectSession(
             output_dir=str(tmp_path),
             template_path=str(template_path),
+            output_naming_schema="{NOME}_{COGNOME}_{TEMPLATE}",
         ),
         dataframe.iloc[0],
         0,

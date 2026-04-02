@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
@@ -18,33 +16,32 @@ def _go_to_mapping(window):
 
 def _assign_first_mapping(window):
     column_combo = mapping_combo(window, 0, 1)
-    column_combo.setCurrentText("NOME")
+    column_combo.setCurrentText("NAME")
     window.mapping_page._sync_session_from_table()
     window.mapping_page.refresh_button.click()
 
 
 def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_window):
     window = prepared_window.window
-    main_window_module = prepared_window.main_window_module
 
     _go_to_mapping(window)
 
     placeholder_combo = mapping_combo(window, 0, 0)
-    assert placeholder_combo.currentText() == "<<NOME>>"
+    assert placeholder_combo.currentText() == "<NAME>"
 
     _assign_first_mapping(window)
     assert_stage_state(window, 3, blocked=False, completed=False)
-    assert window.session.detected_placeholder_delimiter == "<<"
+    assert window.session.detected_placeholder_delimiter == "<"
     assert window.session.detected_placeholder_count == 1
 
-    window.mapping_page.delimiter_input.setText("<   ")
+    window.mapping_page.delimiter_input.setText("{   ")
     QTest.qWait(250)
 
-    assert window.mapping_page.delimiter_input.text() == "<"
-    assert window.session.placeholder_delimiter == "<"
-    assert window.session.placeholder_start == "<"
-    assert window.session.placeholder_end == ">"
-    assert window.session.detected_placeholder_delimiter == "<"
+    assert window.mapping_page.delimiter_input.text() == "{"
+    assert window.session.placeholder_delimiter == "{"
+    assert window.session.placeholder_start == "{"
+    assert window.session.placeholder_end == "}"
+    assert window.session.detected_placeholder_delimiter == "{"
     assert window.session.detected_placeholder_count == 0
     assert_stage_state(window, 3, blocked=True)
     assert window.mapping_page.detected_placeholders == []
@@ -54,21 +51,17 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
     window.mapping_page.delimiter_input.clear()
     assert window.session.placeholder_delimiter == ""
     assert_stage_state(window, 3, blocked=True)
-
-    with patch.object(main_window_module.QMessageBox, "warning") as warning_mock:
-        window.mapping_page.next_button.click()
-
+    assert hasattr(window.mapping_page, "next_button") is False
+    window.stage_cards[3].clicked.emit(3)
     assert window.stage_manager.currentIndex() == 1
-    assert warning_mock.called
-    assert "Set a placeholder delimiter before continuing." in warning_mock.call_args.args[2]
 
-    window.mapping_page.delimiter_input.setText("<<")
+    window.mapping_page.delimiter_input.setText("<")
     QTest.qWait(250)
 
-    assert window.session.placeholder_delimiter == "<<"
+    assert window.session.placeholder_delimiter == "<"
     assert_stage_state(window, 3, blocked=True)
-    assert mapping_combo(window, 0, 0).currentText() == "<<NOME>>"
-    assert window.session.detected_placeholder_delimiter == "<<"
+    assert mapping_combo(window, 0, 0).currentText() == "<NAME>"
+    assert window.session.detected_placeholder_delimiter == "<"
     assert window.session.detected_placeholder_count == 1
 
     _assign_first_mapping(window)
@@ -81,11 +74,11 @@ def test_output_naming_schema_token_insertion_updates_session(prepared_window):
     _go_to_mapping(window)
     _assign_first_mapping(window)
 
-    assert window.mapping_page.delimiter_input.text() == "<<"
+    assert window.mapping_page.delimiter_input.text() == "<"
     assert window.mapping_page.output_naming_schema_input.text() == DEFAULT_OUTPUT_NAMING_SCHEMA
     assert window.mapping_page.output_naming_schema_input.available_tokens() == [
-        "NOME",
-        "COGNOME",
+        "NAME",
+        "LASTNAME",
         "ROW",
         "TEMPLATE",
     ]
@@ -99,15 +92,15 @@ def test_output_naming_schema_token_insertion_updates_session(prepared_window):
     QTest.keyClicks(schema_input, "{")
     QTest.qWait(80)
     assert schema_input.token_completer.popup().isVisible()
-    schema_input.token_completer.activated[str].emit("NOME")
-    assert schema_input.text() == "{NOME}"
-    assert schema_input.cursorPosition() == len("{NOME}")
+    schema_input.token_completer.activated[str].emit("NAME")
+    assert schema_input.text() == "{NAME}"
+    assert schema_input.cursorPosition() == len("{NAME}")
 
     QTest.keyClicks(schema_input, "(mytext){")
     QTest.qWait(80)
-    schema_input.token_completer.activated[str].emit("COGNOME")
-    assert schema_input.text() == "{NOME}(mytext){COGNOME}"
-    assert window.session.output_naming_schema == "{NOME}(mytext){COGNOME}"
+    schema_input.token_completer.activated[str].emit("LASTNAME")
+    assert schema_input.text() == "{NAME}(mytext){LASTNAME}"
+    assert window.session.output_naming_schema == "{NAME}(mytext){LASTNAME}"
     assert_stage_state(window, 3, blocked=False)
 
     schema_input.setText(DEFAULT_OUTPUT_NAMING_SCHEMA)
@@ -123,7 +116,7 @@ def test_mapping_combo_ignores_mouse_wheel_when_popup_is_closed(prepared_window)
 
     column_combo = mapping_combo(window, 0, 1)
     original_text = column_combo.currentText()
-    assert original_text == "NOME"
+    assert original_text == "NAME"
 
     center = QPointF(column_combo.rect().center())
     global_center = QPointF(column_combo.mapToGlobal(QPoint(int(center.x()), int(center.y()))))

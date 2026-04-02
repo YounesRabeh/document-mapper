@@ -32,6 +32,10 @@ def populate_setup_page(window, workbook: Path, template: Path, output_dir: Path
     window.session.templates = [template_entry]
     window.session.selected_template_type = template_type
     window.session.selected_template = template_entry.id
+    window.session.template_path = str(template)
+    window.session.mappings = []
+    window.session.detected_placeholder_delimiter = ""
+    window.session.detected_placeholder_count = 0
     window._refresh_pages()
 
 

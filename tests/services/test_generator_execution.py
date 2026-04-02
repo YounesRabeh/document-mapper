@@ -45,6 +45,8 @@ def test_generator_formats_dates_and_creates_docx(tmp_path):
         excel_path=str(excel_path),
         template_path=str(template_path),
         output_dir=str(tmp_path),
+        output_naming_schema="{NOME}_{COGNOME}_{TEMPLATE}",
+        placeholder_delimiter="<<",
         detected_placeholder_delimiter="<<",
         detected_placeholder_count=2,
         mappings=[
@@ -83,6 +85,8 @@ def test_generator_creates_pdfs_when_enabled(tmp_path):
         excel_path=str(excel_path),
         template_path=str(template_path),
         output_dir=str(tmp_path),
+        output_naming_schema="{NOME}_{COGNOME}_{TEMPLATE}",
+        placeholder_delimiter="<<",
         detected_placeholder_delimiter="<<",
         detected_placeholder_count=1,
         export_pdf=True,

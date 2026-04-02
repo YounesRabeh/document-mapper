@@ -12,7 +12,7 @@ def sample_project_files(tmp_path):
     workbook = tmp_path / "data.xlsx"
     template = tmp_path / "template.docx"
     workbook.write_text("placeholder", encoding="utf-8")
-    template.write_text("Hello <<NOME>>", encoding="utf-8")
+    template.write_text("Hello <NAME>", encoding="utf-8")
     return SimpleNamespace(root=tmp_path, workbook=workbook, template=template)
 
 

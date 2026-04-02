@@ -20,8 +20,8 @@ def test_project_session_defaults_placeholder_delimiter_and_output_schema():
 
     assert session.output_naming_schema == DEFAULT_OUTPUT_NAMING_SCHEMA
     assert session.placeholder_delimiter == DEFAULT_PLACEHOLDER_DELIMITER
-    assert session.placeholder_start == "<<"
-    assert session.placeholder_end == ">>"
+    assert session.placeholder_start == "<"
+    assert session.placeholder_end == ">"
 
 
 def test_project_session_infers_placeholder_delimiter_from_legacy_mappings():

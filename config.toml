@@ -1,10 +1,10 @@
 [app]
 name = "Document Mapper"
-version = "0.9"
+version = "1.0"
 description = "A desktop app for generating certificate DOCX files from Excel data."
 author = "Younes Rabeh"
 organization = "Younes Rabeh"
-domain = "younesrabeh.com"
+domain = "github.com"
 language = "en"
 
 [logging]
@@ -12,9 +12,9 @@ persistence_logging = true
 
 [window]
 width = 1290
-height = 700
+height = 750
 min_width = 1400
-min_height = 640
+min_height = 400
 title = "Document Mapper"
 theme_mode = "AUTO"
 
@@ -23,4 +23,3 @@ base = "resources" # Base resources directory [DO NOT CHANGE]
 qss = "resources/qss"
 icons = "resources/icons"
 images = "resources/images"
-fonts = "resources/fonts"

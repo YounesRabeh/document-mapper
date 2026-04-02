@@ -180,6 +180,7 @@ class WorkflowPage(QWidget):
         scroll_layout = QVBoxLayout(self.scroll_content)
         scroll_layout.setContentsMargins(24, 24, 24, 16)
         scroll_layout.setSpacing(18)
+        scroll_layout.setSizeConstraint(QVBoxLayout.SetMinAndMaxSize)
 
         self.title_label = QLabel()
         self.title_label.setObjectName("workflowTitle")
@@ -194,13 +195,12 @@ class WorkflowPage(QWidget):
 
         self.body_layout = QVBoxLayout()
         self.body_layout.setSpacing(16)
-        scroll_layout.addLayout(self.body_layout, stretch=1)
-        scroll_layout.addStretch(1)
+        scroll_layout.addLayout(self.body_layout)
 
         self.nav_layout = QHBoxLayout()
         self.nav_layout.setContentsMargins(24, 0, 24, 24)
         self.nav_layout.setSpacing(12)
-        layout.addLayout(self.nav_layout)
+        scroll_layout.addLayout(self.nav_layout)
 
         self.localization.language_changed.connect(self.retranslate_ui)
 
@@ -386,15 +386,6 @@ class SetupPage(WorkflowPage):
         status_card_layout.addWidget(self.status_label)
         self.body_layout.addWidget(status_card)
 
-        self.next_button = QPushButton()
-        self._bind_translation(self.next_button, "text", "button.next_mapping")
-        self.next_button.setObjectName("workflowPrimaryButton")
-        self.next_button.setMinimumWidth(170)
-        self.next_button.setMinimumHeight(42)
-        self.next_button.clicked.connect(self._go_next)
-        self.nav_layout.addStretch()
-        self.nav_layout.addWidget(self.next_button)
-
         self.export_pdf_checkbox.toggled.connect(self._sync_session)
         self.pdf_timeout_input.valueChanged.connect(self._sync_session)
         self.retranslate_ui()
@@ -508,10 +499,6 @@ class SetupPage(WorkflowPage):
         )
         if path:
             self._set_text_and_sync(self.output_input["input"], path)
-
-    def _go_next(self):
-        self._sync_session()
-        self.next_requested.emit()
 
     def retranslate_page(self):
         self._refresh_status()
@@ -656,16 +643,6 @@ class MappingPage(WorkflowPage):
         right_layout.addWidget(self.validation_output)
         content_layout.addWidget(self.right_box, stretch=2)
 
-        self.back_button = QPushButton()
-        self.next_button = QPushButton()
-        self._bind_translation(self.back_button, "text", "button.back")
-        self._bind_translation(self.next_button, "text", "button.next_generate")
-        self.next_button.setObjectName("workflowPrimaryButton")
-        self.back_button.clicked.connect(self.prev_requested.emit)
-        self.next_button.clicked.connect(self._go_next)
-        self.nav_layout.addWidget(self.back_button)
-        self.nav_layout.addStretch()
-        self.nav_layout.addWidget(self.next_button)
         self.retranslate_ui()
 
     def refresh_from_session(self):
@@ -1112,15 +1089,6 @@ class MappingPage(WorkflowPage):
             self.validation_summary.setText(ready_text)
             self.validation_output.setPlainText(self.localization.t("status.validation_ready_detail"))
 
-    def _go_next(self):
-        self._sync_session_from_table()
-        errors = self.generator.validate_session(self.session)
-        if errors:
-            translated = [self.localization.translate_runtime_text(error) for error in errors]
-            QMessageBox.warning(self, self.localization.t("dialog.cannot_continue.title"), "\n".join(translated))
-            return
-        self.next_requested.emit()
-
     def retranslate_page(self):
         self.columns_label.setText(self.localization.t("status.no_workbook_loaded"))
         self._refresh_mapping_help_text()
@@ -1208,13 +1176,9 @@ class GeneratePage(WorkflowPage):
         log_layout.addWidget(self.log_output)
         self.body_layout.addWidget(self.log_box, stretch=1)
 
-        self.back_button = QPushButton()
         self.generate_button = QPushButton()
-        self._bind_translation(self.back_button, "text", "button.back")
         self._bind_translation(self.generate_button, "text", "button.generate_certificates")
-        self.back_button.clicked.connect(self.prev_requested.emit)
         self.generate_button.clicked.connect(self._start_generation)
-        self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(self.generate_button)
         self.retranslate_ui()
@@ -1341,17 +1305,13 @@ class ResultsPage(WorkflowPage):
         errors_layout.addWidget(self.errors_output)
         self.body_layout.addWidget(self.errors_box, stretch=1)
 
-        self.back_button = QPushButton()
         self.open_output_button = QPushButton()
         self.open_log_button = QPushButton()
-        self._bind_translation(self.back_button, "text", "button.back")
         self._bind_translation(self.open_output_button, "text", "button.open_output_folder")
         self._bind_translation(self.open_log_button, "text", "button.open_log")
-        self.back_button.clicked.connect(self.prev_requested.emit)
         self.open_output_button.clicked.connect(self._open_output_folder)
         self.open_log_button.clicked.connect(self._open_log)
 
-        self.nav_layout.addWidget(self.back_button)
         self.nav_layout.addStretch()
         self.nav_layout.addWidget(self.open_log_button)
         self.nav_layout.addWidget(self.open_output_button)

@@ -12,7 +12,9 @@ from core.certificate.models import GenerationResult, MappingEntry, ProjectSessi
 
 class FakeExcelService:
     def __init__(self, dataframe: pd.DataFrame | None = None):
-        self.dataframe = dataframe if dataframe is not None else pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
+        self.dataframe = (
+            dataframe if dataframe is not None else pd.DataFrame([{"NAME": "Ada", "LASTNAME": "Lovelace"}])
+        )
 
     def inspect(self, _excel_path: str):
         return SimpleNamespace(columns=[str(column) for column in self.dataframe.columns], row_count=len(self.dataframe.index))

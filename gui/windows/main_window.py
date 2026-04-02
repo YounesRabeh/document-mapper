@@ -178,7 +178,9 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.template_toolbar)
 
         self.stage_manager = QStackedWidget()
-        self.stage_manager.setMinimumSize(CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT)
+        self.stage_manager.setMinimumWidth(CONTENT_MIN_WIDTH)
+        self.stage_manager.setMinimumHeight(0)
+        self.stage_manager.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         content_layout.addWidget(self.stage_manager, stretch=1)
 
         self.setup_page = SetupPage(self.localization)
@@ -198,12 +200,7 @@ class MainWindow(QMainWindow):
         self._last_valid_stage = 1
         self.stage_manager.currentChanged.connect(self._handle_stage_changed)
 
-        self.setup_page.next_requested.connect(lambda: self.goto_stage(2))
-        self.mapping_page.prev_requested.connect(lambda: self.goto_stage(1))
-        self.mapping_page.next_requested.connect(lambda: self.goto_stage(3))
-        self.generate_page.prev_requested.connect(lambda: self.goto_stage(2))
         self.generate_page.results_ready.connect(self._handle_generation_result)
-        self.results_page.prev_requested.connect(lambda: self.goto_stage(3))
 
         self.setup_page.session_changed.connect(self._persist_last_session)
         self.mapping_page.session_changed.connect(self._persist_last_session)
