@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
+from PySide6.QtCore import QPoint, QPointF, Qt
+from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 
 from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA
 from tests.helpers.gui import assert_stage_state, mapping_combo
@@ -110,3 +113,31 @@ def test_output_naming_schema_token_insertion_updates_session(prepared_window):
     schema_input.setText(DEFAULT_OUTPUT_NAMING_SCHEMA)
     assert window.session.output_naming_schema == DEFAULT_OUTPUT_NAMING_SCHEMA
     assert_stage_state(window, 3, blocked=False)
+
+
+def test_mapping_combo_ignores_mouse_wheel_when_popup_is_closed(prepared_window):
+    window = prepared_window.window
+
+    _go_to_mapping(window)
+    _assign_first_mapping(window)
+
+    column_combo = mapping_combo(window, 0, 1)
+    original_text = column_combo.currentText()
+    assert original_text == "NOME"
+
+    center = QPointF(column_combo.rect().center())
+    global_center = QPointF(column_combo.mapToGlobal(QPoint(int(center.x()), int(center.y()))))
+    wheel_event = QWheelEvent(
+        center,
+        global_center,
+        QPoint(0, 0),
+        QPoint(0, -120),
+        Qt.NoButton,
+        Qt.NoModifier,
+        Qt.ScrollPhase.ScrollUpdate,
+        False,
+    )
+
+    QApplication.sendEvent(column_combo, wheel_event)
+
+    assert column_combo.currentText() == original_text

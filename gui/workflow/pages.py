@@ -45,6 +45,7 @@ from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
 from gui.styles import MAPPING_TABLE_VIEWPORT_QSS, build_workflow_page_qss
+from gui.ui.elements.combo_box import ClickSelectComboBox
 
 PAGE_MIN_WIDTH = 860
 PAGE_MIN_HEIGHT = 560
@@ -280,6 +281,13 @@ class WorkflowPage(QWidget):
         resolved = Path(path)
         return resolved.name or str(resolved)
 
+    def _display_folder_name(self, path: str) -> str:
+        if not path:
+            return self.localization.t("common.not_selected")
+        resolved = Path(path)
+        name = resolved.name or str(resolved)
+        return name
+
 
 class SetupPage(WorkflowPage):
     def __init__(self, localization: LocalizationManager):
@@ -439,7 +447,7 @@ class SetupPage(WorkflowPage):
 
     def _refresh_status(self):
         lines = [
-            self.localization.t("summary.workbook", value=self._display_path(self.session.excel_path)),
+            self.localization.t("summary.workbook", value=self._display_file_name(self.session.excel_path)),
             self.localization.t(
                 "summary.template",
                 value=self.session.active_template_name or self.localization.t("common.not_selected"),
@@ -448,7 +456,7 @@ class SetupPage(WorkflowPage):
                 "summary.template_override",
                 value=self._display_file_name(self.session.template_override_path),
             ),
-            self.localization.t("summary.output_folder", value=self._display_path(self.session.output_dir)),
+            self.localization.t("summary.output_folder", value=self._display_folder_name(self.session.output_dir)),
             self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
         ]
         self.status_label.setText("\n".join(lines))
@@ -976,7 +984,7 @@ class MappingPage(WorkflowPage):
         placeholder_combo = self._create_placeholder_dropdown(placeholder)
         self.mapping_table.setCellWidget(row, 0, self._wrap_table_editor(placeholder_combo))
 
-        combo = QComboBox()
+        combo = ClickSelectComboBox()
         combo.addItem("")
         combo.addItems(self.columns)
         combo.setMinimumHeight(34)
@@ -1000,7 +1008,7 @@ class MappingPage(WorkflowPage):
         return container
 
     def _create_placeholder_dropdown(self, placeholder: str) -> QComboBox:
-        combo = QComboBox()
+        combo = ClickSelectComboBox()
         combo.setEditable(True)
         combo.setInsertPolicy(QComboBox.NoInsert)
         combo.setMinimumHeight(34)

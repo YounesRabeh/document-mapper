@@ -26,6 +26,7 @@ from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
     DEFAULT_IMPORTED_TEMPLATE_TYPE,
+    DEFAULT_IMPORTED_TEMPLATE_NAME,
     GenerationResult,
     ProjectSession,
     ProjectTemplateEntry,
@@ -40,6 +41,7 @@ from core.util.app_paths import AppPaths
 from core.util.logger import Logger
 from gui.dialogs import TemplateManagerDialog
 from gui.styles import MAIN_WINDOW_QSS
+from gui.ui.elements.combo_box import ClickSelectComboBox
 from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 
 SIDEBAR_WIDTH = 296
@@ -139,6 +141,7 @@ class MainWindow(QMainWindow):
         self.template_service = TemplatePlaceholderService()
         self.generator = CertificateGenerator(self.excel_service)
         self.session = self.session_store.load_last_session()
+        self._ensure_default_template_seeded(self.session)
         self.last_result = GenerationResult()
 
         ThemeManager(config)
@@ -285,13 +288,13 @@ class MainWindow(QMainWindow):
 
         self.template_type_label = QLabel()
         self.template_type_label.setObjectName("templateToolbarLabel")
-        self.template_type_combo = QComboBox()
+        self.template_type_combo = ClickSelectComboBox()
         self.template_type_combo.setObjectName("templateToolbarCombo")
         self.template_type_combo.currentIndexChanged.connect(self._handle_template_type_changed)
 
         self.template_label = QLabel()
         self.template_label.setObjectName("templateToolbarLabel")
-        self.template_combo = QComboBox()
+        self.template_combo = ClickSelectComboBox()
         self.template_combo.setObjectName("templateToolbarCombo")
         self.template_combo.currentIndexChanged.connect(self._handle_template_selection_changed)
 
@@ -391,6 +394,7 @@ class MainWindow(QMainWindow):
         self.current_project_path = None
         self.last_result = GenerationResult()
         self.session = ProjectSession()
+        self._ensure_default_template_seeded(self.session)
         self.session_store.save_last_session(self.session)
         self._refresh_pages()
         self.goto_stage(1)
@@ -413,6 +417,7 @@ class MainWindow(QMainWindow):
             return
         try:
             self.session = self.session_store.load(path)
+            self._ensure_default_template_seeded(self.session)
             selected_path = Path(path).expanduser().resolve()
             self.current_project_path = str(selected_path if selected_path.is_dir() else selected_path.parent)
             self.last_result = GenerationResult()
@@ -492,6 +497,27 @@ class MainWindow(QMainWindow):
 
         self._sync_effective_template_path(session_to_save)
         return session_to_save
+
+    def _ensure_default_template_seeded(self, session: ProjectSession):
+        if session.templates:
+            return
+
+        default_template_path = AppPaths.shipped_test_template_path()
+        if default_template_path is None:
+            return
+
+        default_type = ProjectTemplateType(DEFAULT_IMPORTED_TEMPLATE_TYPE)
+        default_entry = ProjectTemplateEntry(
+            display_name=DEFAULT_IMPORTED_TEMPLATE_NAME,
+            type_name=default_type.name,
+            source_path=str(default_template_path),
+            is_managed=False,
+        )
+        session.template_types = [default_type]
+        session.templates = [default_entry]
+        session.selected_template_type = default_type.name
+        session.selected_template = default_entry.id
+        session.template_path = str(default_template_path)
 
     def _store_template_override_in_project(self, session: ProjectSession):
         if not session.template_override_path:

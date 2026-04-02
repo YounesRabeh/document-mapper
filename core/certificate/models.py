@@ -6,7 +6,8 @@ import re
 from typing import Any
 from uuid import uuid4
 
-DEFAULT_IMPORTED_TEMPLATE_TYPE = "Imported"
+DEFAULT_IMPORTED_TEMPLATE_TYPE = "Default template"
+DEFAULT_IMPORTED_TEMPLATE_NAME = "Default template 01"
 DEFAULT_PLACEHOLDER_DELIMITER = "<<"
 DEFAULT_OUTPUT_NAMING_SCHEMA = "{NOME}_{COGNOME}_{TEMPLATE}"
 DELIMITER_CLOSING_MAP = {
@@ -27,7 +28,10 @@ def normalize_certificate_type(value: str) -> str:
 
 
 def normalize_template_type_name(value: str) -> str:
-    return re.sub(r"\s+", " ", str(value or "").strip())
+    normalized = re.sub(r"\s+", " ", str(value or "").strip())
+    if normalized.casefold() == "imported":
+        return DEFAULT_IMPORTED_TEMPLATE_TYPE
+    return normalized
 
 
 def normalize_placeholder_delimiter(value: str) -> str:
@@ -324,7 +328,7 @@ class ProjectSession:
 
         imported_type = ProjectTemplateType(DEFAULT_IMPORTED_TEMPLATE_TYPE)
         imported_entry = ProjectTemplateEntry(
-            display_name=legacy_label or "Imported template",
+            display_name=DEFAULT_IMPORTED_TEMPLATE_NAME,
             type_name=imported_type.name,
             source_path=legacy_template_path,
             is_managed=False,

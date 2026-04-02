@@ -7,11 +7,11 @@ import shutil
 
 from core.certificate.models import (
     DEFAULT_IMPORTED_TEMPLATE_TYPE,
+    DEFAULT_IMPORTED_TEMPLATE_NAME,
     MappingEntry,
     ProjectSession,
     ProjectTemplateEntry,
     ProjectTemplateType,
-    normalize_certificate_type,
     normalize_template_name,
 )
 from core.util.app_paths import AppPaths
@@ -78,12 +78,9 @@ class ProjectSessionStore:
             timeout = 300
 
         legacy_template_path = str(paths.get("template_path", "")).strip()
-        legacy_template_label = normalize_certificate_type(paths.get("certificate_type", "")) or (
-            normalize_template_name(Path(legacy_template_path).name) if legacy_template_path else "Imported template"
-        )
         imported_type = ProjectTemplateType(DEFAULT_IMPORTED_TEMPLATE_TYPE)
         imported_entry = ProjectTemplateEntry(
-            display_name=legacy_template_label,
+            display_name=DEFAULT_IMPORTED_TEMPLATE_NAME,
             type_name=imported_type.name,
             source_path=legacy_template_path,
             is_managed=False,

@@ -130,10 +130,10 @@ def test_specific_template_section_is_always_visible(prepared_window):
 
     window.session.template_override_path = str(prepared_window.files.template)
     window.setup_page.refresh_from_session()
-    assert "Specific template: template.docx" in window.setup_page.status_label.text()
+    assert "One-time template: template.docx" in window.setup_page.status_label.text()
 
     window.localization.set_language("it")
-    assert window.setup_page.clear_override_button.text() == "Rimuovi template specifico"
+    assert window.setup_page.clear_override_button.text() == "Rimuovi template monouso"
 
 
 def test_new_project_and_open_project_recompute_workflow_states(prepared_window):
@@ -152,21 +152,23 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
-    assert window.template_type_combo.isEnabled() is False
+    assert window.template_type_combo.isEnabled() is True
+    assert window.template_type_combo.currentText() == "Default template"
+    assert window.template_combo.currentText() == "Default template 01"
 
     fake_store.loaded_session = ProjectSession(
         excel_path=str(workbook),
         output_dir=str(temp_dir),
-        template_types=[ProjectTemplateType("Imported")],
+        template_types=[ProjectTemplateType("Default template")],
         templates=[
             ProjectTemplateEntry(
-                display_name="Imported template",
-                type_name="Imported",
+                display_name="Default template 01",
+                type_name="Default template",
                 source_path=str(template),
                 is_managed=False,
             )
         ],
-        selected_template_type="Imported",
+        selected_template_type="Default template",
         detected_placeholder_delimiter="<<",
         detected_placeholder_count=1,
         mappings=[MappingEntry(placeholder="<<NOME>>", column_name="NOME")],
@@ -183,5 +185,5 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=False, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
-    assert window.template_type_combo.currentText() == "Imported"
-    assert window.template_combo.currentText() == "Imported template"
+    assert window.template_type_combo.currentText() == "Default template"
+    assert window.template_combo.currentText() == "Default template 01"

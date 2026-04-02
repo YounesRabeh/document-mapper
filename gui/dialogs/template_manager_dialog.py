@@ -263,6 +263,20 @@ class TemplateManagerDialog(QDialog):
         current_name = self._current_type_name()
         if not current_name:
             return
+        template_count = len(self.session.templates_for_type(current_name))
+        answer = QMessageBox.question(
+            self,
+            self.localization.t("dialog.remove_template_type.title"),
+            self.localization.t(
+                "dialog.remove_template_type.body",
+                name=current_name,
+                count=template_count,
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
         self.session.template_types = [entry for entry in self.session.template_types if entry.name != current_name]
         removed_template_ids = {entry.id for entry in self.session.templates if entry.type_name == current_name}
         self.session.templates = [entry for entry in self.session.templates if entry.type_name != current_name]

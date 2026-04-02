@@ -116,6 +116,8 @@ ipython_config.py
 #pdm.toml
 .pdm-python
 .pdm-build/
+out/
+build/
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
@@ -203,6 +205,7 @@ cython_debug/
 
 # Codex session/tooling artifacts
 .codex
+Todo.md
 
 # Document Mapper private/user data
 resources/temp/

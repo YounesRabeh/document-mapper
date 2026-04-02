@@ -74,9 +74,9 @@ def test_session_store_loads_legacy_files(tmp_path):
     assert session.template_path == "/tmp/template.docx"
     assert session.output_dir == "/tmp/out"
     assert session.license_path == "/tmp/license.xml"
-    assert session.selected_template_type == "Imported"
+    assert session.selected_template_type == "Default template"
     assert session.selected_template_entry() is not None
-    assert session.selected_template_entry().label == "attestato"
+    assert session.selected_template_entry().label == "Default template 01"
     assert session.placeholder_delimiter == "<<"
     assert session.placeholder_start == "<<"
     assert session.placeholder_end == ">>"

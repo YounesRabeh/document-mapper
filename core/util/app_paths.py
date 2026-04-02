@@ -95,3 +95,10 @@ class AppPaths:
     @classmethod
     def legacy_last_session_path(cls, filename: str) -> Path:
         return cls.legacy_resources_temp_dir() / filename
+
+    @classmethod
+    def shipped_test_template_path(cls) -> Path | None:
+        candidate = cls.project_root() / "tests" / "fixtures" / "docx_template_test.docx"
+        if candidate.exists():
+            return candidate.resolve()
+        return None
