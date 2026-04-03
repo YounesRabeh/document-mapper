@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import threading
-
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
@@ -28,6 +26,7 @@ from gui.forms import Ui_MainWindow
 from gui.styles import apply_stylesheet
 from gui.windows.components import SidebarStageCard
 from gui.windows.constants import CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
+from gui.windows.last_session_persistence import LastSessionPersistenceService
 from gui.windows.project_actions import (
     activate_new_project,
     confirm_new_project_action,
@@ -62,6 +61,7 @@ from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 class MainWindow(QMainWindow):
     """Main window for the template-based document merge workflow."""
     THEME_PERSIST_DEBOUNCE_MS = 300
+    LAST_SESSION_FLUSH_TIMEOUT_SECONDS = 2.0
 
     def __init__(self, config: dict):
         super().__init__()
@@ -88,9 +88,7 @@ class MainWindow(QMainWindow):
         self._theme_persist_timer.setSingleShot(True)
         self._theme_persist_timer.setInterval(self.THEME_PERSIST_DEBOUNCE_MS)
         self._theme_persist_timer.timeout.connect(self._flush_theme_session_persist)
-        self._last_session_persist_lock = threading.Lock()
-        self._pending_last_session_snapshot: ProjectSession | None = None
-        self._last_session_persist_thread: threading.Thread | None = None
+        self._last_session_persistence = LastSessionPersistenceService(self.session_store)
 
         min_width = max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH)
         min_height = max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT)
@@ -329,7 +327,6 @@ class MainWindow(QMainWindow):
         if self.session.theme_mode == normalized:
             return
         self.session.theme_mode = normalized
-        self.document.mark_unsaved()
         self._schedule_theme_session_persist()
 
     def _apply_project_theme_mode(
@@ -352,39 +349,17 @@ class MainWindow(QMainWindow):
         if sync_document_snapshot:
             self.document.mark_saved()
         if save_last_session:
-            self._enqueue_last_session_persist(self.session.clone())
+            self._persist_last_session_async()
 
     def _schedule_theme_session_persist(self):
         self._theme_persist_timer.start()
 
     def _flush_theme_session_persist(self):
         if self.session.theme_mode:
-            self._enqueue_last_session_persist(self.session.clone())
-
-    def _enqueue_last_session_persist(self, snapshot: ProjectSession):
-        with self._last_session_persist_lock:
-            self._pending_last_session_snapshot = snapshot
-            worker = self._last_session_persist_thread
-            if worker is not None and worker.is_alive():
-                return
-            self._last_session_persist_thread = threading.Thread(
-                target=self._run_last_session_persist_worker,
-                name="last-session-persist",
-                daemon=True,
-            )
-            self._last_session_persist_thread.start()
-
-    def _run_last_session_persist_worker(self):
-        while True:
-            with self._last_session_persist_lock:
-                snapshot = self._pending_last_session_snapshot
-                self._pending_last_session_snapshot = None
-            if snapshot is None:
-                return
-            self.session_store.save_last_session(snapshot)
+            self._persist_last_session_async()
 
     def _persist_last_session_async(self):
-        self._enqueue_last_session_persist(self.session.clone())
+        self._last_session_persistence.enqueue(self.session.clone())
 
     @staticmethod
     def _normalize_theme_mode(value: str | AppTheme | None) -> str:
@@ -396,5 +371,12 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         if self._theme_persist_timer.isActive():
             self._theme_persist_timer.stop()
-            self._flush_theme_session_persist()
+        self._persist_last_session_async()
+        flushed = self._last_session_persistence.flush_and_stop(self.LAST_SESSION_FLUSH_TIMEOUT_SECONDS)
+        if not flushed:
+            fallback_snapshot = self._last_session_persistence.latest_snapshot() or self.session.clone()
+            try:
+                self.session_store.save_last_session(fallback_snapshot)
+            except Exception:  # noqa: BLE001
+                pass
         super().closeEvent(event)

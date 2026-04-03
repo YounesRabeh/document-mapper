@@ -60,7 +60,7 @@ class ProjectDocument:
         self._saved_snapshot = self.snapshot()
 
     def mark_unsaved(self):
-        self._saved_snapshot = None
+        return None
 
     @staticmethod
     def _normalize_project_path(project_path: str | Path | None) -> str | None:

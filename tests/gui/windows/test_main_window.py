@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import threading
 from unittest.mock import patch
 
 from PySide6.QtWidgets import QDialog
@@ -194,6 +193,7 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     with patch.object(window, "_confirm_new_project_action", return_value="discard"):
         window._new_project()
     assert window.stage_manager.currentIndex() == 0
+    assert window.document.is_dirty is True
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
@@ -397,16 +397,20 @@ def test_theme_toggle_debounces_last_session_persistence(main_window_factory):
     assert window._theme_persist_timer.isActive() is True
     assert fake_store.session is None
 
-    persisted = threading.Event()
-
-    def _capture_enqueue(snapshot):
-        fake_store.save_last_session(snapshot)
-        persisted.set()
-
-    with patch.object(window, "_enqueue_last_session_persist", side_effect=_capture_enqueue) as enqueue:
+    with patch.object(window._last_session_persistence, "enqueue") as enqueue:
         window._flush_theme_session_persist()
 
     enqueue.assert_called_once()
-    assert persisted.is_set() is True
+    persisted_snapshot = enqueue.call_args.args[0]
+    assert persisted_snapshot.theme_mode == window.session.theme_mode
+
+
+def test_close_event_flushes_pending_last_session_snapshot(main_window_factory):
+    window, fake_store, _main_window_module = main_window_factory()
+    assert fake_store.session is None
+
+    window._toggle_theme()
+    window.close()
+
     assert fake_store.session is not None
     assert fake_store.session.theme_mode == window.session.theme_mode

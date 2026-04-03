@@ -28,6 +28,26 @@ OUTPUT_SCHEMA_BUILTINS = {
     "TEMPLATE",
     "CERTIFICATE_TYPE",
 }
+FIRST_NAME_ALIASES = (
+    normalize_column_name("NAME"),
+    normalize_column_name("NOME"),
+)
+LAST_NAME_ALIASES = (
+    normalize_column_name("LASTNAME"),
+    normalize_column_name("COGNOME"),
+)
+DATE_ALIASES = frozenset(
+    (
+        normalize_column_name("COURSE_DATE"),
+        normalize_column_name("DATE"),
+        normalize_column_name("DATA"),
+    )
+)
+CERTIFICATE_NUMBER_ALIASES = (
+    normalize_column_name("CERTIFICATE_NO"),
+    normalize_column_name("NUMERO-ATTESTATO"),
+)
+UPPERCASE_TEXT_ALIASES = frozenset((*FIRST_NAME_ALIASES, *LAST_NAME_ALIASES))
 
 
 class CertificateGenerator:
@@ -141,10 +161,9 @@ class CertificateGenerator:
                     progress_callback,
                 )
 
-                if normalize_column_name("NUMERO-ATTESTATO") in column_lookup:
-                    last_value = row.get(column_lookup[normalize_column_name("NUMERO-ATTESTATO")])
-                    if not pd.isna(last_value):
-                        last_certificate_number = str(last_value)
+                last_certificate_value = self._first_row_value(row, column_lookup, CERTIFICATE_NUMBER_ALIASES)
+                if last_certificate_value:
+                    last_certificate_number = last_certificate_value
 
                 document = document_cls()
                 document.LoadFromFile(session.template_path)
@@ -243,9 +262,9 @@ class CertificateGenerator:
             return ""
 
         normalized = normalize_column_name(column_name)
-        if normalized == "DATA":
+        if normalized in DATE_ALIASES:
             return self._format_date_to_dd_mm_yyyy(value)
-        if normalized in {"NOME", "COGNOME"}:
+        if normalized in UPPERCASE_TEXT_ALIASES:
             return str(value).strip().upper()
         return str(value).strip()
 
@@ -276,8 +295,8 @@ class CertificateGenerator:
         column_lookup: dict[str, str],
         row_index: int,
     ) -> str:
-        first_name = self._row_value(row, column_lookup, "NOME").upper()
-        last_name = self._row_value(row, column_lookup, "COGNOME").upper()
+        first_name = self._first_row_value(row, column_lookup, FIRST_NAME_ALIASES).upper()
+        last_name = self._first_row_value(row, column_lookup, LAST_NAME_ALIASES).upper()
         full_name = " ".join(part for part in (first_name, last_name) if part).strip()
         return full_name or f"row-{row_index + 1}"
 
@@ -392,6 +411,24 @@ class CertificateGenerator:
         if pd.isna(value) or value is None:
             return ""
         return str(value).strip()
+
+    def _first_row_value(
+        self,
+        row: pd.Series,
+        column_lookup: dict[str, str],
+        aliases: tuple[str, ...] | list[str],
+    ) -> str:
+        for alias in aliases:
+            actual_column = column_lookup.get(alias)
+            if not actual_column:
+                continue
+            value = row.get(actual_column)
+            if pd.isna(value) or value is None:
+                continue
+            text = str(value).strip()
+            if text:
+                return text
+        return ""
 
     def _sanitize_filename_fragment(self, value: str) -> str:
         sanitized = re.sub(r"[^\w.-]+", "_", value.strip(), flags=re.ASCII)

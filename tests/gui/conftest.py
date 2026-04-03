@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+import zipfile
 
 import pytest
 
@@ -12,7 +13,15 @@ def sample_project_files(tmp_path):
     workbook = tmp_path / "data.xlsx"
     template = tmp_path / "template.docx"
     workbook.write_text("placeholder", encoding="utf-8")
-    template.write_text("Hello <NAME>", encoding="utf-8")
+    with zipfile.ZipFile(template, "w") as archive:
+        archive.writestr(
+            "word/document.xml",
+            (
+                '<?xml version="1.0" encoding="UTF-8"?>'
+                '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+                "<w:body><w:p><w:r><w:t>Hello &lt;NAME&gt;</w:t></w:r></w:p></w:body></w:document>"
+            ),
+        )
     return SimpleNamespace(root=tmp_path, workbook=workbook, template=template)
 
 

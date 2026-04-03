@@ -63,6 +63,52 @@ def test_generator_formats_dates_and_creates_docx(tmp_path):
     assert Path(result.generated_docx_paths[0]).exists()
 
 
+def test_generator_supports_english_field_aliases_for_dates_names_and_certificate_numbers(tmp_path):
+    dataframe = pd.DataFrame(
+        [
+            {
+                "NAME": "Ada",
+                "LASTNAME": "Lovelace",
+                "COURSE_DATE": pd.Timestamp("2026-03-28"),
+                "CERTIFICATE_NO": "A7K9M2Q4R8T1",
+            }
+        ]
+    )
+    excel_service = FakeExcelService(dataframe)
+    generator = CertificateGenerator(excel_service=excel_service)
+    generator._load_spire_dependencies = fake_spire_dependencies  # type: ignore[method-assign]
+    generator._clean_docx_content = lambda _path: True  # type: ignore[method-assign]
+
+    template_path = tmp_path / "template.docx"
+    template_path.write_text("template", encoding="utf-8")
+    excel_path = tmp_path / "data.xlsx"
+    excel_path.write_text("placeholder", encoding="utf-8")
+    session = ProjectSession(
+        excel_path=str(excel_path),
+        template_path=str(template_path),
+        output_dir=str(tmp_path),
+        output_naming_schema="{NAME}_{LASTNAME}_{TEMPLATE}",
+        placeholder_delimiter="<",
+        detected_placeholder_delimiter="<",
+        detected_placeholder_count=2,
+        mappings=[
+            MappingEntry(placeholder="<NAME>", column_name="NAME"),
+            MappingEntry(placeholder="<COURSE_DATE>", column_name="COURSE_DATE"),
+        ],
+    )
+
+    result = generator.generate(session)
+    column_lookup = excel_service.build_column_lookup([str(column) for column in dataframe.columns])
+    participant_name = generator._participant_name(dataframe.iloc[0], column_lookup, 0)
+    replacements = generator._build_replacements(dataframe.iloc[0], session.mappings, column_lookup)
+
+    assert result.success_count == 1
+    assert result.last_certificate_number == "A7K9M2Q4R8T1"
+    assert participant_name == "ADA LOVELACE"
+    assert replacements["<NAME>"] == "ADA"
+    assert replacements["<COURSE_DATE>"] == "28/03/2026"
+
+
 def test_generator_creates_pdfs_when_enabled(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
 

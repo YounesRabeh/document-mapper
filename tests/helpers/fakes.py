@@ -75,6 +75,8 @@ class FakeSessionStore:
         self.session: ProjectSession | None = None
         self.loaded_session: ProjectSession | None = None
         self.last_session: ProjectSession | None = None
+        self.saved_sessions: list[ProjectSession] = []
+        self.save_last_session_hook = None
 
     def load_last_session(self):
         if self.last_session is not None:
@@ -82,7 +84,10 @@ class FakeSessionStore:
         return ProjectSession()
 
     def save_last_session(self, session):
+        if callable(self.save_last_session_hook):
+            self.save_last_session_hook(session.clone())
         self.session = session.clone()
+        self.saved_sessions.append(self.session.clone())
         return Path(tempfile.gettempdir()) / "last_session.json"
 
     def save(self, session, path):

@@ -14,7 +14,7 @@ def new_project(window):
         if action == "save_current":
             if not window._save_project():
                 return
-            window._activate_new_project(window.session.__class__(), saved=True)
+            window._activate_new_project(window.session.__class__(), saved=False)
             return
         if action == "save_copy":
             if not window._save_project():
@@ -25,10 +25,10 @@ def new_project(window):
             )
             return
         if action == "discard":
-            window._activate_new_project(window.session.__class__(), saved=True)
+            window._activate_new_project(window.session.__class__(), saved=False)
             return
 
-    window._activate_new_project(window.session.__class__(), saved=True)
+    window._activate_new_project(window.session.__class__(), saved=False)
 
 
 def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
@@ -337,7 +337,6 @@ def manage_templates(window, *, dialog_cls, accepted_code):
 
     window.session = dialog.edited_session()
     window._sync_effective_template_path()
-    window.document.mark_unsaved()
     window._persist_last_session_async()
     window._refresh_pages()
 
