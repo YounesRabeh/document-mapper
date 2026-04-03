@@ -5,16 +5,11 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
-    QHBoxLayout,
     QInputDialog,
     QLineEdit,
     QLabel,
-    QListWidget,
     QListWidgetItem,
     QMessageBox,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
     QDialog,
 )
 
@@ -27,6 +22,7 @@ from core.certificate.models import (
     normalize_template_type_name,
 )
 from core.manager.localization_manager import LocalizationManager
+from gui.forms import Ui_TemplateManagerDialog
 from gui.styles import TEMPLATE_MANAGER_SECTION_TITLE_QSS
 
 
@@ -37,66 +33,25 @@ class TemplateManagerDialog(QDialog):
         self.session = session.clone()
 
         self.setModal(True)
-        self.resize(860, 480)
+        self.ui = Ui_TemplateManagerDialog()
+        self.ui.setupUi(self)
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(12)
+        self.type_title = self.ui.typeTitle
+        self.type_list = self.ui.typeList
+        self.type_add_button = self.ui.typeAddButton
+        self.type_rename_button = self.ui.typeRenameButton
+        self.type_remove_button = self.ui.typeRemoveButton
+        self.template_title = self.ui.templateTitle
+        self.template_list = self.ui.templateList
+        self.template_add_button = self.ui.templateAddButton
+        self.template_rename_button = self.ui.templateRenameButton
+        self.template_remove_button = self.ui.templateRemoveButton
+        self.status_label = self.ui.statusLabel
+        self.cancel_button = self.ui.cancelButton
+        self.save_button = self.ui.saveButton
 
-        panels = QHBoxLayout()
-        panels.setSpacing(16)
-
-        type_panel = QWidget()
-        type_layout = QVBoxLayout(type_panel)
-        type_layout.setContentsMargins(0, 0, 0, 0)
-        type_layout.setSpacing(8)
-        self.type_title = QLabel()
         self.type_title.setStyleSheet(TEMPLATE_MANAGER_SECTION_TITLE_QSS)
-        self.type_list = QListWidget()
-        self.type_add_button = QPushButton()
-        self.type_rename_button = QPushButton()
-        self.type_remove_button = QPushButton()
-        type_buttons = QHBoxLayout()
-        type_buttons.addWidget(self.type_add_button)
-        type_buttons.addWidget(self.type_rename_button)
-        type_buttons.addWidget(self.type_remove_button)
-        type_layout.addWidget(self.type_title)
-        type_layout.addWidget(self.type_list, stretch=1)
-        type_layout.addLayout(type_buttons)
-
-        template_panel = QWidget()
-        template_layout = QVBoxLayout(template_panel)
-        template_layout.setContentsMargins(0, 0, 0, 0)
-        template_layout.setSpacing(8)
-        self.template_title = QLabel()
         self.template_title.setStyleSheet(TEMPLATE_MANAGER_SECTION_TITLE_QSS)
-        self.template_list = QListWidget()
-        self.template_add_button = QPushButton()
-        self.template_rename_button = QPushButton()
-        self.template_remove_button = QPushButton()
-        template_buttons = QHBoxLayout()
-        template_buttons.addWidget(self.template_add_button)
-        template_buttons.addWidget(self.template_rename_button)
-        template_buttons.addWidget(self.template_remove_button)
-        template_layout.addWidget(self.template_title)
-        template_layout.addWidget(self.template_list, stretch=1)
-        template_layout.addLayout(template_buttons)
-
-        panels.addWidget(type_panel, 1)
-        panels.addWidget(template_panel, 2)
-        root.addLayout(panels, stretch=1)
-
-        self.status_label = QLabel()
-        self.status_label.setWordWrap(True)
-        root.addWidget(self.status_label)
-
-        footer = QHBoxLayout()
-        footer.addStretch()
-        self.cancel_button = QPushButton()
-        self.save_button = QPushButton()
-        footer.addWidget(self.cancel_button)
-        footer.addWidget(self.save_button)
-        root.addLayout(footer)
 
         self.type_list.currentItemChanged.connect(self._refresh_template_list)
         self.template_list.currentItemChanged.connect(self._refresh_actions)

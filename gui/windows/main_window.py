@@ -1,15 +1,12 @@
 from __future__ import annotations
 
+from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
-    QHBoxLayout,
     QMainWindow,
     QMessageBox,
     QSizePolicy,
-    QStackedWidget,
-    QVBoxLayout,
-    QWidget,
 )
 
 from core.certificate.excel_service import ExcelDataService
@@ -23,7 +20,9 @@ from core.project import ProjectDocument, TemplateCatalogService
 from core.util.app_paths import AppPaths
 from gui.controllers import WorkflowStateController
 from gui.dialogs import TemplateManagerDialog
+from gui.forms import Ui_MainWindow
 from gui.styles import MAIN_WINDOW_QSS
+from gui.windows.components import SidebarStageCard
 from gui.windows.constants import CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
 from gui.windows.project_actions import (
     activate_new_project,
@@ -42,7 +41,6 @@ from gui.windows.project_actions import (
     show_about,
     sync_effective_template_path,
 )
-from gui.windows.ui_builders import create_menu_bar, create_sidebar, create_template_toolbar
 from gui.windows.workflow_actions import (
     can_navigate_to_stage,
     goto_stage,
@@ -86,32 +84,73 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(min_width, min_height)
         self.setWindowTitle(self.localization.t("app.name"))
 
-        self.window_root = QWidget()
-        self.window_root.setObjectName("windowRoot")
-        self.window_root.setStyleSheet(MAIN_WINDOW_QSS)
-        self.setCentralWidget(self.window_root)
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.setStyleSheet(MAIN_WINDOW_QSS)
 
-        root_layout = QHBoxLayout(self.window_root)
-        root_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.setSpacing(0)
+        self.window_root = self.ui.windowRoot
+        self.sidebar = self.ui.workflowSidebarScroll
+        self.sidebar_eyebrow = self.ui.sidebarEyebrow
+        self.sidebar_title = self.ui.sidebarTitle
+        self.sidebar_subtitle = self.ui.sidebarSubtitle
+        self.stage_cards_layout = self.ui.stageCardsLayout
+        self.sidebar_new_button = self.ui.sidebarNewButton
+        self.sidebar_open_button = self.ui.sidebarOpenButton
+        self.sidebar_save_button = self.ui.sidebarSaveButton
+        self.template_toolbar = self.ui.templateToolbar
+        self.template_type_label = self.ui.templateTypeLabel
+        self.template_type_combo = self.ui.templateTypeCombo
+        self.template_label = self.ui.templateLabel
+        self.template_combo = self.ui.templateCombo
+        self.manage_templates_button = self.ui.manageTemplatesButton
+        self.template_toolbar_status = self.ui.templateToolbarStatus
+        self.stage_manager = self.ui.stageManager
+        self.file_menu = self.ui.menuFile
+        self.view_menu = self.ui.menuView
+        self.help_menu = self.ui.menuHelp
+        self.language_menu = self.ui.menuLanguage
+        self.new_project_action = self.ui.actionNewProject
+        self.open_project_action = self.ui.actionOpenProject
+        self.save_project_action = self.ui.actionSaveProject
+        self.save_project_as_action = self.ui.actionSaveProjectAs
+        self.exit_action = self.ui.actionExit
+        self.toggle_theme_action = self.ui.actionToggleTheme
+        self.about_action = self.ui.actionAbout
+        self.language_en_action = self.ui.actionLanguageEn
+        self.language_it_action = self.ui.actionLanguageIt
 
-        self.sidebar = self._create_sidebar()
-        root_layout.addWidget(self.sidebar)
+        self.ui.workflowSidebar.setObjectName("workflowSidebar")
+        self.template_type_label.setObjectName("templateToolbarLabel")
+        self.template_label.setObjectName("templateToolbarLabel")
+        self.template_type_combo.setObjectName("templateToolbarCombo")
+        self.template_combo.setObjectName("templateToolbarCombo")
+        self.manage_templates_button.setObjectName("templateToolbarButton")
+        self.template_toolbar_status.setObjectName("templateToolbarStatus")
+        for button in (self.sidebar_new_button, self.sidebar_open_button, self.sidebar_save_button):
+            button.setObjectName("sidebarUtilityButton")
 
-        self.content_root = QWidget()
-        content_layout = QVBoxLayout(self.content_root)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
-        root_layout.addWidget(self.content_root, stretch=1)
-
-        self.template_toolbar = self._create_template_toolbar()
-        content_layout.addWidget(self.template_toolbar)
-
-        self.stage_manager = QStackedWidget()
         self.stage_manager.setMinimumWidth(CONTENT_MIN_WIDTH)
         self.stage_manager.setMinimumHeight(0)
         self.stage_manager.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        content_layout.addWidget(self.stage_manager, stretch=1)
+
+        self.stage_cards = {}
+        for index, title_key, detail_key in (
+            (1, "sidebar.stage.setup", "sidebar.stage.setup.detail"),
+            (2, "sidebar.stage.mapping", "sidebar.stage.mapping.detail"),
+            (3, "sidebar.stage.generate", "sidebar.stage.generate.detail"),
+            (4, "sidebar.stage.results", "sidebar.stage.results.detail"),
+        ):
+            card = SidebarStageCard(index, title_key, detail_key, self.localization)
+            card.clicked.connect(self.goto_stage)
+            self.stage_cards[index] = card
+            self.stage_cards_layout.addWidget(card)
+
+        self.sidebar_new_button.clicked.connect(self._new_project)
+        self.sidebar_open_button.clicked.connect(self._open_project)
+        self.sidebar_save_button.clicked.connect(self._save_project)
+        self.template_type_combo.currentIndexChanged.connect(self._handle_template_type_changed)
+        self.template_combo.currentIndexChanged.connect(self._handle_template_selection_changed)
+        self.manage_templates_button.clicked.connect(self._manage_templates)
 
         self.setup_page = SetupPage(self.localization)
         self.mapping_page = MappingPage(
@@ -164,14 +203,25 @@ class MainWindow(QMainWindow):
     def last_result(self, value: GenerationResult):
         self.document.last_result = value
 
-    def _create_sidebar(self):
-        return create_sidebar(self)
-
-    def _create_template_toolbar(self):
-        return create_template_toolbar(self)
-
     def _create_menu_bar(self):
-        create_menu_bar(self)
+        self.new_project_action.triggered.connect(self._new_project)
+        self.open_project_action.triggered.connect(self._open_project)
+        self.save_project_action.triggered.connect(self._save_project)
+        self.save_project_as_action.triggered.connect(self._save_project_as)
+        self.exit_action.triggered.connect(self.close)
+        self.toggle_theme_action.triggered.connect(ThemeManager.toggle_theme)
+        self.about_action.triggered.connect(self._show_about)
+
+        self.language_action_group = QActionGroup(self)
+        self.language_action_group.setExclusive(True)
+        self.language_action_group.addAction(self.language_en_action)
+        self.language_action_group.addAction(self.language_it_action)
+        self.language_en_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("en")
+        )
+        self.language_it_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("it")
+        )
 
     def _refresh_pages(self):
         refresh_pages(self)
