@@ -28,10 +28,10 @@ def test_resources_resolve_from_project_root_not_cwd(tmp_path, monkeypatch):
             "RESOURCES_FONTS": "resources/fonts",
         }
     )
-    qss_path = Path(Resources.get_in_qss("elements/file_entry/default.qss"))
+    icon_path = Path(Resources.get_in_icons("sys/chevron_down.svg"))
 
-    assert qss_path.exists()
-    assert str(qss_path).startswith(str(AppPaths.project_root()))
+    assert icon_path.exists()
+    assert str(icon_path).startswith(str(AppPaths.project_root()))
 
 
 def test_default_template_and_locales_resolve_from_resources():
@@ -44,3 +44,10 @@ def test_default_template_and_locales_resolve_from_resources():
     assert locales_dir is not None
     assert (locales_dir / "en.json").exists()
     assert (locales_dir / "it.json").exists()
+
+
+def test_legacy_gui_ui_factory_stack_is_removed():
+    assert not (AppPaths.project_root() / "gui" / "ui" / "ui_factory.py").exists()
+    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "drag_drop.py").exists()
+    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "file_entry.py").exists()
+    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "menu_bar.py").exists()
