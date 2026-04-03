@@ -264,42 +264,6 @@ class Ui_SetupPageForm(object):
 
         self.rootLayout.addWidget(self.optionsCard)
 
-        self.statusCard = QFrame(setupPageForm)
-        self.statusCard.setObjectName(u"statusCard")
-        self.statusCard.setFrameShape(QFrame.StyledPanel)
-        self.statusCard.setObjectName(u"workflowCard")
-        self.statusCardLayout = QVBoxLayout(self.statusCard)
-        self.statusCardLayout.setSpacing(14)
-        self.statusCardLayout.setObjectName(u"statusCardLayout")
-        self.statusCardLayout.setContentsMargins(18, 16, 18, 16)
-        self.statusTitleBar = QFrame(self.statusCard)
-        self.statusTitleBar.setObjectName(u"statusTitleBar")
-        self.statusTitleBar.setFrameShape(QFrame.NoFrame)
-        self.statusTitleBar.setObjectName(u"workflowCardTitleBar")
-        self.statusTitleLayout = QHBoxLayout(self.statusTitleBar)
-        self.statusTitleLayout.setSpacing(0)
-        self.statusTitleLayout.setObjectName(u"statusTitleLayout")
-        self.statusTitleLayout.setContentsMargins(0, 0, 0, 0)
-        self.statusTitle = QLabel(self.statusTitleBar)
-        self.statusTitle.setObjectName(u"statusTitle")
-        self.statusTitle.setObjectName(u"workflowCardTitle")
-
-        self.statusTitleLayout.addWidget(self.statusTitle)
-
-
-        self.statusCardLayout.addWidget(self.statusTitleBar)
-
-        self.statusLabel = QLabel(self.statusCard)
-        self.statusLabel.setObjectName(u"statusLabel")
-        self.statusLabel.setObjectName(u"workflowStatus")
-        self.statusLabel.setMinimumSize(QSize(0, 96))
-        self.statusLabel.setWordWrap(True)
-
-        self.statusCardLayout.addWidget(self.statusLabel)
-
-
-        self.rootLayout.addWidget(self.statusCard)
-
 
         self.retranslateUi(setupPageForm)
 
@@ -320,8 +284,6 @@ class Ui_SetupPageForm(object):
         self.optionsTitle.setText(QCoreApplication.translate("SetupPageForm", u"Export options", None))
         self.exportPdfCheckBox.setText(QCoreApplication.translate("SetupPageForm", u"Also export PDF", None))
         self.pdfTimeoutLabel.setText(QCoreApplication.translate("SetupPageForm", u"PDF timeout", None))
-        self.statusTitle.setText(QCoreApplication.translate("SetupPageForm", u"Session summary", None))
-        self.statusLabel.setText(QCoreApplication.translate("SetupPageForm", u"Summary", None))
         pass
     # retranslateUi
 

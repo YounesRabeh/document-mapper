@@ -31,10 +31,8 @@ class SetupPage(WorkflowPage):
         self.template_override_hint = self.ui.templateOverrideHint
         self.clear_override_button = self.ui.clearOverrideButton
         self.options_card = self.ui.optionsCard
-        self.status_card = self.ui.statusCard
         self.export_pdf_checkbox = self.ui.exportPdfCheckBox
         self.pdf_timeout_input = self.ui.pdfTimeoutSpinBox
-        self.status_label = self.ui.statusLabel
 
         self.excel_input = {
             "container": self.ui.excelInputContainer,
@@ -72,7 +70,6 @@ class SetupPage(WorkflowPage):
         self._bind_translation(self.ui.optionsTitle, "upper_text", "card.export_options")
         self._bind_translation(self.export_pdf_checkbox, "text", "checkbox.export_pdf")
         self._bind_translation(self.ui.pdfTimeoutLabel, "text", "field.pdf_timeout")
-        self._bind_translation(self.ui.statusTitle, "upper_text", "card.session_summary")
 
         self.pdf_timeout_input.setRange(10, 3600)
         self.pdf_timeout_input.setSuffix(" s")
@@ -97,23 +94,6 @@ class SetupPage(WorkflowPage):
             self.pdf_timeout_input.setValue(self.session.pdf_timeout_seconds)
         finally:
             self._loading = False
-        self._refresh_status()
-
-    def _refresh_status(self):
-        lines = [
-            self.localization.t("summary.workbook", value=self._display_file_name(self.session.excel_path)),
-            self.localization.t(
-                "summary.template",
-                value=self.session.active_template_name or self.localization.t("common.not_selected"),
-            ),
-            self.localization.t(
-                "summary.template_override",
-                value=self._display_file_name(self.session.template_override_path),
-            ),
-            self.localization.t("summary.output_folder", value=self._display_folder_name(self.session.output_dir)),
-            self.localization.t("summary.mappings_configured", count=len(self.session.mappings)),
-        ]
-        self.status_label.setText("\n".join(lines))
 
     def _sync_session(self, *_args):
         if self._loading:
@@ -124,7 +104,6 @@ class SetupPage(WorkflowPage):
         self.session.template_override_path = self.template_override_input["input"].text().strip()
         self.session.export_pdf = self.export_pdf_checkbox.isChecked()
         self.session.pdf_timeout_seconds = self.pdf_timeout_input.value()
-        self._refresh_status()
         self.session_changed.emit()
 
     def _set_text_and_sync(self, widget: QLineEdit, value: str):
@@ -164,4 +143,4 @@ class SetupPage(WorkflowPage):
             self._set_text_and_sync(self.output_input["input"], path)
 
     def retranslate_page(self):
-        self._refresh_status()
+        pass

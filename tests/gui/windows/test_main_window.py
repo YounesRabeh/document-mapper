@@ -130,7 +130,7 @@ def test_specific_template_section_is_always_visible(prepared_window):
 
     window.session.template_override_path = str(prepared_window.files.template)
     window.setup_page.refresh_from_session()
-    assert "One-time template: template.docx" in window.setup_page.status_label.text()
+    assert window.setup_page.template_override_input["input"].text() == str(prepared_window.files.template)
 
     window.localization.set_language("it")
     assert window.setup_page.clear_override_button.text() == "Rimuovi template monouso"

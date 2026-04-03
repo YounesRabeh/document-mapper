@@ -34,9 +34,9 @@ class Ui_TemplateManagerDialog(object):
         self.typePanel = QWidget(TemplateManagerDialog)
         self.typePanel.setObjectName(u"typePanel")
         self.typeLayout = QVBoxLayout(self.typePanel)
-        self.typeLayout.setSpacing(8)
+        self.typeLayout.setSpacing(10)
         self.typeLayout.setObjectName(u"typeLayout")
-        self.typeLayout.setContentsMargins(0, 0, 0, 0)
+        self.typeLayout.setContentsMargins(14, 14, 14, 14)
         self.typeTitle = QLabel(self.typePanel)
         self.typeTitle.setObjectName(u"typeTitle")
 
@@ -48,6 +48,7 @@ class Ui_TemplateManagerDialog(object):
         self.typeLayout.addWidget(self.typeList)
 
         self.typeButtonsLayout = QHBoxLayout()
+        self.typeButtonsLayout.setSpacing(10)
         self.typeButtonsLayout.setObjectName(u"typeButtonsLayout")
         self.typeAddButton = QPushButton(self.typePanel)
         self.typeAddButton.setObjectName(u"typeAddButton")
@@ -73,9 +74,9 @@ class Ui_TemplateManagerDialog(object):
         self.templatePanel = QWidget(TemplateManagerDialog)
         self.templatePanel.setObjectName(u"templatePanel")
         self.templateLayout = QVBoxLayout(self.templatePanel)
-        self.templateLayout.setSpacing(8)
+        self.templateLayout.setSpacing(10)
         self.templateLayout.setObjectName(u"templateLayout")
-        self.templateLayout.setContentsMargins(0, 0, 0, 0)
+        self.templateLayout.setContentsMargins(14, 14, 14, 14)
         self.templateTitle = QLabel(self.templatePanel)
         self.templateTitle.setObjectName(u"templateTitle")
 
@@ -87,6 +88,7 @@ class Ui_TemplateManagerDialog(object):
         self.templateLayout.addWidget(self.templateList)
 
         self.templateButtonsLayout = QHBoxLayout()
+        self.templateButtonsLayout.setSpacing(10)
         self.templateButtonsLayout.setObjectName(u"templateButtonsLayout")
         self.templateAddButton = QPushButton(self.templatePanel)
         self.templateAddButton.setObjectName(u"templateAddButton")

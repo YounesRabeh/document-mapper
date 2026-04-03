@@ -38,19 +38,19 @@
       <widget class="QWidget" name="typePanel" native="true">
        <layout class="QVBoxLayout" name="typeLayout">
         <property name="spacing">
-         <number>8</number>
+         <number>10</number>
         </property>
         <property name="leftMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="bottomMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <item>
          <widget class="QLabel" name="typeTitle">
@@ -64,6 +64,9 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="typeButtonsLayout">
+          <property name="spacing">
+           <number>10</number>
+          </property>
           <item>
            <widget class="QPushButton" name="typeAddButton">
             <property name="text">
@@ -94,19 +97,19 @@
       <widget class="QWidget" name="templatePanel" native="true">
        <layout class="QVBoxLayout" name="templateLayout">
         <property name="spacing">
-         <number>8</number>
+         <number>10</number>
         </property>
         <property name="leftMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="topMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <property name="bottomMargin">
-         <number>0</number>
+         <number>14</number>
         </property>
         <item>
          <widget class="QLabel" name="templateTitle">
@@ -120,6 +123,9 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="templateButtonsLayout">
+          <property name="spacing">
+           <number>10</number>
+          </property>
           <item>
            <widget class="QPushButton" name="templateAddButton">
             <property name="text">

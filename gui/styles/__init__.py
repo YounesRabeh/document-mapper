@@ -2,18 +2,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from core.util.app_paths import AppPaths
 from core.util.resources import Resources
 
 
 def _combo_arrow_path() -> str:
-    resolved = Resources.get_in_icons("sys/chevron_down.svg", suppress=True)
-    if resolved:
-        return Path(resolved).resolve().as_posix()
-    return (Path(__file__).resolve().parents[2] / "resources" / "icons" / "sys" / "chevron_down.svg").as_posix()
+    getter = getattr(Resources, "get_in_icons", None)
+    if getter is not None:
+        resolved = getter("sys/chevron_down.svg", suppress=True)
+        if resolved:
+            return Path(resolved).resolve().as_posix()
+    return (AppPaths.resource_root("resources") / "icons" / "sys" / "chevron_down.svg").as_posix()
 
 
 def load_stylesheet(name: str) -> str:
-    path = Path(Resources.get_in_qss(f"{name}.qss"))
+    getter = getattr(Resources, "get_in_qss", None)
+    if getter is not None:
+        path = Path(getter(f"{name}.qss"))
+    else:
+        path = AppPaths.resource_root("resources") / "qss" / f"{name}.qss"
     qss = path.read_text(encoding="utf-8")
     return qss.replace("__COMBO_ARROW_PATH__", _combo_arrow_path())
 
