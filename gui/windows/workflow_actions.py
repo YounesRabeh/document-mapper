@@ -16,7 +16,7 @@ def refresh_pages(window):
 def persist_last_session(window):
     window._sync_effective_template_path()
     window.document.mark_unsaved()
-    window.session_store.save_last_session(window.session)
+    window._persist_last_session_async()
     window._refresh_template_toolbar()
     window.generate_page.bind_session(window.session)
     window.results_page.bind_result(window.last_result, window.session)

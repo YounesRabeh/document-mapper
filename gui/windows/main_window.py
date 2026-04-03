@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import threading
+
+from PySide6.QtCore import QTimer
 from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
     QDialog,
@@ -58,6 +61,7 @@ from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
 
 class MainWindow(QMainWindow):
     """Main window for the template-based document merge workflow."""
+    THEME_PERSIST_DEBOUNCE_MS = 300
 
     def __init__(self, config: dict):
         super().__init__()
@@ -80,6 +84,13 @@ class MainWindow(QMainWindow):
         self.theme_manager = ThemeManager({**self.config, "WINDOW_THEME_MODE": initial_theme_mode})
         self.localization = LocalizationManager(config)
         self._applying_project_theme = False
+        self._theme_persist_timer = QTimer(self)
+        self._theme_persist_timer.setSingleShot(True)
+        self._theme_persist_timer.setInterval(self.THEME_PERSIST_DEBOUNCE_MS)
+        self._theme_persist_timer.timeout.connect(self._flush_theme_session_persist)
+        self._last_session_persist_lock = threading.Lock()
+        self._pending_last_session_snapshot: ProjectSession | None = None
+        self._last_session_persist_thread: threading.Thread | None = None
 
         min_width = max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH)
         min_height = max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT)
@@ -319,7 +330,7 @@ class MainWindow(QMainWindow):
             return
         self.session.theme_mode = normalized
         self.document.mark_unsaved()
-        self.session_store.save_last_session(self.session)
+        self._schedule_theme_session_persist()
 
     def _apply_project_theme_mode(
         self,
@@ -341,7 +352,39 @@ class MainWindow(QMainWindow):
         if sync_document_snapshot:
             self.document.mark_saved()
         if save_last_session:
-            self.session_store.save_last_session(self.session)
+            self._enqueue_last_session_persist(self.session.clone())
+
+    def _schedule_theme_session_persist(self):
+        self._theme_persist_timer.start()
+
+    def _flush_theme_session_persist(self):
+        if self.session.theme_mode:
+            self._enqueue_last_session_persist(self.session.clone())
+
+    def _enqueue_last_session_persist(self, snapshot: ProjectSession):
+        with self._last_session_persist_lock:
+            self._pending_last_session_snapshot = snapshot
+            worker = self._last_session_persist_thread
+            if worker is not None and worker.is_alive():
+                return
+            self._last_session_persist_thread = threading.Thread(
+                target=self._run_last_session_persist_worker,
+                name="last-session-persist",
+                daemon=True,
+            )
+            self._last_session_persist_thread.start()
+
+    def _run_last_session_persist_worker(self):
+        while True:
+            with self._last_session_persist_lock:
+                snapshot = self._pending_last_session_snapshot
+                self._pending_last_session_snapshot = None
+            if snapshot is None:
+                return
+            self.session_store.save_last_session(snapshot)
+
+    def _persist_last_session_async(self):
+        self._enqueue_last_session_persist(self.session.clone())
 
     @staticmethod
     def _normalize_theme_mode(value: str | AppTheme | None) -> str:
@@ -349,3 +392,9 @@ class MainWindow(QMainWindow):
             return value.name
         candidate = str(value or "").strip().upper()
         return candidate if candidate in AppTheme.__members__ else ""
+
+    def closeEvent(self, event):
+        if self._theme_persist_timer.isActive():
+            self._theme_persist_timer.stop()
+            self._flush_theme_session_persist()
+        super().closeEvent(event)

@@ -50,7 +50,7 @@ def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
             save_last_session=False,
             sync_document_snapshot=True,
         )
-        window.session_store.save_last_session(window.session)
+        window._persist_last_session_async()
         window._refresh_pages()
         window.goto_stage(1)
     except Exception as exc:  # noqa: BLE001
@@ -83,7 +83,7 @@ def save_project_to_path(window, path: str | Path):
     saved_path = window.session_store.save(session_to_save, project_dir)
     loaded_session = window.session_store.load(Path(saved_path).parent)
     window.document.load(loaded_session, Path(saved_path).parent)
-    window.session_store.save_last_session(window.session)
+    window._persist_last_session_async()
     window._refresh_pages()
     return True
 
@@ -98,7 +98,7 @@ def activate_new_project(window, session, *, saved: bool):
         save_last_session=False,
         sync_document_snapshot=saved,
     )
-    window.session_store.save_last_session(window.session)
+    window._persist_last_session_async()
     window._refresh_pages()
     window.goto_stage(1)
 
@@ -284,7 +284,7 @@ def manage_templates(window, *, dialog_cls, accepted_code):
     window.session = dialog.edited_session()
     window._sync_effective_template_path()
     window.document.mark_unsaved()
-    window.session_store.save_last_session(window.session)
+    window._persist_last_session_async()
     window._refresh_pages()
 
 

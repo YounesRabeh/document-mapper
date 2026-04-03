@@ -20,6 +20,7 @@ class ThemeManager(QObject):
     _current_theme: AppTheme = AppTheme.AUTO
     _config: dict = {}
     _last_system_theme: AppTheme = None  # Track last detected system theme
+    _style_initialized = False
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -96,9 +97,12 @@ class ThemeManager(QObject):
             Logger.error("QApplication instance not found. Cannot apply theme.")
             return
 
-        # Use a consistent Qt style so custom palettes render more predictably
-        # across platforms and widget types.
-        app.setStyle("Fusion")
+        # Initialize the base Qt style once. Reapplying it on every theme switch
+        # forces a full repolish of the application and causes visible lag.
+        current_style = app.style().objectName().lower() if app.style() else ""
+        if not ThemeManager._style_initialized or current_style != "fusion":
+            app.setStyle("Fusion")
+            ThemeManager._style_initialized = True
 
         if theme == AppTheme.DARK:
             ThemeManager._apply_dark_palette()
@@ -107,8 +111,40 @@ class ThemeManager(QObject):
             ThemeManager._apply_light_palette()
             Logger.debug("Applied LIGHT theme.")
 
-        # Force UI refresh
-        app.setStyle(app.style().objectName())
+        ThemeManager._refresh_styled_widgets(app)
+
+    @staticmethod
+    def _refresh_styled_widgets(app: QApplication):
+        # Re-polish styled windows/widgets so palette(...) values inside QSS are
+        # re-evaluated after the palette switch without forcing a full app style
+        # reset.
+        styled_widgets = [
+            widget
+            for widget in app.allWidgets()
+            if widget.isWindow() or bool(widget.styleSheet())
+        ]
+
+        for widget in styled_widgets:
+            widget.setUpdatesEnabled(False)
+            try:
+                style = widget.style()
+                if style is not None:
+                    style.unpolish(widget)
+                    style.polish(widget)
+
+                qss = widget.styleSheet()
+                if qss:
+                    widget.setStyleSheet(qss)
+
+                widget.updateGeometry()
+                widget.update()
+                viewport = getattr(widget, "viewport", None)
+                if callable(viewport):
+                    view = viewport()
+                    if view is not None:
+                        view.update()
+            finally:
+                widget.setUpdatesEnabled(True)
 
     @staticmethod
     def apply_theme_to_widget(widget: QWidget, path: str):

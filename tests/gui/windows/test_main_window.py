@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import threading
 from unittest.mock import patch
 
 from PySide6.QtWidgets import QDialog
@@ -292,3 +293,27 @@ def test_open_project_applies_saved_project_theme(prepared_window):
 
     assert window.session.theme_mode == target_theme.name
     assert ThemeManager.get_current_theme() == target_theme
+
+
+def test_theme_toggle_debounces_last_session_persistence(main_window_factory):
+    window, fake_store, _main_window_module = main_window_factory()
+    assert fake_store.session is None
+
+    window._toggle_theme()
+
+    assert window._theme_persist_timer.isActive() is True
+    assert fake_store.session is None
+
+    persisted = threading.Event()
+
+    def _capture_enqueue(snapshot):
+        fake_store.save_last_session(snapshot)
+        persisted.set()
+
+    with patch.object(window, "_enqueue_last_session_persist", side_effect=_capture_enqueue) as enqueue:
+        window._flush_theme_session_persist()
+
+    enqueue.assert_called_once()
+    assert persisted.is_set() is True
+    assert fake_store.session is not None
+    assert fake_store.session.theme_mode == window.session.theme_mode
