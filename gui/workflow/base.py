@@ -150,20 +150,29 @@ class WorkflowPage(QWidget):
         layout.addWidget(self.scroll_area, stretch=1)
 
         scroll_layout = QVBoxLayout(self.scroll_content)
-        scroll_layout.setContentsMargins(24, 24, 24, 16)
-        scroll_layout.setSpacing(18)
+        scroll_layout.setContentsMargins(24, 16, 24, 16)
+        scroll_layout.setSpacing(14)
         scroll_layout.setSizeConstraint(QVBoxLayout.SetMinAndMaxSize)
 
         self.title_label = QLabel()
         self.title_label.setObjectName("workflowTitle")
+        self.title_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.description_label = QLabel()
         self.description_label.setWordWrap(True)
         self.description_label.setObjectName("workflowDescription")
+        self.description_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self._bind_translation(self.title_label, "upper_text", title_key)
         self._bind_translation(self.description_label, "text", description_key)
 
-        scroll_layout.addWidget(self.title_label)
-        scroll_layout.addWidget(self.description_label)
+        self.header_container = QWidget()
+        self.header_container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.header_layout = QVBoxLayout(self.header_container)
+        self.header_layout.setContentsMargins(0, 0, 0, 0)
+        self.header_layout.setSpacing(6)
+        self.header_layout.addWidget(self.title_label)
+        self.header_layout.addWidget(self.description_label)
+
+        scroll_layout.addWidget(self.header_container)
 
         self.body_layout = QVBoxLayout()
         self.body_layout.setSpacing(16)

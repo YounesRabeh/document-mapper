@@ -72,6 +72,7 @@ def test_output_naming_schema_token_insertion_updates_session(prepared_window):
     window = prepared_window.window
 
     _go_to_mapping(window)
+    assert hasattr(window.mapping_page.ui, "leftBox") is False
     _assign_first_mapping(window)
 
     assert window.mapping_page.delimiter_input.text() == "<"

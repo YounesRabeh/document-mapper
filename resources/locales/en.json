@@ -65,7 +65,7 @@
   "common.yes": "Yes",
   "common.no": "No",
   "page.setup.title": "Setup",
-  "page.setup.description": "Choose the Excel workbook, output folder, and runtime options for this project. Select project templates from the top toolbar or use a one-time template below.",
+  "page.setup.description": "Choose the Excel workbook, output folder, and runtime options for this project. Select templates above or use a one-time template below.",
   "card.project_inputs": "Project inputs",
   "field.excel_workbook": "Excel workbook",
   "field.output_folder": "Output folder",

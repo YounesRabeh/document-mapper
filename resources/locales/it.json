@@ -65,7 +65,7 @@
   "common.yes": "Sì",
   "common.no": "No",
   "page.setup.title": "Configurazione",
-  "page.setup.description": "Scegli il file Excel, la cartella di output e le opzioni runtime per questo progetto. Seleziona i template dalla barra in alto o usa un template monouso qui sotto.",
+  "page.setup.description": "Scegli il file Excel, la cartella di output e le opzioni runtime per questo progetto. Seleziona i template sopra o usa un template monouso qui sotto.",
   "card.project_inputs": "Input progetto",
   "field.excel_workbook": "File Excel",
   "field.output_folder": "Cartella output",

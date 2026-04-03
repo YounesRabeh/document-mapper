@@ -385,7 +385,13 @@
     </widget>
    </item>
    <item>
-    <widget class="QFrame" name="optionsCard">
+   <widget class="QFrame" name="optionsCard">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
      </property>
@@ -394,19 +400,19 @@
      </property>
      <layout class="QVBoxLayout" name="optionsCardLayout">
       <property name="spacing">
-       <number>14</number>
+       <number>10</number>
       </property>
       <property name="leftMargin">
        <number>18</number>
       </property>
       <property name="topMargin">
-       <number>16</number>
+       <number>12</number>
       </property>
       <property name="rightMargin">
        <number>18</number>
       </property>
       <property name="bottomMargin">
-       <number>16</number>
+       <number>12</number>
       </property>
       <item>
        <widget class="QFrame" name="optionsTitleBar">

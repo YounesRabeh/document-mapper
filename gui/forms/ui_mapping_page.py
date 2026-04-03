@@ -17,9 +17,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QGridLayout, QGroupBox,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
-    QSizePolicy, QSpacerItem, QTableWidget, QTableWidgetItem,
-    QVBoxLayout, QWidget)
+    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from gui.workflow.base import TokenSuggestingLineEdit
 
@@ -31,54 +30,6 @@ class Ui_MappingPageForm(object):
         self.contentLayout.setSpacing(16)
         self.contentLayout.setObjectName(u"contentLayout")
         self.contentLayout.setContentsMargins(0, 0, 0, 0)
-        self.leftBox = QFrame(mappingPageForm)
-        self.leftBox.setObjectName(u"leftBox")
-        self.leftBox.setMinimumSize(QSize(260, 230))
-        self.leftBox.setFrameShape(QFrame.StyledPanel)
-        self.leftBox.setObjectName(u"workflowCard")
-        self.leftBoxLayout = QVBoxLayout(self.leftBox)
-        self.leftBoxLayout.setSpacing(14)
-        self.leftBoxLayout.setObjectName(u"leftBoxLayout")
-        self.leftBoxLayout.setContentsMargins(18, 16, 18, 16)
-        self.leftTitleBar = QFrame(self.leftBox)
-        self.leftTitleBar.setObjectName(u"leftTitleBar")
-        self.leftTitleBar.setFrameShape(QFrame.NoFrame)
-        self.leftTitleBar.setObjectName(u"workflowCardTitleBar")
-        self.leftTitleLayout = QHBoxLayout(self.leftTitleBar)
-        self.leftTitleLayout.setSpacing(0)
-        self.leftTitleLayout.setObjectName(u"leftTitleLayout")
-        self.leftTitleLayout.setContentsMargins(0, 0, 0, 0)
-        self.leftTitle = QLabel(self.leftTitleBar)
-        self.leftTitle.setObjectName(u"leftTitle")
-        self.leftTitle.setObjectName(u"workflowCardTitle")
-
-        self.leftTitleLayout.addWidget(self.leftTitle)
-
-
-        self.leftBoxLayout.addWidget(self.leftTitleBar)
-
-        self.columnsLabel = QLabel(self.leftBox)
-        self.columnsLabel.setObjectName(u"columnsLabel")
-        self.columnsLabel.setObjectName(u"workflowStatus")
-        self.columnsLabel.setWordWrap(True)
-
-        self.leftBoxLayout.addWidget(self.columnsLabel)
-
-        self.columnsHint = QLabel(self.leftBox)
-        self.columnsHint.setObjectName(u"columnsHint")
-        self.columnsHint.setObjectName(u"workflowHint")
-        self.columnsHint.setWordWrap(True)
-
-        self.leftBoxLayout.addWidget(self.columnsHint)
-
-        self.columnsList = QListWidget(self.leftBox)
-        self.columnsList.setObjectName(u"columnsList")
-
-        self.leftBoxLayout.addWidget(self.columnsList)
-
-
-        self.contentLayout.addWidget(self.leftBox)
-
         self.rightBox = QFrame(mappingPageForm)
         self.rightBox.setObjectName(u"rightBox")
         self.rightBox.setMinimumSize(QSize(420, 0))
@@ -231,9 +182,6 @@ class Ui_MappingPageForm(object):
     # setupUi
 
     def retranslateUi(self, mappingPageForm):
-        self.leftTitle.setText(QCoreApplication.translate("MappingPageForm", u"Workbook columns", None))
-        self.columnsLabel.setText(QCoreApplication.translate("MappingPageForm", u"No workbook loaded", None))
-        self.columnsHint.setText(QCoreApplication.translate("MappingPageForm", u"Hint", None))
         self.rightTitle.setText(QCoreApplication.translate("MappingPageForm", u"Placeholder mappings", None))
         self.mappingHint.setText(QCoreApplication.translate("MappingPageForm", u"Hint", None))
         self.delimiterLabel.setText(QCoreApplication.translate("MappingPageForm", u"Delimiter", None))

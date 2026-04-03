@@ -4,15 +4,10 @@ from PySide6.QtCore import QEvent, QTimer, Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
-    QFrame,
     QHeaderView,
     QHBoxLayout,
-    QLabel,
-    QListWidget,
-    QListWidgetItem,
     QPlainTextEdit,
     QPushButton,
-    QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
     QWidget,
@@ -31,7 +26,7 @@ from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_MappingPageForm
 from gui.ui.elements.combo_box import ClickSelectComboBox
-from gui.workflow.base import PANEL_MIN_HEIGHT, SIDE_PANEL_MIN_WIDTH, WIDE_PANEL_MIN_WIDTH, WorkflowPage
+from gui.workflow.base import WIDE_PANEL_MIN_WIDTH, WorkflowPage
 from gui.workflow.mapping_logic import MappingContextService
 
 
@@ -64,11 +59,7 @@ class MappingPage(WorkflowPage):
         self.ui.setupUi(self.form_root)
         self.body_layout.addWidget(self.form_root, stretch=1)
 
-        self.left_box = self.ui.leftBox
         self.right_box = self.ui.rightBox
-        self.columns_label = self.ui.columnsLabel
-        self.columns_hint = self.ui.columnsHint
-        self.columns_list = self.ui.columnsList
         self.mapping_hint = self.ui.mappingHint
         self.delimiter_label = self.ui.delimiterLabel
         self.delimiter_input = self.ui.delimiterInput
@@ -84,8 +75,6 @@ class MappingPage(WorkflowPage):
         self.validation_summary = self.ui.validationSummary
         self.validation_output = self.ui.validationOutput
 
-        self._bind_translation(self.ui.leftTitle, "upper_text", "group.workbook_columns")
-        self._bind_translation(self.columns_hint, "text", "hint.columns_panel")
         self._bind_translation(self.ui.rightTitle, "upper_text", "group.placeholder_mappings")
         self._bind_translation(self.delimiter_label, "text", "field.placeholder_delimiter")
         self._bind_translation(self.output_naming_group, "upper_title", "group.output_naming_schema")
@@ -94,16 +83,6 @@ class MappingPage(WorkflowPage):
         self._bind_translation(self.add_button, "text", "button.add_mapping")
         self._bind_translation(self.refresh_button, "text", "button.refresh_mapping_data")
         self._bind_translation(self.validation_label, "text", "label.validation")
-
-        self.left_box.setMinimumWidth(SIDE_PANEL_MIN_WIDTH)
-        self.left_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
-        self.columns_label.setWordWrap(True)
-        self.columns_hint.setWordWrap(True)
-        self.columns_list.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.columns_list.setAlternatingRowColors(False)
-        self.columns_list.setSpacing(2)
-        self.columns_list.setSelectionMode(QAbstractItemView.NoSelection)
-        self.columns_list.setFocusPolicy(Qt.NoFocus)
 
         self.mapping_hint.setWordWrap(True)
         self.right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
@@ -119,12 +98,11 @@ class MappingPage(WorkflowPage):
         self.mapping_table.setObjectName("mappingTable")
         self.mapping_table.setAlternatingRowColors(False)
         self.mapping_table.setShowGrid(False)
-        self.mapping_table.horizontalHeader().setStretchLastSection(True)
-        self.mapping_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.mapping_table.horizontalHeader().setStretchLastSection(False)
+        self.mapping_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.mapping_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.mapping_table.verticalHeader().setVisible(False)
         self.mapping_table.verticalHeader().setDefaultSectionSize(44)
-        self.mapping_table.setColumnWidth(0, 280)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.mapping_table.viewport().setObjectName("mappingTableViewport")
@@ -191,28 +169,16 @@ class MappingPage(WorkflowPage):
 
     def _load_columns(self):
         self.columns = []
-        self.columns_list.clear()
         if not self.session.excel_path:
-            self.columns_label.setText(self.localization.t("status.select_workbook_for_columns"))
             self._refresh_output_naming_tokens()
             return
 
         result = self.mapping_context.load_workbook_columns(self.session.excel_path)
         if result.error is not None:
-            self.columns_label.setText(self.localization.t("status.could_not_inspect_workbook", error=result.error))
             self._refresh_output_naming_tokens()
             return
 
         self.columns = list(result.columns)
-        self.columns_label.setText(
-            self.localization.t(
-                "status.rows_detected",
-                row_count=result.row_count,
-                path=self._display_file_name(self.session.excel_path),
-            )
-        )
-        for column in self.columns:
-            self._add_column_entry(column)
         self._refresh_output_naming_tokens()
 
     def _output_naming_tokens(self) -> list[str]:
@@ -228,32 +194,6 @@ class MappingPage(WorkflowPage):
         self.session.output_naming_schema = self.output_naming_schema_input.text().strip()
         self._refresh_validation()
         self.session_changed.emit()
-
-    def _add_column_entry(self, column_name: str):
-        item = QListWidgetItem()
-        item.setFlags(Qt.NoItemFlags)
-        self.columns_list.addItem(item)
-
-        row_widget = QFrame()
-        row_widget.setObjectName("columnEntry")
-        row_widget.setMinimumHeight(44)
-        layout = QHBoxLayout(row_widget)
-        layout.setContentsMargins(14, 8, 10, 8)
-        layout.setSpacing(10)
-
-        label = QLabel(column_name)
-        label.setObjectName("columnEntryLabel")
-        label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        button = QPushButton("→")
-        button.setObjectName("columnEntryAddButton")
-        button.setCursor(Qt.PointingHandCursor)
-        button.setFixedSize(28, 28)
-        button.clicked.connect(lambda _checked=False, value=column_name: self._assign_column_to_mapping(value))
-
-        layout.addWidget(label, stretch=1)
-        layout.addWidget(button, alignment=Qt.AlignRight | Qt.AlignVCenter)
-        item.setSizeHint(row_widget.sizeHint())
-        self.columns_list.setItemWidget(item, row_widget)
 
     def _populate_table(self):
         self.mapping_table.setRowCount(0)
@@ -482,18 +422,6 @@ class MappingPage(WorkflowPage):
         self._sync_session_from_table()
         self._update_actions()
 
-    def _assign_column_to_mapping(self, column_name: str):
-        row = self.mapping_table.currentRow()
-        if row < 0 or row >= self.mapping_table.rowCount():
-            row = self._add_mapping_row(column_name=column_name)
-            self.mapping_table.setCurrentCell(row, 0)
-            return
-
-        combo = self._get_cell_editor(row, 1, QComboBox)
-        if isinstance(combo, QComboBox):
-            combo.setCurrentText(column_name)
-        self.mapping_table.setCurrentCell(row, 0)
-
     def _sync_session_from_table(self, *_args, emit_signal: bool = True):
         if self._loading:
             return
@@ -528,7 +456,6 @@ class MappingPage(WorkflowPage):
             self.validation_output.setPlainText(self.localization.t("status.validation_ready_detail"))
 
     def retranslate_page(self):
-        self.columns_label.setText(self.localization.t("status.no_workbook_loaded"))
         self._refresh_mapping_help_text()
         self.mapping_table.setHorizontalHeaderLabels(
             [
@@ -536,10 +463,9 @@ class MappingPage(WorkflowPage):
                 self.localization.t("table.excel_column"),
             ]
         )
+        self._load_columns()
         self._load_template_placeholders()
         self._refresh_validation()
-        if self.session.excel_path:
-            self._load_columns()
         self._update_actions()
 
     def _update_actions(self, *_args):

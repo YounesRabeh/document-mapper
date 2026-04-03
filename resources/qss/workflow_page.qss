@@ -16,6 +16,7 @@ QLabel#workflowTitle {
     font-size: 18px;
     font-weight: 800;
     letter-spacing: 0.2px;
+    margin-left: -3px;
     margin-bottom: 2px;
 }
 
@@ -297,46 +298,6 @@ QTableCornerButton::section {
     background: palette(button);
     border: none;
     border-bottom: 1px solid palette(mid);
-}
-
-QFrame#columnEntry {
-    background: palette(button);
-    border: 1px solid palette(midlight);
-    border-radius: 10px;
-    min-height: 44px;
-}
-
-QLabel#columnEntryLabel {
-    color: palette(window-text);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 0;
-}
-
-QPushButton#columnEntryAddButton {
-    background: transparent;
-    border: none;
-    color: palette(highlight);
-    font-size: 18px;
-    font-weight: 700;
-    padding: 0;
-    min-width: 28px;
-    max-width: 28px;
-    min-height: 28px;
-    max-height: 28px;
-    border-radius: 14px;
-}
-
-QPushButton#columnEntryAddButton:hover {
-    background: transparent;
-    border: none;
-    color: palette(link);
-}
-
-QPushButton#columnEntryAddButton:pressed {
-    background: transparent;
-    border: none;
-    color: palette(highlight);
 }
 
 QListWidget::item {
