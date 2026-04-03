@@ -13,4 +13,4 @@ python -m pip install -r requirements.txt
 python -m pytest
 ```
 
-For GUI/headless environments, see the dedicated test guide for the `offscreen` command and the split between `tests/services/` and `tests/gui/`.
+For GUI/headless environments, see the dedicated test guide for the `offscreen` command and the split between `tests/core/` and `tests/gui/`.

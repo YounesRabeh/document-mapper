@@ -35,7 +35,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest -q
 Service tests:
 
 ```bash
-python -m pytest tests/services -q
+python -m pytest tests/core -q
 ```
 
 GUI tests:
@@ -47,19 +47,25 @@ python -m pytest tests/gui -q
 Single file:
 
 ```bash
-python -m pytest tests/gui/test_mapping_page.py -q
+python -m pytest tests/gui/workflow/test_mapping_page.py -q
 ```
 
 Single test:
 
 ```bash
-python -m pytest tests/gui/test_mapping_page.py -k delimiter -q
+python -m pytest tests/gui/workflow/test_mapping_page.py -k delimiter -q
 ```
 
 ## Structure
 
-- `tests/services/`: service, generator, session, and path logic
-- `tests/gui/`: workflow navigation and window behavior
+- `tests/core/certificate/`: Excel, generator, session, template, and model tests
+- `tests/core/project/`: project document and template-catalog tests
+- `tests/core/util/`: app-path and resource resolution tests
+- `tests/core/manager/`: localization catalog and manager-level tests
+- `tests/gui/windows/`: main window flow and project save/open behavior
+- `tests/gui/workflow/`: mapping page and workflow-specific logic
+- `tests/gui/dialogs/`: dialog behavior
+- `tests/gui/controllers/`: controller-only GUI state logic
 - `tests/helpers/`: shared fakes and GUI helpers
 - `tests/fixtures/`: sample `.xlsx` and `.docx` inputs used by tests
 - `tests/conftest.py`: shared pytest fixtures for the whole suite
