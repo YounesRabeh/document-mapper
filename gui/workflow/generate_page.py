@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, QThread, Signal, Qt
-from PySide6.QtWidgets import QLabel, QMessageBox, QPlainTextEdit, QPushButton, QSizePolicy
+from PySide6.QtWidgets import QMessageBox, QSizePolicy, QWidget
 
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
+from gui.forms import Ui_GeneratePageForm
 from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
 
 
@@ -41,31 +42,33 @@ class GeneratePage(WorkflowPage):
         self._thread: QThread | None = None
         self._worker: GenerationWorker | None = None
 
-        self.summary_box, summary_layout = self._create_card("group.batch_summary")
+        self.ui = Ui_GeneratePageForm()
+        self.form_root = QWidget()
+        self.ui.setupUi(self.form_root)
+        self.body_layout.addWidget(self.form_root)
+
+        self.summary_box = self.ui.summaryBox
+        self.summary_output = self.ui.summaryOutput
+        self.log_box = self.ui.logBox
+        self.log_output = self.ui.logOutput
+        self.generate_button = self.ui.generateButton
+
+        self._bind_translation(self.ui.summaryTitle, "upper_text", "group.batch_summary")
+        self._bind_translation(self.ui.logTitle, "upper_text", "group.generation_log")
+        self._bind_translation(self.generate_button, "text", "button.generate_certificates")
+
         self.summary_box.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        self.summary_output = QLabel()
-        self.summary_output.setObjectName("workflowInfoBox")
         self.summary_output.setWordWrap(True)
         self.summary_output.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.summary_output.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.summary_output.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         self.summary_output.setMinimumHeight(0)
-        summary_layout.addWidget(self.summary_output)
-        self.body_layout.addWidget(self.summary_box)
 
-        self.log_box, log_layout = self._create_card("group.generation_log")
         self.log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
-        self.log_output = QPlainTextEdit()
         self.log_output.setReadOnly(True)
         self.log_output.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        log_layout.addWidget(self.log_output)
-        self.body_layout.addWidget(self.log_box, stretch=1)
 
-        self.generate_button = QPushButton()
-        self._bind_translation(self.generate_button, "text", "button.generate_certificates")
         self.generate_button.clicked.connect(self._start_generation)
-        self.nav_layout.addStretch()
-        self.nav_layout.addWidget(self.generate_button)
         self.retranslate_ui()
 
     def refresh_from_session(self):

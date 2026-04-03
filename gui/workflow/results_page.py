@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGroupBox, QLabel, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QListWidgetItem, QWidget
 
 from core.certificate.models import GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
+from gui.forms import Ui_ResultsPageForm
 from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
 
 
@@ -20,43 +21,34 @@ class ResultsPage(WorkflowPage):
         )
         self.result = GenerationResult()
 
-        self.summary_label = QLabel()
-        self.summary_label.setWordWrap(True)
-        self.summary_label.setMinimumHeight(72)
-        self.body_layout.addWidget(self.summary_label)
+        self.ui = Ui_ResultsPageForm()
+        self.form_root = QWidget()
+        self.ui.setupUi(self.form_root)
+        self.body_layout.addWidget(self.form_root)
 
-        self.files_box = QGroupBox()
+        self.summary_label = self.ui.summaryLabel
+        self.files_box = self.ui.filesBox
+        self.files_list = self.ui.filesList
+        self.errors_box = self.ui.errorsBox
+        self.errors_output = self.ui.errorsOutput
+        self.open_output_button = self.ui.openOutputButton
+        self.open_log_button = self.ui.openLogButton
+
         self._bind_translation(self.files_box, "upper_title", "group.generated_files")
-        files_layout = QVBoxLayout(self.files_box)
-        files_layout.setContentsMargins(12, 12, 12, 12)
-        self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.files_list = QListWidget()
-        self.files_list.setMinimumHeight(PANEL_MIN_HEIGHT)
-        self.files_list.itemDoubleClicked.connect(self._open_selected_item)
-        files_layout.addWidget(self.files_list)
-        self.body_layout.addWidget(self.files_box, stretch=1)
-
-        self.errors_box = QGroupBox()
         self._bind_translation(self.errors_box, "upper_title", "group.errors")
-        errors_layout = QVBoxLayout(self.errors_box)
-        errors_layout.setContentsMargins(12, 12, 12, 12)
-        self.errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.errors_output = QPlainTextEdit()
-        self.errors_output.setReadOnly(True)
-        self.errors_output.setMinimumHeight(PANEL_MIN_HEIGHT)
-        errors_layout.addWidget(self.errors_output)
-        self.body_layout.addWidget(self.errors_box, stretch=1)
-
-        self.open_output_button = QPushButton()
-        self.open_log_button = QPushButton()
         self._bind_translation(self.open_output_button, "text", "button.open_output_folder")
         self._bind_translation(self.open_log_button, "text", "button.open_log")
+
+        self.summary_label.setWordWrap(True)
+        self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.files_list.setMinimumHeight(PANEL_MIN_HEIGHT)
+        self.files_list.itemDoubleClicked.connect(self._open_selected_item)
+
+        self.errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.errors_output.setReadOnly(True)
+        self.errors_output.setMinimumHeight(PANEL_MIN_HEIGHT)
         self.open_output_button.clicked.connect(self._open_output_folder)
         self.open_log_button.clicked.connect(self._open_log)
-
-        self.nav_layout.addStretch()
-        self.nav_layout.addWidget(self.open_log_button)
-        self.nav_layout.addWidget(self.open_output_button)
         self.retranslate_ui()
 
     def bind_result(self, result: GenerationResult, session: ProjectSession):
