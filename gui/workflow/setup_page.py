@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QLabel,
     QLineEdit,
+    QSizePolicy,
     QSpinBox,
     QWidget,
 )
@@ -24,6 +25,8 @@ class SetupPage(WorkflowPage):
         self.ui = Ui_SetupPageForm()
         self.form_root = QWidget()
         self.ui.setupUi(self.form_root)
+        self.form_root.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.ui.rootLayout.setSizeConstraint(self.ui.rootLayout.SizeConstraint.SetMinimumSize)
         self.body_layout.addWidget(self.form_root)
 
         self.form_card = self.ui.formCard

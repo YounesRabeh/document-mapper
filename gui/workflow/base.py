@@ -176,6 +176,7 @@ class WorkflowPage(QWidget):
 
         self.body_layout = QVBoxLayout()
         self.body_layout.setSpacing(16)
+        self.body_layout.setAlignment(Qt.AlignTop)
         scroll_layout.addLayout(self.body_layout)
 
         self.nav_layout = QHBoxLayout()
