@@ -13,6 +13,8 @@ class AppPaths:
     DEFAULT_PROJECT_FILENAME = "project.json"
     DEFAULT_LOG_FILENAME = "certificate_generation.log"
     DEFAULT_RESOURCES_DIRNAME = "resources"
+    DEFAULT_TEMPLATE_RELATIVE_PATH = Path("defaults") / "default_template_01.docx"
+    DEFAULT_LOCALES_DIRNAME = "locales"
 
     @classmethod
     def is_bundled(cls) -> bool:
@@ -97,8 +99,15 @@ class AppPaths:
         return cls.legacy_resources_temp_dir() / filename
 
     @classmethod
-    def shipped_test_template_path(cls) -> Path | None:
-        candidate = cls.project_root() / "tests" / "fixtures" / "docx_template_test.docx"
+    def default_template_path(cls) -> Path | None:
+        candidate = cls.resource_root() / cls.DEFAULT_TEMPLATE_RELATIVE_PATH
+        if candidate.exists():
+            return candidate.resolve()
+        return None
+
+    @classmethod
+    def locales_dir(cls) -> Path | None:
+        candidate = cls.resource_root() / cls.DEFAULT_LOCALES_DIRNAME
         if candidate.exists():
             return candidate.resolve()
         return None

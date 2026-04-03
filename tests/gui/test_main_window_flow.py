@@ -147,7 +147,8 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     _unlock_generate_stage(window)
     assert_stage_state(window, 3, blocked=False)
 
-    window._new_project()
+    with patch.object(window, "_confirm_new_project_action", return_value="discard"):
+        window._new_project()
     assert window.stage_manager.currentIndex() == 0
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
@@ -206,3 +207,52 @@ def test_open_project_uses_a_single_file_dialog(main_window_factory):
 
     open_dialog.assert_called_once()
     directory_dialog.assert_not_called()
+
+
+def test_new_project_confirmation_cancel_keeps_current_session(prepared_window):
+    window = prepared_window.window
+    original_session = window.session.clone()
+
+    with patch.object(window, "_confirm_new_project_action", return_value=None):
+        window._new_project()
+
+    assert window.session.to_dict() == original_session.to_dict()
+
+
+def test_new_project_confirmation_save_current_creates_empty_project(prepared_window):
+    window = prepared_window.window
+
+    with patch.object(window, "_confirm_new_project_action", return_value="save_current"), patch.object(
+        window,
+        "_save_project",
+        return_value=True,
+    ) as save_project:
+        window._new_project()
+
+    save_project.assert_called_once()
+    assert window.current_project_path is None
+    assert window.session.excel_path == ""
+    assert window.session.output_dir == ""
+    assert window.template_type_combo.currentText() == "Default template"
+    assert window.template_combo.currentText() == "Default template 01"
+
+
+def test_new_project_confirmation_save_copy_creates_unsaved_copy(prepared_window):
+    window = prepared_window.window
+
+    _unlock_generate_stage(window)
+    original_session = window.session.clone()
+
+    with patch.object(window, "_confirm_new_project_action", return_value="save_copy"), patch.object(
+        window,
+        "_save_project",
+        return_value=True,
+    ) as save_project:
+        window._new_project()
+
+    save_project.assert_called_once()
+    assert window.current_project_path is None
+    assert window.session.excel_path == original_session.excel_path
+    assert window.session.output_dir == original_session.output_dir
+    assert window.session.output_naming_schema == original_session.output_naming_schema
+    assert window.session.mappings == original_session.mappings

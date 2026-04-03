@@ -44,6 +44,7 @@ from core.certificate.models import (
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
+from gui.workflow.mapping_logic import MappingContextService
 from gui.styles import MAPPING_TABLE_VIEWPORT_QSS, build_workflow_page_qss
 from gui.ui.elements.combo_box import ClickSelectComboBox
 
@@ -520,6 +521,7 @@ class MappingPage(WorkflowPage):
         self.excel_service = excel_service
         self.generator = generator
         self.template_service = template_service or TemplatePlaceholderService()
+        self.mapping_context = MappingContextService(self.excel_service, self.template_service)
         self.columns: list[str] = []
         self.detected_placeholders: list[str] = []
         self._last_detected_delimiters: tuple[str, str] | None = None
@@ -722,18 +724,17 @@ class MappingPage(WorkflowPage):
             self._refresh_output_naming_tokens()
             return
 
-        try:
-            preview = self.excel_service.inspect(self.session.excel_path)
-        except Exception as exc:
-            self.columns_label.setText(self.localization.t("status.could_not_inspect_workbook", error=exc))
+        result = self.mapping_context.load_workbook_columns(self.session.excel_path)
+        if result.error is not None:
+            self.columns_label.setText(self.localization.t("status.could_not_inspect_workbook", error=result.error))
             self._refresh_output_naming_tokens()
             return
 
-        self.columns = preview.columns
+        self.columns = list(result.columns)
         self.columns_label.setText(
             self.localization.t(
                 "status.rows_detected",
-                row_count=preview.row_count,
+                row_count=result.row_count,
                 path=self._display_file_name(self.session.excel_path),
             )
         )
@@ -742,9 +743,7 @@ class MappingPage(WorkflowPage):
         self._refresh_output_naming_tokens()
 
     def _output_naming_tokens(self) -> list[str]:
-        tokens = list(self.columns)
-        tokens.extend(["ROW", "TEMPLATE"])
-        return tokens
+        return self.mapping_context.output_naming_tokens(self.columns)
 
     def _refresh_output_naming_tokens(self):
         self.output_naming_schema_input.set_token_options(self._output_naming_tokens())
@@ -790,33 +789,11 @@ class MappingPage(WorkflowPage):
             self._add_mapping_row(mapping.placeholder, mapping.column_name)
 
     def _build_mapping_rows(self) -> list[MappingEntry]:
-        merged_mappings: list[MappingEntry] = []
-        detected_lookup = {placeholder: None for placeholder in self.detected_placeholders}
-        manual_mappings = [
-            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
-            for entry in self.session.mappings
-        ]
-
-        for placeholder in self.detected_placeholders:
-            matching = next((entry for entry in manual_mappings if entry.placeholder == placeholder), None)
-            if matching is not None:
-                merged_mappings.append(matching)
-            else:
-                merged_mappings.append(MappingEntry(placeholder=placeholder))
-
-        for entry in manual_mappings:
-            placeholder = entry.placeholder.strip()
-            if not placeholder or placeholder not in detected_lookup:
-                merged_mappings.append(entry)
-
-        if not merged_mappings:
-            return [MappingEntry()]
-
-        self.session.mappings = [
-            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
-            for entry in merged_mappings
-            if entry.placeholder or entry.column_name
-        ]
+        merged_mappings, persisted_mappings = self.mapping_context.build_mapping_rows(
+            self.detected_placeholders,
+            self.session.mappings,
+        )
+        self.session.mappings = persisted_mappings
         return merged_mappings
 
     def _load_template_placeholders(self):
@@ -829,26 +806,25 @@ class MappingPage(WorkflowPage):
             self._update_template_status()
             return
 
-        try:
-            placeholders = self.template_service.extract_placeholders(self.session.template_path, delimiter)
-        except Exception as exc:
+        result = self.mapping_context.detect_placeholders(self.session.template_path, delimiter)
+        if result.error is not None:
             self._last_detected_delimiters = None
             self.session.detected_placeholder_delimiter = ""
             self.session.detected_placeholder_count = 0
             self.template_status.setText(
-                self.localization.t("status.could_not_inspect_template", error=exc)
+                self.localization.t("status.could_not_inspect_template", error=result.error)
             )
             return
 
-        self.detected_placeholders = placeholders
+        self.detected_placeholders = list(result.placeholders)
         self._last_detected_delimiters = derive_placeholder_boundaries(delimiter)
         self.session.detected_placeholder_delimiter = delimiter
-        self.session.detected_placeholder_count = len(placeholders)
-        if placeholders:
+        self.session.detected_placeholder_count = len(self.detected_placeholders)
+        if self.detected_placeholders:
             self.template_status.setText(
                 self.localization.t(
                     "status.detected_template_placeholders",
-                    count=len(placeholders),
+                    count=len(self.detected_placeholders),
                 )
             )
             return
@@ -893,18 +869,11 @@ class MappingPage(WorkflowPage):
         self.session_changed.emit()
 
     def _prune_stale_detected_mappings(self, previous_detected_placeholders: set[str]):
-        if not previous_detected_placeholders:
-            return
-
-        stale_placeholders = previous_detected_placeholders.difference(self.detected_placeholders)
-        if not stale_placeholders:
-            return
-
-        self.session.mappings = [
-            MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
-            for entry in self.session.mappings
-            if entry.placeholder.strip() not in stale_placeholders
-        ]
+        self.session.mappings = self.mapping_context.prune_stale_detected_mappings(
+            self.session.mappings,
+            previous_detected_placeholders,
+            self.detected_placeholders,
+        )
 
     def _sync_delimiter(self, *_args):
         if self._loading:

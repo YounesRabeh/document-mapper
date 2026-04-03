@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
@@ -25,20 +24,17 @@ from PySide6.QtWidgets import (
 from core.certificate.excel_service import ExcelDataService
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import (
-    DEFAULT_IMPORTED_TEMPLATE_TYPE,
-    DEFAULT_IMPORTED_TEMPLATE_NAME,
     GenerationResult,
     ProjectSession,
-    ProjectTemplateEntry,
-    ProjectTemplateType,
-    normalize_template_name,
 )
 from core.certificate.session_store import ProjectSessionStore
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from core.manager.theme_manager import ThemeManager
+from core.project import ProjectDocument, TemplateCatalogService
 from core.util.app_paths import AppPaths
 from core.util.logger import Logger
+from gui.controllers import WorkflowStageState, WorkflowStateController
 from gui.dialogs import TemplateManagerDialog
 from gui.styles import MAIN_WINDOW_QSS
 from gui.ui.elements.combo_box import ClickSelectComboBox
@@ -48,13 +44,6 @@ SIDEBAR_WIDTH = 296
 CONTENT_MIN_WIDTH = 860
 WINDOW_MIN_WIDTH = 1240
 WINDOW_MIN_HEIGHT = 680
-
-
-@dataclass(slots=True)
-class WorkflowStageState:
-    active: bool = False
-    completed: bool = False
-    blocked: bool = False
 
 
 class SidebarStageCard(QFrame):
@@ -134,15 +123,16 @@ class MainWindow(QMainWindow):
     def __init__(self, config: dict):
         super().__init__()
         self.config = config
-        self.current_project_path: str | None = None
 
         self.session_store = ProjectSessionStore()
         self.excel_service = ExcelDataService()
         self.template_service = TemplatePlaceholderService()
         self.generator = CertificateGenerator(self.excel_service)
-        self.session = self.session_store.load_last_session()
-        self._ensure_default_template_seeded(self.session)
-        self.last_result = GenerationResult()
+        self.template_catalog = TemplateCatalogService(AppPaths.default_template_path)
+        loaded_session = self.session_store.load_last_session()
+        self.template_catalog.seed_default_template(loaded_session)
+        self.document = ProjectDocument(session=loaded_session)
+        self.workflow_controller = WorkflowStateController(self.generator)
 
         ThemeManager(config)
         self.localization = LocalizationManager(config)
@@ -210,6 +200,30 @@ class MainWindow(QMainWindow):
         self._refresh_pages()
         self._retranslate_ui()
         self.goto_stage(1)
+
+    @property
+    def session(self) -> ProjectSession:
+        return self.document.session
+
+    @session.setter
+    def session(self, value: ProjectSession):
+        self.document.session = value
+
+    @property
+    def current_project_path(self) -> str | None:
+        return self.document.project_path
+
+    @current_project_path.setter
+    def current_project_path(self, value: str | None):
+        self.document.project_path = value
+
+    @property
+    def last_result(self) -> GenerationResult:
+        return self.document.last_result
+
+    @last_result.setter
+    def last_result(self, value: GenerationResult):
+        self.document.last_result = value
 
     def _create_sidebar(self) -> QScrollArea:
         sidebar_scroll = QScrollArea()
@@ -368,6 +382,7 @@ class MainWindow(QMainWindow):
 
     def _persist_last_session(self):
         self._sync_effective_template_path()
+        self.document.mark_unsaved()
         self.session_store.save_last_session(self.session)
         self._refresh_template_toolbar()
         self.generate_page.bind_session(self.session)
@@ -388,13 +403,28 @@ class MainWindow(QMainWindow):
         return True
 
     def _new_project(self):
-        self.current_project_path = None
-        self.last_result = GenerationResult()
-        self.session = ProjectSession()
-        self._ensure_default_template_seeded(self.session)
-        self.session_store.save_last_session(self.session)
-        self._refresh_pages()
-        self.goto_stage(1)
+        if self.document.is_dirty or self.current_project_path:
+            action = self._confirm_new_project_action()
+            if action is None:
+                return
+            if action == "save_current":
+                if not self._save_project():
+                    return
+                self._activate_new_project(ProjectSession(), saved=True)
+                return
+            if action == "save_copy":
+                if not self._save_project():
+                    return
+                self._activate_new_project(
+                    self.template_catalog.build_unsaved_copy(self.session, self._current_project_dir()),
+                    saved=False,
+                )
+                return
+            if action == "discard":
+                self._activate_new_project(ProjectSession(), saved=True)
+                return
+
+        self._activate_new_project(ProjectSession(), saved=True)
 
     def _open_project(self):
         start_dir = self.current_project_path or str(AppPaths.documents_dir())
@@ -407,11 +437,11 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
-            self.session = self.session_store.load(path)
-            self._ensure_default_template_seeded(self.session)
+            loaded_session = self.session_store.load(path)
+            self.template_catalog.seed_default_template(loaded_session)
             selected_path = Path(path).expanduser().resolve()
-            self.current_project_path = str(selected_path if selected_path.is_dir() else selected_path.parent)
-            self.last_result = GenerationResult()
+            project_path = selected_path if selected_path.is_dir() else selected_path.parent
+            self.document.load(loaded_session, project_path)
             self.session_store.save_last_session(self.session)
             self._refresh_pages()
             self.goto_stage(1)
@@ -420,9 +450,8 @@ class MainWindow(QMainWindow):
 
     def _save_project(self):
         if self.current_project_path:
-            self._save_project_to_path(self.current_project_path)
-            return
-        self._save_project_as()
+            return self._save_project_to_path(self.current_project_path)
+        return self._save_project_as()
 
     def _save_project_as(self):
         path = QFileDialog.getExistingDirectory(
@@ -431,20 +460,63 @@ class MainWindow(QMainWindow):
             self.current_project_path or str(AppPaths.default_project_path()),
         )
         if not path:
-            return
-        self._save_project_to_path(path)
+            return False
+        return self._save_project_to_path(path)
 
     def _save_project_to_path(self, path: str | Path):
         project_dir = Path(path).expanduser().resolve()
         session_to_save = self._prepare_session_for_save(project_dir)
         if session_to_save is None:
-            return
+            return False
 
         saved_path = self.session_store.save(session_to_save, project_dir)
-        self.current_project_path = str(Path(saved_path).parent)
-        self.session = self.session_store.load(self.current_project_path)
+        loaded_session = self.session_store.load(Path(saved_path).parent)
+        self.document.load(loaded_session, Path(saved_path).parent)
         self.session_store.save_last_session(self.session)
         self._refresh_pages()
+        return True
+
+    def _activate_new_project(self, session: ProjectSession, *, saved: bool):
+        next_session = session.clone()
+        self.template_catalog.seed_default_template(next_session)
+        self.document.activate(next_session, None, saved=saved)
+        self.session_store.save_last_session(self.session)
+        self._refresh_pages()
+        self.goto_stage(1)
+
+    def _confirm_new_project_action(self) -> str | None:
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Question)
+        message_box.setWindowTitle(self.localization.t("dialog.new_project_confirm.title"))
+        message_box.setText(self.localization.t("dialog.new_project_confirm.body"))
+        save_current_button = message_box.addButton(
+            self.localization.t("dialog.new_project_confirm.save_current"),
+            QMessageBox.AcceptRole,
+        )
+        save_copy_button = message_box.addButton(
+            self.localization.t("dialog.new_project_confirm.save_copy"),
+            QMessageBox.ActionRole,
+        )
+        discard_button = message_box.addButton(
+            self.localization.t("dialog.new_project_confirm.discard"),
+            QMessageBox.DestructiveRole,
+        )
+        cancel_button = message_box.addButton(
+            self.localization.t("dialog.new_project_confirm.cancel"),
+            QMessageBox.RejectRole,
+        )
+        message_box.exec()
+
+        clicked_button = message_box.clickedButton()
+        if clicked_button is save_current_button:
+            return "save_current"
+        if clicked_button is save_copy_button:
+            return "save_copy"
+        if clicked_button is discard_button:
+            return "discard"
+        if clicked_button is cancel_button:
+            return None
+        return None
 
     def _prepare_session_for_save(self, project_dir: Path) -> ProjectSession | None:
         session_to_save = self.session.clone()
@@ -484,84 +556,13 @@ class MainWindow(QMainWindow):
         if clicked_button is cancel_button:
             return None
         if clicked_button is store_button:
-            self._store_template_override_in_project(session_to_save)
+            self.template_catalog.store_template_override_in_project(session_to_save)
 
         self._sync_effective_template_path(session_to_save)
         return session_to_save
 
-    def _ensure_default_template_seeded(self, session: ProjectSession):
-        if session.templates:
-            return
-
-        default_template_path = AppPaths.shipped_test_template_path()
-        if default_template_path is None:
-            return
-
-        default_type = ProjectTemplateType(DEFAULT_IMPORTED_TEMPLATE_TYPE)
-        default_entry = ProjectTemplateEntry(
-            display_name=DEFAULT_IMPORTED_TEMPLATE_NAME,
-            type_name=default_type.name,
-            source_path=str(default_template_path),
-            is_managed=False,
-        )
-        session.template_types = [default_type]
-        session.templates = [default_entry]
-        session.selected_template_type = default_type.name
-        session.selected_template = default_entry.id
-        session.template_path = str(default_template_path)
-
-    def _store_template_override_in_project(self, session: ProjectSession):
-        if not session.template_override_path:
-            return
-        override_path = Path(session.template_override_path).expanduser().resolve()
-        if not override_path.exists():
-            return
-
-        type_name = session.selected_template_type or DEFAULT_IMPORTED_TEMPLATE_TYPE
-        if type_name not in {entry.name for entry in session.template_types}:
-            session.template_types.append(ProjectTemplateType(type_name))
-
-        display_name = self._unique_template_display_name(
-            session,
-            type_name,
-            normalize_template_name(override_path.stem) or normalize_template_name(override_path.name),
-        )
-        new_entry = ProjectTemplateEntry(
-            display_name=display_name,
-            type_name=type_name,
-            source_path=str(override_path),
-            is_managed=False,
-        )
-        session.templates.append(new_entry)
-        session.selected_template_type = type_name
-        session.selected_template = new_entry.id
-        session.template_override_path = ""
-        session._ensure_template_catalog_consistency()
-
-    def _unique_template_display_name(
-        self,
-        session: ProjectSession,
-        type_name: str,
-        base_name: str,
-        exclude_template_id: str = "",
-    ) -> str:
-        normalized = normalize_template_name(base_name) or "Template"
-        existing = {
-            entry.label.casefold()
-            for entry in session.templates_for_type(type_name)
-            if entry.id != exclude_template_id
-        }
-        candidate = normalized
-        counter = 2
-        while candidate.casefold() in existing:
-            candidate = f"{normalized} {counter}"
-            counter += 1
-        return candidate
-
     def _current_project_dir(self) -> Path | None:
-        if not self.current_project_path:
-            return None
-        return Path(self.current_project_path).expanduser().resolve()
+        return self.document.project_dir
 
     def _sync_effective_template_path(self, session: ProjectSession | None = None):
         target_session = session or self.session
@@ -656,6 +657,7 @@ class MainWindow(QMainWindow):
 
         self.session = dialog.edited_session()
         self._sync_effective_template_path()
+        self.document.mark_unsaved()
         self.session_store.save_last_session(self.session)
         self._refresh_pages()
 
@@ -728,49 +730,29 @@ class MainWindow(QMainWindow):
         Logger.debug(f"Switched to workflow page {stage_number}")
 
     def _refresh_workflow_state(self):
-        states = self._compute_workflow_states()
+        states = self.workflow_controller.compute_states(
+            self.session,
+            self.last_result,
+            self.stage_manager.currentIndex() + 1,
+            self.stage_manager.count(),
+        )
         for index, card in self.stage_cards.items():
             card.set_stage_state(states[index])
 
-    def _compute_workflow_states(self) -> dict[int, WorkflowStageState]:
-        current_stage = max(1, min(self.stage_manager.currentIndex() + 1, self.stage_manager.count() or 1))
-        generate_available = not self.generator.validate_session(self.session)
-        results_available = self._has_generation_results()
-        blocked_by_stage = {
-            1: False,
-            2: False,
-            3: not generate_available,
-            4: not results_available,
-        }
-        return {
-            index: WorkflowStageState(
-                active=index == current_stage and not blocked_by_stage[index],
-                completed=index < current_stage and not blocked_by_stage[index],
-                blocked=blocked_by_stage[index],
-            )
-            for index in range(1, self.stage_manager.count() + 1)
-        }
-
     def _can_navigate_to_stage(self, index: int) -> bool:
-        if index < 1 or index > self.stage_manager.count():
-            return False
-        return not self._compute_workflow_states()[index].blocked
+        return self.workflow_controller.can_navigate_to_stage(
+            index,
+            self.session,
+            self.last_result,
+            self.stage_manager.currentIndex() + 1,
+            self.stage_manager.count(),
+        )
 
     def _resolve_fallback_stage(self) -> int:
-        if self._can_navigate_to_stage(self._last_valid_stage):
-            return self._last_valid_stage
-        for stage in range(self.stage_manager.count(), 0, -1):
-            if self._can_navigate_to_stage(stage):
-                return stage
-        return 1
-
-    def _has_generation_results(self) -> bool:
-        return any(
-            (
-                self.last_result.total_rows,
-                self.last_result.generated_docx_paths,
-                self.last_result.generated_pdf_paths,
-                self.last_result.log_path,
-                self.last_result.errors,
-            )
+        return self.workflow_controller.resolve_fallback_stage(
+            self._last_valid_stage,
+            self.session,
+            self.last_result,
+            self.stage_manager.currentIndex() + 1,
+            self.stage_manager.count(),
         )
