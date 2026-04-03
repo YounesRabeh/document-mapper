@@ -25,7 +25,6 @@ def test_resources_resolve_from_project_root_not_cwd(tmp_path, monkeypatch):
             "RESOURCES_QSS": "resources/qss",
             "RESOURCES_ICONS": "resources/icons",
             "RESOURCES_IMAGES": "resources/images",
-            "RESOURCES_FONTS": "resources/fonts",
         }
     )
     icon_path = Path(Resources.get_in_icons("sys/chevron_down.svg"))

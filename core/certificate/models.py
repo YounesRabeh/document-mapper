@@ -6,6 +6,8 @@ import re
 from typing import Any
 from uuid import uuid4
 
+from core.enums.app_themes import AppTheme
+
 DEFAULT_IMPORTED_TEMPLATE_TYPE = "Default template"
 DEFAULT_IMPORTED_TEMPLATE_NAME = "Default template 01"
 DEFAULT_PLACEHOLDER_DELIMITER = "<"
@@ -40,6 +42,13 @@ def normalize_placeholder_delimiter(value: str) -> str:
 
 def normalize_output_naming_schema(value: str) -> str:
     return str(value or "").strip()
+
+
+def normalize_theme_mode(value: Any) -> str:
+    if isinstance(value, AppTheme):
+        return value.name
+    candidate = str(value or "").strip().upper()
+    return candidate if candidate in AppTheme.__members__ else ""
 
 
 def derive_placeholder_boundaries(delimiter: str) -> tuple[str, str]:
@@ -163,6 +172,7 @@ class ProjectSession:
     template_override_path: str = ""
     output_dir: str = ""
     license_path: str = ""
+    theme_mode: str = ""
     selected_template_type: str = ""
     selected_template: str = ""
     template_types: list[ProjectTemplateType] = field(default_factory=list)
@@ -180,6 +190,7 @@ class ProjectSession:
         self.template_override_path = str(self.template_override_path or "").strip()
         self.output_dir = str(self.output_dir or "").strip()
         self.license_path = str(self.license_path or "").strip()
+        self.theme_mode = normalize_theme_mode(self.theme_mode)
         self.selected_template_type = normalize_template_type_name(self.selected_template_type)
         self.selected_template = str(self.selected_template or "").strip()
         self.template_types = [entry for entry in self._normalize_template_types(self.template_types) if entry.name]
@@ -241,6 +252,7 @@ class ProjectSession:
             "template_override_path": self.template_override_path,
             "output_dir": self.output_dir,
             "license_path": self.license_path,
+            "theme_mode": self.theme_mode,
             "selected_template_type": self.selected_template_type,
             "selected_template": self.selected_template,
             "template_types": [entry.to_dict() for entry in self.template_types],
@@ -284,6 +296,7 @@ class ProjectSession:
             template_override_path=str(payload.get("template_override_path", "")).strip(),
             output_dir=str(payload.get("output_dir", "")).strip(),
             license_path=str(payload.get("license_path", "")).strip(),
+            theme_mode=payload.get("theme_mode", ""),
             selected_template_type=str(payload.get("selected_template_type", "")).strip(),
             selected_template=str(payload.get("selected_template", "")).strip(),
             template_types=[

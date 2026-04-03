@@ -44,6 +44,12 @@ def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
         selected_path = Path(path).expanduser().resolve()
         project_path = selected_path if selected_path.is_dir() else selected_path.parent
         window.document.load(loaded_session, project_path)
+        window._apply_project_theme_mode(
+            window.session.theme_mode,
+            persist_to_session=True,
+            save_last_session=False,
+            sync_document_snapshot=True,
+        )
         window.session_store.save_last_session(window.session)
         window._refresh_pages()
         window.goto_stage(1)
@@ -86,6 +92,12 @@ def activate_new_project(window, session, *, saved: bool):
     next_session = session.clone()
     window.template_catalog.seed_default_template(next_session)
     window.document.activate(next_session, None, saved=saved)
+    window._apply_project_theme_mode(
+        window.session.theme_mode,
+        persist_to_session=True,
+        save_last_session=False,
+        sync_document_snapshot=saved,
+    )
     window.session_store.save_last_session(window.session)
     window._refresh_pages()
     window.goto_stage(1)

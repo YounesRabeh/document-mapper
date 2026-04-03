@@ -12,6 +12,8 @@ from core.certificate.models import (
     ProjectTemplateEntry,
     ProjectTemplateType,
 )
+from core.enums.app_themes import AppTheme
+from core.manager.theme_manager import ThemeManager
 from tests.helpers.gui import assert_stage_state, mapping_combo
 
 
@@ -256,3 +258,37 @@ def test_new_project_confirmation_save_copy_creates_unsaved_copy(prepared_window
     assert window.session.output_dir == original_session.output_dir
     assert window.session.output_naming_schema == original_session.output_naming_schema
     assert window.session.mappings == original_session.mappings
+
+
+def test_theme_toggle_persists_on_project_and_new_project_resets_to_config(prepared_window):
+    window = prepared_window.window
+    original_theme = window.default_theme_mode
+
+    window._toggle_theme()
+
+    assert window.session.theme_mode != original_theme
+
+    with patch.object(window, "_confirm_new_project_action", return_value="discard"):
+        window._new_project()
+
+    assert window.session.theme_mode == window.default_theme_mode
+    assert ThemeManager.get_current_theme().name == window.default_theme_mode
+
+
+def test_open_project_applies_saved_project_theme(prepared_window):
+    window = prepared_window.window
+    fake_store = prepared_window.fake_store
+    main_window_module = prepared_window.main_window_module
+    target_theme = AppTheme.LIGHT if ThemeManager.get_current_theme() != AppTheme.LIGHT else AppTheme.DARK
+
+    fake_store.loaded_session = ProjectSession(theme_mode=target_theme.name)
+
+    with patch.object(
+        main_window_module.QFileDialog,
+        "getOpenFileName",
+        return_value=("project.json", ""),
+    ):
+        window._open_project()
+
+    assert window.session.theme_mode == target_theme.name
+    assert ThemeManager.get_current_theme() == target_theme

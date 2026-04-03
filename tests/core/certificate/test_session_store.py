@@ -20,6 +20,7 @@ def test_session_store_round_trip(tmp_path):
     session = ProjectSession(
         excel_path="/tmp/data.xlsx",
         output_dir="/tmp/out",
+        theme_mode="DARK",
         selected_template_type="General",
         selected_template=template_entry.id,
         template_types=[ProjectTemplateType("General")],
@@ -42,6 +43,7 @@ def test_session_store_round_trip(tmp_path):
     assert Path(loaded.template_path).exists()
     assert loaded.output_naming_schema == "{COGNOME}_{ROW}"
     assert loaded.placeholder_delimiter == "{{"
+    assert loaded.theme_mode == "DARK"
 
 
 def test_session_store_loads_legacy_files(tmp_path):

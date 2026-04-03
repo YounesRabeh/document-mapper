@@ -74,8 +74,11 @@ class FakeSessionStore:
     def __init__(self):
         self.session: ProjectSession | None = None
         self.loaded_session: ProjectSession | None = None
+        self.last_session: ProjectSession | None = None
 
     def load_last_session(self):
+        if self.last_session is not None:
+            return self.last_session.clone()
         return ProjectSession()
 
     def save_last_session(self, session):

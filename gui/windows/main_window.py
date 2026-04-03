@@ -14,6 +14,7 @@ from core.certificate.generator import CertificateGenerator
 from core.certificate.models import GenerationResult, ProjectSession
 from core.certificate.session_store import ProjectSessionStore
 from core.certificate.template_service import TemplatePlaceholderService
+from core.enums.app_themes import AppTheme
 from core.manager.localization_manager import LocalizationManager
 from core.manager.theme_manager import ThemeManager
 from core.project import ProjectDocument, TemplateCatalogService
@@ -60,7 +61,10 @@ class MainWindow(QMainWindow):
 
     def __init__(self, config: dict):
         super().__init__()
-        self.config = config
+        self.config = dict(config)
+        self.default_theme_mode = self._normalize_theme_mode(
+            self.config.get("WINDOW_THEME_MODE", AppTheme.AUTO)
+        ) or AppTheme.AUTO.name
 
         self.session_store = ProjectSessionStore()
         self.excel_service = ExcelDataService()
@@ -72,8 +76,10 @@ class MainWindow(QMainWindow):
         self.document = ProjectDocument(session=loaded_session)
         self.workflow_controller = WorkflowStateController(self.generator)
 
-        ThemeManager(config)
+        initial_theme_mode = self.session.theme_mode or self.default_theme_mode
+        self.theme_manager = ThemeManager({**self.config, "WINDOW_THEME_MODE": initial_theme_mode})
         self.localization = LocalizationManager(config)
+        self._applying_project_theme = False
 
         min_width = max(self.config.get("WINDOW_MIN_WIDTH", 400), WINDOW_MIN_WIDTH)
         min_height = max(self.config.get("WINDOW_MIN_HEIGHT", 300), WINDOW_MIN_HEIGHT)
@@ -174,7 +180,14 @@ class MainWindow(QMainWindow):
         self.mapping_page.session_changed.connect(self._persist_last_session)
 
         self._create_menu_bar()
+        self.theme_manager.theme_changed.connect(self._handle_theme_changed)
         self.localization.language_changed.connect(self._retranslate_ui)
+        self._apply_project_theme_mode(
+            initial_theme_mode,
+            persist_to_session=True,
+            save_last_session=False,
+            sync_document_snapshot=True,
+        )
         self._refresh_pages()
         self._retranslate_ui()
         self.goto_stage(1)
@@ -209,7 +222,7 @@ class MainWindow(QMainWindow):
         self.save_project_action.triggered.connect(self._save_project)
         self.save_project_as_action.triggered.connect(self._save_project_as)
         self.exit_action.triggered.connect(self.close)
-        self.toggle_theme_action.triggered.connect(ThemeManager.toggle_theme)
+        self.toggle_theme_action.triggered.connect(self._toggle_theme)
         self.about_action.triggered.connect(self._show_about)
 
         self.language_action_group = QActionGroup(self)
@@ -294,3 +307,45 @@ class MainWindow(QMainWindow):
 
     def _resolve_fallback_stage(self) -> int:
         return resolve_fallback_stage(self)
+
+    def _toggle_theme(self):
+        ThemeManager.toggle_theme()
+
+    def _handle_theme_changed(self, theme: AppTheme):
+        if self._applying_project_theme:
+            return
+        normalized = theme.name
+        if self.session.theme_mode == normalized:
+            return
+        self.session.theme_mode = normalized
+        self.document.mark_unsaved()
+        self.session_store.save_last_session(self.session)
+
+    def _apply_project_theme_mode(
+        self,
+        theme_mode: str | AppTheme | None,
+        *,
+        persist_to_session: bool = True,
+        save_last_session: bool = True,
+        sync_document_snapshot: bool = False,
+    ):
+        normalized = self._normalize_theme_mode(theme_mode) or self.default_theme_mode
+        self._applying_project_theme = True
+        try:
+            ThemeManager.set_canonical_theme(AppTheme[normalized])
+        finally:
+            self._applying_project_theme = False
+
+        if persist_to_session:
+            self.session.theme_mode = normalized
+        if sync_document_snapshot:
+            self.document.mark_saved()
+        if save_last_session:
+            self.session_store.save_last_session(self.session)
+
+    @staticmethod
+    def _normalize_theme_mode(value: str | AppTheme | None) -> str:
+        if isinstance(value, AppTheme):
+            return value.name
+        candidate = str(value or "").strip().upper()
+        return candidate if candidate in AppTheme.__members__ else ""

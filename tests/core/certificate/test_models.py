@@ -5,6 +5,7 @@ from core.certificate.models import (
     DEFAULT_PLACEHOLDER_DELIMITER,
     ProjectSession,
     normalize_certificate_type,
+    normalize_theme_mode,
 )
 
 
@@ -36,3 +37,11 @@ def test_project_session_infers_placeholder_delimiter_from_legacy_mappings():
     assert session.placeholder_delimiter == "<"
     assert session.placeholder_start == "<"
     assert session.placeholder_end == ">"
+
+
+def test_project_session_normalizes_theme_mode():
+    session = ProjectSession(theme_mode="dark")
+
+    assert session.theme_mode == "DARK"
+    assert normalize_theme_mode("auto") == "AUTO"
+    assert normalize_theme_mode("invalid") == ""
