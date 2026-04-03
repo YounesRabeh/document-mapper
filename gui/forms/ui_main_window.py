@@ -97,24 +97,6 @@ class Ui_MainWindow(object):
 
         self.sidebarLayout.addItem(self.sidebarSpacer)
 
-        self.sidebarNewButton = QPushButton(self.workflowSidebar)
-        self.sidebarNewButton.setObjectName(u"sidebarNewButton")
-        self.sidebarNewButton.setMinimumSize(QSize(0, 44))
-
-        self.sidebarLayout.addWidget(self.sidebarNewButton)
-
-        self.sidebarOpenButton = QPushButton(self.workflowSidebar)
-        self.sidebarOpenButton.setObjectName(u"sidebarOpenButton")
-        self.sidebarOpenButton.setMinimumSize(QSize(0, 44))
-
-        self.sidebarLayout.addWidget(self.sidebarOpenButton)
-
-        self.sidebarSaveButton = QPushButton(self.workflowSidebar)
-        self.sidebarSaveButton.setObjectName(u"sidebarSaveButton")
-        self.sidebarSaveButton.setMinimumSize(QSize(0, 44))
-
-        self.sidebarLayout.addWidget(self.sidebarSaveButton)
-
         self.workflowSidebarScroll.setWidget(self.workflowSidebar)
 
         self.rootLayout.addWidget(self.workflowSidebarScroll)
@@ -232,9 +214,6 @@ class Ui_MainWindow(object):
         self.sidebarEyebrow.setText(QCoreApplication.translate("MainWindow", u"WORKFLOW", None))
         self.sidebarTitle.setText(QCoreApplication.translate("MainWindow", u"Workflow", None))
         self.sidebarSubtitle.setText(QCoreApplication.translate("MainWindow", u"Configure, map, generate, and review each batch.", None))
-        self.sidebarNewButton.setText(QCoreApplication.translate("MainWindow", u"New project", None))
-        self.sidebarOpenButton.setText(QCoreApplication.translate("MainWindow", u"Open project", None))
-        self.sidebarSaveButton.setText(QCoreApplication.translate("MainWindow", u"Save project", None))
         self.templateTypeLabel.setText(QCoreApplication.translate("MainWindow", u"Template type", None))
         self.templateLabel.setText(QCoreApplication.translate("MainWindow", u"Template", None))
         self.manageTemplatesButton.setText(QCoreApplication.translate("MainWindow", u"Manage templates...", None))

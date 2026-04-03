@@ -344,6 +344,8 @@ class MappingPage(WorkflowPage):
         combo.setMinimumHeight(34)
         if column_name:
             combo.setCurrentText(column_name)
+        else:
+            combo.setCurrentIndex(-1)
         combo.currentTextChanged.connect(self._sync_session_from_table)
         combo.installEventFilter(self)
         self.mapping_table.setCellWidget(row, 1, self._wrap_table_editor(combo, self._create_row_delete_button()))

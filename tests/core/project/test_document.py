@@ -4,29 +4,29 @@ from core.certificate.models import ProjectSession
 from core.project import ProjectDocument
 
 
-def test_project_document_tracks_dirty_state_from_session_snapshot():
+def test_project_document_ignores_session_only_fields_in_project_snapshot():
     document = ProjectDocument(session=ProjectSession())
 
     assert document.is_dirty is False
 
     document.session.excel_path = "/tmp/data.xlsx"
-    assert document.is_dirty is True
-
-    document.mark_saved()
     assert document.is_dirty is False
 
     document.session.output_dir = "/tmp/out"
+    assert document.is_dirty is False
+
+    document.session.output_naming_schema = "{ROW}"
     assert document.is_dirty is True
 
 
 def test_project_document_returns_clean_when_changes_revert_to_saved_snapshot():
-    session = ProjectSession(excel_path="/tmp/data.xlsx", output_dir="/tmp/out")
+    session = ProjectSession(output_naming_schema="{NAME}_{LASTNAME}")
     document = ProjectDocument(session=session)
 
-    document.session.output_dir = "/tmp/new-out"
+    document.session.output_naming_schema = "{NAME}_{LASTNAME}_{ROW}"
     assert document.is_dirty is True
 
-    document.session.output_dir = "/tmp/out"
+    document.session.output_naming_schema = "{NAME}_{LASTNAME}"
     assert document.is_dirty is False
 
     document.mark_unsaved()

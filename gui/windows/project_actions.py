@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QDir
-from PySide6.QtWidgets import QFileDialog, QDialog
-
-
 def new_project(window):
     if window.document.is_dirty or window.current_project_path:
         action = window._confirm_new_project_action()
@@ -32,17 +28,14 @@ def new_project(window):
 
 
 def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
-    start_dir = window.current_project_path or str(app_paths_cls.documents_dir())
-    dialog = _create_project_open_dialog(window, file_dialog_cls, start_dir)
-    if dialog.exec() != QDialog.DialogCode.Accepted:
-        return
-
-    selected_path = _selected_project_path(dialog)
-    if not selected_path:
-        return
-
+    del file_dialog_cls
+    project_dir = app_paths_cls.internal_project_dir()
     try:
-        project_dir = _normalize_project_selection(window, selected_path)
+        manifest_name = getattr(window.session_store, "project_filename", "project.json")
+        if not (project_dir / manifest_name).exists():
+            raise FileNotFoundError(
+                window.localization.t("dialog.open_project.missing_internal_project", path=str(project_dir))
+            )
         loaded_session = window.session_store.load(project_dir)
         window.template_catalog.seed_default_template(loaded_session)
         window.document.load(loaded_session, project_dir)
@@ -59,87 +52,41 @@ def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
         message_box_cls.critical(window, window.localization.t("dialog.open_project.failed_title"), str(exc))
 
 
-def _create_project_open_dialog(window, file_dialog_cls, start_dir: str):
-    dialog = file_dialog_cls(window, window.localization.t("dialog.open_project.title"), start_dir)
-    manifest_name = getattr(window.session_store, "project_filename", "project.json")
-    if hasattr(dialog, "setAcceptMode"):
-        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
-    if hasattr(dialog, "setFileMode"):
-        dialog.setFileMode(QFileDialog.FileMode.AnyFile)
-    if hasattr(dialog, "setOption"):
-        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
-        dialog.setOption(QFileDialog.Option.ShowDirsOnly, False)
-    if hasattr(dialog, "setFilter"):
-        dialog.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
-    if hasattr(dialog, "setNameFilter"):
-        dialog.setNameFilter(window.localization.t("dialog.project_files"))
-    if hasattr(dialog, "selectFile"):
-        dialog.selectFile(manifest_name)
-    return dialog
+def save_project(window, *, message_box_cls, app_paths_cls):
+    return window._save_project_to_path(app_paths_cls.internal_project_dir(), message_box_cls=message_box_cls)
 
 
-def _selected_project_path(dialog) -> str:
-    if hasattr(dialog, "selectedFiles"):
-        selected = dialog.selectedFiles()
-        if selected:
-            return str(selected[0]).strip()
-    return ""
+def save_project_as(window, *, file_dialog_cls, app_paths_cls, message_box_cls):
+    del file_dialog_cls
+    return save_project(window, message_box_cls=message_box_cls, app_paths_cls=app_paths_cls)
 
 
-def _normalize_project_selection(window, selected_path: str) -> Path:
-    candidate = Path(selected_path).expanduser().resolve()
-    manifest_name = getattr(window.session_store, "project_filename", "project.json")
-
-    if not candidate.exists():
-        raise FileNotFoundError(
-            window.localization.t("dialog.open_project.selection_missing", path=str(candidate))
-        )
-
-    if candidate.is_dir():
-        manifest_path = candidate / manifest_name
-        if not manifest_path.exists():
-            raise FileNotFoundError(
-                window.localization.t("dialog.open_project.folder_missing_manifest", name=manifest_name)
-            )
-        return candidate
-
-    if candidate.name != manifest_name:
-        raise ValueError(
-            window.localization.t("dialog.open_project.invalid_file_selection", name=manifest_name)
-        )
-
-    return candidate.parent
-
-
-def save_project(window):
-    if window.current_project_path:
-        return window._save_project_to_path(window.current_project_path)
-    return window._save_project_as()
-
-
-def save_project_as(window, *, file_dialog_cls, app_paths_cls):
-    path = file_dialog_cls.getExistingDirectory(
-        window,
-        window.localization.t("dialog.save_project.title"),
-        window.current_project_path or str(app_paths_cls.default_project_path()),
-    )
-    if not path:
-        return False
-    return window._save_project_to_path(path)
-
-
-def save_project_to_path(window, path: str | Path):
+def save_project_to_path(window, path: str | Path, *, message_box_cls):
     project_dir = Path(path).expanduser().resolve()
+    source_project_dir = window._current_project_dir()
     session_to_save = window._prepare_session_for_save(project_dir)
     if session_to_save is None:
         return False
 
-    saved_path = window.session_store.save(session_to_save, project_dir)
-    loaded_session = window.session_store.load(Path(saved_path).parent)
+    saved_path = window.session_store.save(
+        session_to_save,
+        project_dir,
+        source_project_dir=source_project_dir,
+    )
+    loaded_session = window.session_store.load(project_dir)
+    _restore_local_session_fields(loaded_session, session_to_save)
+    loaded_session.template_path = window.session_store.resolve_effective_template_path(loaded_session, project_dir)
     window.document.load(loaded_session, Path(saved_path).parent)
     window._persist_last_session_async()
     window._refresh_pages()
     return True
+
+
+def _restore_local_session_fields(target_session, source_session):
+    target_session.excel_path = source_session.excel_path
+    target_session.output_dir = source_session.output_dir
+    target_session.license_path = source_session.license_path
+    target_session.template_override_path = source_session.template_override_path
 
 
 def activate_new_project(window, session, *, saved: bool):

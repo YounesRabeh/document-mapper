@@ -4,7 +4,6 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
     QDialog,
-    QFileDialog,
     QMainWindow,
     QMessageBox,
     QSizePolicy,
@@ -109,9 +108,6 @@ class MainWindow(QMainWindow):
         self.sidebar_title = self.ui.sidebarTitle
         self.sidebar_subtitle = self.ui.sidebarSubtitle
         self.stage_cards_layout = self.ui.stageCardsLayout
-        self.sidebar_new_button = self.ui.sidebarNewButton
-        self.sidebar_open_button = self.ui.sidebarOpenButton
-        self.sidebar_save_button = self.ui.sidebarSaveButton
         self.template_toolbar = self.ui.templateToolbar
         self.template_type_label = self.ui.templateTypeLabel
         self.template_type_combo = self.ui.templateTypeCombo
@@ -141,8 +137,6 @@ class MainWindow(QMainWindow):
         self.template_combo.setObjectName("templateToolbarCombo")
         self.manage_templates_button.setObjectName("templateToolbarButton")
         self.template_toolbar_status.setObjectName("templateToolbarStatus")
-        for button in (self.sidebar_new_button, self.sidebar_open_button, self.sidebar_save_button):
-            button.setObjectName("sidebarUtilityButton")
 
         self.stage_manager.setMinimumWidth(CONTENT_MIN_WIDTH)
         self.stage_manager.setMinimumHeight(0)
@@ -160,9 +154,6 @@ class MainWindow(QMainWindow):
             self.stage_cards[index] = card
             self.stage_cards_layout.addWidget(card)
 
-        self.sidebar_new_button.clicked.connect(self._new_project)
-        self.sidebar_open_button.clicked.connect(self._open_project)
-        self.sidebar_save_button.clicked.connect(self._save_project)
         self.template_type_combo.currentIndexChanged.connect(self._handle_template_type_changed)
         self.template_combo.currentIndexChanged.connect(self._handle_template_selection_changed)
         self.manage_templates_button.clicked.connect(self._manage_templates)
@@ -258,16 +249,21 @@ class MainWindow(QMainWindow):
         new_project(self)
 
     def _open_project(self):
-        open_project(self, file_dialog_cls=QFileDialog, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
+        open_project(self, file_dialog_cls=None, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
 
     def _save_project(self):
-        return save_project(self)
+        return save_project(self, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
 
-    def _save_project_as(self):
-        return save_project_as(self, file_dialog_cls=QFileDialog, app_paths_cls=AppPaths)
+    def _save_project_as(self, *, message_box_cls=QMessageBox):
+        return save_project_as(
+            self,
+            file_dialog_cls=None,
+            app_paths_cls=AppPaths,
+            message_box_cls=message_box_cls,
+        )
 
-    def _save_project_to_path(self, path):
-        return save_project_to_path(self, path)
+    def _save_project_to_path(self, path, *, message_box_cls=QMessageBox):
+        return save_project_to_path(self, path, message_box_cls=message_box_cls)
 
     def _activate_new_project(self, session: ProjectSession, *, saved: bool):
         activate_new_project(self, session, saved=saved)
@@ -361,6 +357,37 @@ class MainWindow(QMainWindow):
     def _persist_last_session_async(self):
         self._last_session_persistence.enqueue(self.session.clone())
 
+    def _confirm_close_action(self) -> str | None:
+        if not self.document.is_dirty:
+            return "discard"
+
+        message_box = QMessageBox(self)
+        message_box.setIcon(QMessageBox.Icon.Question)
+        message_box.setWindowTitle(self.localization.t("dialog.close_project_confirm.title"))
+        message_box.setText(self.localization.t("dialog.close_project_confirm.body"))
+        save_button = message_box.addButton(
+            self.localization.t("dialog.close_project_confirm.save"),
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+        discard_button = message_box.addButton(
+            self.localization.t("dialog.close_project_confirm.discard"),
+            QMessageBox.ButtonRole.DestructiveRole,
+        )
+        cancel_button = message_box.addButton(
+            self.localization.t("dialog.close_project_confirm.cancel"),
+            QMessageBox.ButtonRole.RejectRole,
+        )
+        message_box.exec()
+
+        clicked_button = message_box.clickedButton()
+        if clicked_button is save_button:
+            return "save"
+        if clicked_button is discard_button:
+            return "discard"
+        if clicked_button is cancel_button:
+            return None
+        return None
+
     @staticmethod
     def _normalize_theme_mode(value: str | AppTheme | None) -> str:
         if isinstance(value, AppTheme):
@@ -369,6 +396,13 @@ class MainWindow(QMainWindow):
         return candidate if candidate in AppTheme.__members__ else ""
 
     def closeEvent(self, event):
+        action = self._confirm_close_action()
+        if action is None:
+            event.ignore()
+            return
+        if action == "save" and not self._save_project():
+            event.ignore()
+            return
         if self._theme_persist_timer.isActive():
             self._theme_persist_timer.stop()
         self._persist_last_session_async()

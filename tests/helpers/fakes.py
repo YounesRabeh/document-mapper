@@ -90,7 +90,7 @@ class FakeSessionStore:
         self.saved_sessions.append(self.session.clone())
         return Path(tempfile.gettempdir()) / "last_session.json"
 
-    def save(self, session, path):
+    def save(self, session, path, source_project_dir=None):
         self.session = session.clone()
         resolved = Path(path)
         if resolved.suffix.lower() == ".json":
@@ -99,7 +99,7 @@ class FakeSessionStore:
 
     def load(self, _path):
         if self.loaded_session is not None:
-            session = self.loaded_session.clone()
+            session = ProjectSession.from_project_dict(self.loaded_session.to_project_dict())
         else:
             session = ProjectSession()
         session.template_path = self.resolve_effective_template_path(session, None)

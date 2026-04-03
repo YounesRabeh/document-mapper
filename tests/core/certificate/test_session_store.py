@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -35,12 +36,23 @@ def test_session_store_round_trip(tmp_path):
     project_dir = tmp_path / "project"
     saved_path = store.save(session, project_dir)
     loaded = store.load(project_dir)
+    saved_payload = json.loads(saved_path.read_text(encoding="utf-8"))
 
     assert saved_path == project_dir / "project.json"
+    assert "excel_path" not in saved_payload
+    assert "output_dir" not in saved_payload
+    assert "template_path" not in saved_payload
+    assert "template_override_path" not in saved_payload
+    assert "license_path" not in saved_payload
+    assert saved_payload["templates"][0]["relative_path"].startswith("templates/")
+    assert "source_path" not in saved_payload["templates"][0]
     assert loaded.selected_template_type == "General"
     assert loaded.selected_template_entry() is not None
     assert loaded.selected_template_entry().is_managed is True
     assert Path(loaded.template_path).exists()
+    assert loaded.excel_path == ""
+    assert loaded.output_dir == ""
+    assert loaded.template_override_path == ""
     assert loaded.output_naming_schema == "{COGNOME}_{ROW}"
     assert loaded.placeholder_delimiter == "{{"
     assert loaded.theme_mode == "DARK"
@@ -132,3 +144,52 @@ def test_session_store_quarantines_invalid_last_session(tmp_path):
     assert loaded.to_dict() == ProjectSession().to_dict()
     assert last_session_path.exists() is False
     assert len(list(state_dir.glob("last_session.invalid-*.json"))) == 1
+
+
+def test_last_session_round_trip_preserves_local_machine_paths(tmp_path):
+    store = ProjectSessionStore(tmp_path)
+    session = ProjectSession(
+        excel_path="/tmp/data.xlsx",
+        output_dir="/tmp/out",
+        template_override_path="/tmp/override.docx",
+        license_path="/tmp/license.xml",
+    )
+
+    store.save_last_session(session)
+    loaded = store.load_last_session()
+
+    assert loaded.excel_path == "/tmp/data.xlsx"
+    assert loaded.output_dir == "/tmp/out"
+    assert loaded.template_override_path == "/tmp/override.docx"
+    assert loaded.license_path == "/tmp/license.xml"
+
+
+def test_session_store_save_as_copies_existing_managed_templates_from_source_project(tmp_path):
+    source_project_dir = tmp_path / "source-project"
+    source_templates_dir = source_project_dir / "templates"
+    source_templates_dir.mkdir(parents=True, exist_ok=True)
+    managed_template = source_templates_dir / "Default_template_01.docx"
+    managed_template.write_text("Hello <NAME>", encoding="utf-8")
+
+    template_entry = ProjectTemplateEntry(
+        display_name="Default template 01",
+        type_name="Default template",
+        relative_path="templates/Default_template_01.docx",
+        is_managed=True,
+    )
+    session = ProjectSession(
+        selected_template_type="Default template",
+        selected_template=template_entry.id,
+        template_types=[ProjectTemplateType("Default template")],
+        templates=[template_entry],
+        mappings=[MappingEntry(placeholder="<NAME>", column_name="NAME")],
+    )
+
+    store = ProjectSessionStore(tmp_path)
+    target_project_dir = tmp_path / "shared-project-copy"
+    saved_path = store.save(session, target_project_dir, source_project_dir=source_project_dir)
+    saved_payload = json.loads(saved_path.read_text(encoding="utf-8"))
+
+    assert (target_project_dir / "templates" / "Default_template_01.docx").exists()
+    assert saved_payload["templates"][0]["relative_path"] == "templates/Default_template_01.docx"
+    assert "source_path" not in saved_payload["templates"][0]

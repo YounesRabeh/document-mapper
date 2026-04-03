@@ -39,7 +39,7 @@ class ProjectDocument:
         return self._saved_snapshot is None or self.snapshot() != self._saved_snapshot
 
     def snapshot(self) -> dict[str, Any]:
-        return self.session.to_dict()
+        return self.session.to_project_dict()
 
     def load(self, session: ProjectSession, project_path: str | Path | None = None):
         self.session = session.clone()

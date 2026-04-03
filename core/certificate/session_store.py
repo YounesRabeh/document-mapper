@@ -35,17 +35,22 @@ class ProjectSessionStore:
     def last_session_path(self) -> Path:
         return self.base_dir / self.last_session_filename
 
-    def save(self, session: ProjectSession, path: str | Path) -> Path:
+    def save(
+        self,
+        session: ProjectSession,
+        path: str | Path,
+        source_project_dir: str | Path | None = None,
+    ) -> Path:
         project_dir, project_json_path = self._resolve_project_destination(path)
         prepared_session = session.clone()
-        self._materialize_project_templates(prepared_session, project_dir)
+        self._materialize_project_templates(prepared_session, project_dir, source_project_dir)
         prepared_session.template_path = self.resolve_effective_template_path(prepared_session, project_dir)
-        self._write_json(prepared_session, project_json_path)
+        self._write_project_json(prepared_session, project_json_path)
         return project_json_path
 
     def load(self, path: str | Path) -> ProjectSession:
         project_json_path, project_dir = self._resolve_project_source(path)
-        session = self._load_json(project_json_path)
+        session = self._load_project_json(project_json_path)
         session.template_path = self.resolve_effective_template_path(session, project_dir)
         return session
 
@@ -105,29 +110,41 @@ class ProjectSessionStore:
         )
 
     def save_last_session(self, session: ProjectSession) -> Path:
-        return self._write_json(session, self.last_session_path)
+        return self._write_last_session_json(session, self.last_session_path)
 
     def load_last_session(self) -> ProjectSession:
         if not self.last_session_path.exists():
             return ProjectSession()
         try:
-            return self._load_json(self.last_session_path)
+            return self._load_last_session_json(self.last_session_path)
         except (json.JSONDecodeError, OSError, ValueError, TypeError) as exc:
             self._quarantine_invalid_last_session(exc)
             return ProjectSession()
 
-    def _write_json(self, session: ProjectSession, path: Path) -> Path:
+    def _write_last_session_json(self, session: ProjectSession, path: Path) -> Path:
+        return self._write_payload(session.to_dict(), path)
+
+    def _write_project_json(self, session: ProjectSession, path: Path) -> Path:
+        return self._write_payload(session.to_project_dict(), path)
+
+    def _write_payload(self, payload: dict, path: Path) -> Path:
         destination = Path(path).expanduser().resolve()
         destination.parent.mkdir(parents=True, exist_ok=True)
         with open(destination, "w", encoding="utf-8") as handle:
-            json.dump(session.to_dict(), handle, indent=2, ensure_ascii=True)
+            json.dump(payload, handle, indent=2, ensure_ascii=True)
         return destination
 
-    def _load_json(self, path: str | Path) -> ProjectSession:
+    def _load_last_session_json(self, path: str | Path) -> ProjectSession:
         source = Path(path).expanduser().resolve()
         with open(source, "r", encoding="utf-8") as handle:
             payload = json.load(handle)
         return ProjectSession.from_dict(payload)
+
+    def _load_project_json(self, path: str | Path) -> ProjectSession:
+        source = Path(path).expanduser().resolve()
+        with open(source, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        return ProjectSession.from_project_dict(payload)
 
     def _resolve_project_destination(self, path: str | Path) -> tuple[Path, Path]:
         destination = Path(path).expanduser().resolve()
@@ -152,14 +169,36 @@ class ProjectSessionStore:
             raise FileNotFoundError(f"Project file not found: {project_json_path}")
         return project_json_path, project_dir
 
-    def _materialize_project_templates(self, session: ProjectSession, project_dir: Path):
+    def _materialize_project_templates(
+        self,
+        session: ProjectSession,
+        project_dir: Path,
+        source_project_dir: str | Path | None = None,
+    ):
         templates_dir = project_dir / self.managed_templates_dirname
         templates_dir.mkdir(parents=True, exist_ok=True)
+        source_project_root = (
+            Path(source_project_dir).expanduser().resolve()
+            if source_project_dir
+            else None
+        )
         used_relative_paths = {entry.relative_path for entry in session.templates if entry.relative_path}
 
         for entry in session.templates:
             if entry.is_managed and entry.relative_path and (project_dir / entry.relative_path).exists():
+                entry.source_path = ""
                 continue
+
+            if entry.is_managed and entry.relative_path and source_project_root is not None:
+                managed_source_path = (source_project_root / entry.relative_path).resolve()
+                if managed_source_path.exists():
+                    target_path = project_dir / entry.relative_path
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(managed_source_path, target_path)
+                    entry.source_path = ""
+                    used_relative_paths.add(entry.relative_path)
+                    continue
+
             source_path = Path(entry.source_path).expanduser().resolve() if entry.source_path else None
             if source_path is None or not source_path.exists():
                 continue
@@ -173,6 +212,7 @@ class ProjectSessionStore:
             shutil.copy2(source_path, target_path)
             entry.relative_path = relative_path.as_posix()
             entry.is_managed = True
+            entry.source_path = ""
             used_relative_paths.add(entry.relative_path)
 
     def _unique_managed_relative_path(
@@ -219,7 +259,7 @@ class ProjectSessionStore:
             return
 
         try:
-            session = self._load_json(legacy_path)
+            session = self._load_last_session_json(legacy_path)
         except (json.JSONDecodeError, OSError, ValueError, TypeError) as exc:
             self._quarantine_legacy_last_session(legacy_path, exc)
             return

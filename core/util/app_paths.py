@@ -84,7 +84,13 @@ class AppPaths:
 
     @classmethod
     def default_project_path(cls) -> Path:
-        return cls.documents_dir() / cls.DEFAULT_PROJECT_DIRNAME
+        return cls.internal_project_dir()
+
+    @classmethod
+    def internal_project_dir(cls) -> Path:
+        path = cls.state_dir() / cls.DEFAULT_PROJECT_DIRNAME
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
     @classmethod
     def default_log_path(cls) -> Path:

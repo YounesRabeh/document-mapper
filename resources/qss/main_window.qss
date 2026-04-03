@@ -191,21 +191,3 @@ QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageTitle,
 QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageDetail {
     color: palette(mid);
 }
-
-QPushButton#sidebarUtilityButton {
-    background: palette(button);
-    border: 1px solid palette(mid);
-    border-radius: 12px;
-    color: palette(button-text);
-    font-weight: 600;
-    padding: 11px 12px;
-}
-
-QPushButton#sidebarUtilityButton:hover {
-    background: palette(alternate-base);
-    border-color: palette(highlight);
-}
-
-QPushButton#sidebarUtilityButton:pressed {
-    background: palette(midlight);
-}
