@@ -5,8 +5,6 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
     QFrame,
-    QGridLayout,
-    QGroupBox,
     QHeaderView,
     QHBoxLayout,
     QLabel,
@@ -17,9 +15,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QTableWidget,
     QTableWidgetItem,
-    QVBoxLayout,
     QWidget,
-    QLineEdit,
 )
 
 from core.certificate.excel_service import ExcelDataService
@@ -33,15 +29,10 @@ from core.certificate.models import (
 )
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
+from gui.forms import Ui_MappingPageForm
 from gui.styles import MAPPING_TABLE_VIEWPORT_QSS
 from gui.ui.elements.combo_box import ClickSelectComboBox
-from gui.workflow.base import (
-    PANEL_MIN_HEIGHT,
-    SIDE_PANEL_MIN_WIDTH,
-    WIDE_PANEL_MIN_WIDTH,
-    TokenSuggestingLineEdit,
-    WorkflowPage,
-)
+from gui.workflow.base import PANEL_MIN_HEIGHT, SIDE_PANEL_MIN_WIDTH, WIDE_PANEL_MIN_WIDTH, WorkflowPage
 from gui.workflow.mapping_logic import MappingContextService
 
 
@@ -69,76 +60,63 @@ class MappingPage(WorkflowPage):
         self._delimiter_refresh_timer.setSingleShot(True)
         self._delimiter_refresh_timer.setInterval(180)
         self._delimiter_refresh_timer.timeout.connect(self._auto_refresh_mapping_context)
+        self.ui = Ui_MappingPageForm()
+        self.form_root = QWidget()
+        self.ui.setupUi(self.form_root)
+        self.body_layout.addWidget(self.form_root, stretch=1)
 
-        content_layout = QHBoxLayout()
-        content_layout.setSpacing(16)
-        self.body_layout.addLayout(content_layout, stretch=1)
+        self.left_box = self.ui.leftBox
+        self.right_box = self.ui.rightBox
+        self.columns_label = self.ui.columnsLabel
+        self.columns_hint = self.ui.columnsHint
+        self.columns_list = self.ui.columnsList
+        self.mapping_hint = self.ui.mappingHint
+        self.delimiter_label = self.ui.delimiterLabel
+        self.delimiter_input = self.ui.delimiterInput
+        self.template_status = self.ui.templateStatus
+        self.output_naming_group = self.ui.outputNamingGroup
+        self.output_naming_schema_label = self.ui.outputNamingSchemaLabel
+        self.output_naming_schema_input = self.ui.outputNamingSchemaInput
+        self.output_naming_schema_hint = self.ui.outputNamingSchemaHint
+        self.mapping_table = self.ui.mappingTable
+        self.add_button = self.ui.addButton
+        self.refresh_button = self.ui.refreshButton
+        self.validation_label = self.ui.validationLabel
+        self.validation_summary = self.ui.validationSummary
+        self.validation_output = self.ui.validationOutput
 
-        self.left_box, left_layout = self._create_card("group.workbook_columns")
+        self._bind_translation(self.ui.leftTitle, "upper_text", "group.workbook_columns")
+        self._bind_translation(self.columns_hint, "text", "hint.columns_panel")
+        self._bind_translation(self.ui.rightTitle, "upper_text", "group.placeholder_mappings")
+        self._bind_translation(self.delimiter_label, "text", "field.placeholder_delimiter")
+        self._bind_translation(self.output_naming_group, "upper_title", "group.output_naming_schema")
+        self._bind_translation(self.output_naming_schema_label, "text", "field.output_naming_schema")
+        self._bind_translation(self.output_naming_schema_hint, "text", "hint.output_naming_schema")
+        self._bind_translation(self.add_button, "text", "button.add_mapping")
+        self._bind_translation(self.refresh_button, "text", "button.refresh_mapping_data")
+        self._bind_translation(self.validation_label, "text", "label.validation")
+
         self.left_box.setMinimumWidth(SIDE_PANEL_MIN_WIDTH)
         self.left_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
-        self.columns_label = QLabel()
         self.columns_label.setWordWrap(True)
-        self.columns_label.setObjectName("workflowStatus")
-        self.columns_hint = QLabel()
         self.columns_hint.setWordWrap(True)
-        self.columns_hint.setObjectName("workflowHint")
-        self._bind_translation(self.columns_hint, "text", "hint.columns_panel")
-        self.columns_list = QListWidget()
         self.columns_list.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         self.columns_list.setAlternatingRowColors(False)
         self.columns_list.setSpacing(2)
         self.columns_list.setSelectionMode(QAbstractItemView.NoSelection)
         self.columns_list.setFocusPolicy(Qt.NoFocus)
-        left_layout.addWidget(self.columns_label)
-        left_layout.addWidget(self.columns_hint)
-        left_layout.addWidget(self.columns_list)
-        content_layout.addWidget(self.left_box, stretch=1)
 
-        self.right_box, right_layout = self._create_card("group.placeholder_mappings")
-        self.right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
-        self.mapping_hint = QLabel()
         self.mapping_hint.setWordWrap(True)
-        self.mapping_hint.setObjectName("workflowHint")
-        delimiter_row = QHBoxLayout()
-        delimiter_row.setContentsMargins(0, 0, 0, 0)
-        delimiter_row.setSpacing(12)
-        self.delimiter_label = self._create_field_label("field.placeholder_delimiter")
-        self.delimiter_input = QLineEdit()
+        self.right_box.setMinimumWidth(WIDE_PANEL_MIN_WIDTH)
         self.delimiter_input.setClearButtonEnabled(True)
-        self.delimiter_input.setMaximumWidth(220)
-        self.delimiter_input.setMinimumHeight(40)
         self.delimiter_input.textChanged.connect(self._sync_delimiter)
-        delimiter_row.addWidget(self.delimiter_label)
-        delimiter_row.addWidget(self.delimiter_input)
-        delimiter_row.addStretch()
-        self.template_status = QLabel()
         self.template_status.setWordWrap(True)
-        self.template_status.setObjectName("workflowStatus")
-
-        self.output_naming_group = QGroupBox()
-        self._bind_translation(self.output_naming_group, "upper_title", "group.output_naming_schema")
-        output_naming_layout = QGridLayout(self.output_naming_group)
-        output_naming_layout.setContentsMargins(16, 18, 16, 16)
-        output_naming_layout.setHorizontalSpacing(12)
-        output_naming_layout.setVerticalSpacing(10)
-        output_naming_layout.setColumnMinimumWidth(0, 128)
-        output_naming_layout.setColumnStretch(1, 1)
-        self.output_naming_schema_label = self._create_field_label("field.output_naming_schema")
-        self.output_naming_schema_input = TokenSuggestingLineEdit()
         self.output_naming_schema_input.setClearButtonEnabled(True)
         self.output_naming_schema_input.setMinimumHeight(40)
         self.output_naming_schema_input.setPlaceholderText(DEFAULT_OUTPUT_NAMING_SCHEMA)
         self.output_naming_schema_input.textChanged.connect(self._sync_output_naming_schema)
-        self.output_naming_schema_hint = QLabel()
-        self.output_naming_schema_hint.setWordWrap(True)
-        self.output_naming_schema_hint.setObjectName("workflowHint")
-        self._bind_translation(self.output_naming_schema_hint, "text", "hint.output_naming_schema")
-        output_naming_layout.addWidget(self.output_naming_schema_label, 0, 0)
-        output_naming_layout.addWidget(self.output_naming_schema_input, 0, 1)
-        output_naming_layout.addWidget(self.output_naming_schema_hint, 1, 1)
-
-        self.mapping_table = QTableWidget(0, 2)
+        self.mapping_table.setRowCount(0)
+        self.mapping_table.setColumnCount(2)
         self.mapping_table.setObjectName("mappingTable")
         self.mapping_table.setAlternatingRowColors(False)
         self.mapping_table.setShowGrid(False)
@@ -150,40 +128,13 @@ class MappingPage(WorkflowPage):
         self.mapping_table.setColumnWidth(0, 280)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.mapping_table.setMinimumHeight(300)
         self.mapping_table.viewport().setStyleSheet(MAPPING_TABLE_VIEWPORT_QSS)
         self.mapping_table.itemSelectionChanged.connect(self._update_actions)
-
-        mapping_buttons = QHBoxLayout()
-        self.add_button = QPushButton()
-        self.refresh_button = QPushButton()
-        self._bind_translation(self.add_button, "text", "button.add_mapping")
-        self._bind_translation(self.refresh_button, "text", "button.refresh_mapping_data")
         self.add_button.clicked.connect(self._add_empty_mapping_row)
         self.refresh_button.clicked.connect(self._refresh_mapping_context)
-        mapping_buttons.addWidget(self.add_button)
-        mapping_buttons.addWidget(self.refresh_button)
-        mapping_buttons.addStretch()
-
-        self.validation_summary = QLabel()
         self.validation_summary.setWordWrap(True)
-        self.validation_summary.setObjectName("workflowStatus")
-        self.validation_output = QPlainTextEdit()
         self.validation_output.setReadOnly(True)
         self.validation_output.setMaximumBlockCount(200)
-        self.validation_output.setMinimumHeight(160)
-        self.validation_label = self._create_field_label("label.validation")
-
-        right_layout.addWidget(self.mapping_hint)
-        right_layout.addLayout(delimiter_row)
-        right_layout.addWidget(self.template_status)
-        right_layout.addWidget(self.output_naming_group)
-        right_layout.addLayout(mapping_buttons)
-        right_layout.addWidget(self.mapping_table, stretch=1)
-        right_layout.addWidget(self.validation_label)
-        right_layout.addWidget(self.validation_summary)
-        right_layout.addWidget(self.validation_output)
-        content_layout.addWidget(self.right_box, stretch=2)
 
         self.retranslate_ui()
 

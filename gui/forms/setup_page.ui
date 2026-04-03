@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SetupPageForm</class>
+ <widget class="QWidget" name="setupPageForm">
+  <layout class="QVBoxLayout" name="rootLayout">
+   <property name="spacing">
+    <number>16</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QFrame" name="formCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="objectName">
+      <string notr="true">workflowCard</string>
+     </property>
+     <layout class="QVBoxLayout" name="formCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>16</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>16</number>
+      </property>
+      <item>
+       <widget class="QFrame" name="formCardTitleBar">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="objectName">
+         <string notr="true">workflowCardTitleBar</string>
+        </property>
+        <layout class="QHBoxLayout" name="formCardTitleLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="formCardTitle">
+           <property name="objectName">
+            <string notr="true">workflowCardTitle</string>
+           </property>
+           <property name="text">
+            <string>Project inputs</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="formLayout">
+        <property name="horizontalSpacing">
+         <number>16</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>12</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="excelLabel">
+          <property name="objectName">
+           <string notr="true">workflowFieldLabel</string>
+          </property>
+          <property name="text">
+           <string>Excel workbook</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QWidget" name="excelInputContainer" native="true">
+          <layout class="QHBoxLayout" name="excelInputLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLineEdit" name="excelLineEdit">
+             <property name="minimumSize">
+              <size>
+               <width>360</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="clearButtonEnabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QPushButton" name="excelBrowseButton">
+          <property name="minimumSize">
+           <size>
+            <width>148</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Workbook</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="outputLabel">
+          <property name="objectName">
+           <string notr="true">workflowFieldLabel</string>
+          </property>
+          <property name="text">
+           <string>Output folder</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QWidget" name="outputInputContainer" native="true">
+          <layout class="QHBoxLayout" name="outputInputLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLineEdit" name="outputLineEdit">
+             <property name="minimumSize">
+              <size>
+               <width>360</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="clearButtonEnabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <widget class="QPushButton" name="outputBrowseButton">
+          <property name="minimumSize">
+           <size>
+            <width>148</width>
+            <height>40</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>Output folder</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="templateOverrideCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="objectName">
+      <string notr="true">workflowCard</string>
+     </property>
+     <layout class="QVBoxLayout" name="templateOverrideCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>16</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>16</number>
+      </property>
+      <item>
+       <widget class="QFrame" name="templateOverrideTitleBar">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="objectName">
+         <string notr="true">workflowCardTitleBar</string>
+        </property>
+        <layout class="QHBoxLayout" name="templateOverrideTitleLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="templateOverrideTitle">
+           <property name="objectName">
+            <string notr="true">workflowCardTitle</string>
+           </property>
+           <property name="text">
+            <string>Use a one-time template</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QGridLayout" name="templateOverrideFormLayout">
+        <property name="horizontalSpacing">
+         <number>16</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>10</number>
+        </property>
+        <item row="0" column="0">
+         <widget class="QLabel" name="templateOverrideLabel">
+          <property name="objectName">
+           <string notr="true">workflowFieldLabel</string>
+          </property>
+          <property name="text">
+           <string>Use one-time template</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QWidget" name="templateOverrideInputContainer" native="true">
+          <layout class="QHBoxLayout" name="templateOverrideInputLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLineEdit" name="templateOverrideLineEdit">
+             <property name="minimumSize">
+              <size>
+               <width>360</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="clearButtonEnabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <widget class="QWidget" name="templateOverrideActions" native="true">
+          <layout class="QHBoxLayout" name="templateOverrideActionsLayout">
+           <property name="spacing">
+            <number>8</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QPushButton" name="templateOverrideBrowseButton">
+             <property name="minimumSize">
+              <size>
+               <width>148</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Template</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="clearOverrideButton">
+             <property name="minimumSize">
+              <size>
+               <width>110</width>
+               <height>40</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Clear one-time template</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="2">
+         <widget class="QLabel" name="templateOverrideHint">
+          <property name="objectName">
+           <string notr="true">workflowHint</string>
+          </property>
+          <property name="text">
+           <string>Use an external Word template for this run only.</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="optionsCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="objectName">
+      <string notr="true">workflowCard</string>
+     </property>
+     <layout class="QVBoxLayout" name="optionsCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>16</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>16</number>
+      </property>
+      <item>
+       <widget class="QFrame" name="optionsTitleBar">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="objectName">
+         <string notr="true">workflowCardTitleBar</string>
+        </property>
+        <layout class="QHBoxLayout" name="optionsTitleLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="optionsTitle">
+           <property name="objectName">
+            <string notr="true">workflowCardTitle</string>
+           </property>
+           <property name="text">
+            <string>Export options</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="exportRow">
+        <property name="spacing">
+         <number>12</number>
+        </property>
+        <item>
+         <widget class="QCheckBox" name="exportPdfCheckBox">
+          <property name="text">
+           <string>Also export PDF</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="optionsStretch">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="pdfTimeoutLabel">
+          <property name="objectName">
+           <string notr="true">workflowFieldLabel</string>
+          </property>
+          <property name="text">
+           <string>PDF timeout</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="pdfTimeoutSpinBox">
+          <property name="minimumSize">
+           <size>
+            <width>128</width>
+            <height>40</height>
+           </size>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QFrame" name="statusCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="objectName">
+      <string notr="true">workflowCard</string>
+     </property>
+     <layout class="QVBoxLayout" name="statusCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
+      <property name="leftMargin">
+       <number>18</number>
+      </property>
+      <property name="topMargin">
+       <number>16</number>
+      </property>
+      <property name="rightMargin">
+       <number>18</number>
+      </property>
+      <property name="bottomMargin">
+       <number>16</number>
+      </property>
+      <item>
+       <widget class="QFrame" name="statusTitleBar">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <property name="objectName">
+         <string notr="true">workflowCardTitleBar</string>
+        </property>
+        <layout class="QHBoxLayout" name="statusTitleLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="statusTitle">
+           <property name="objectName">
+            <string notr="true">workflowCardTitle</string>
+           </property>
+           <property name="text">
+            <string>Session summary</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="statusLabel">
+        <property name="objectName">
+         <string notr="true">workflowStatus</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>96</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Summary</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
