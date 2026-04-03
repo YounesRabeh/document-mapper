@@ -23,7 +23,7 @@ from core.certificate.models import (
 )
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_TemplateManagerDialog
-from gui.styles import TEMPLATE_MANAGER_SECTION_TITLE_QSS
+from gui.styles import apply_stylesheet
 
 
 class TemplateManagerDialog(QDialog):
@@ -50,8 +50,9 @@ class TemplateManagerDialog(QDialog):
         self.cancel_button = self.ui.cancelButton
         self.save_button = self.ui.saveButton
 
-        self.type_title.setStyleSheet(TEMPLATE_MANAGER_SECTION_TITLE_QSS)
-        self.template_title.setStyleSheet(TEMPLATE_MANAGER_SECTION_TITLE_QSS)
+        self.type_title.setProperty("sectionTitle", True)
+        self.template_title.setProperty("sectionTitle", True)
+        apply_stylesheet(self, "template_manager_dialog")
 
         self.type_list.currentItemChanged.connect(self._refresh_template_list)
         self.template_list.currentItemChanged.connect(self._refresh_actions)

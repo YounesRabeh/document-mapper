@@ -1,10 +1,3 @@
-from __future__ import annotations
-
-from pathlib import Path
-
-from core.util.resources import Resources
-
-WORKFLOW_PAGE_QSS = """
 QWidget#workflowPage {
     background: palette(window);
 }
@@ -213,7 +206,7 @@ QTableWidget#mappingTable {
     gridline-color: transparent;
 }
 
-QTableWidget#mappingTable QWidget#qt_scrollarea_viewport {
+QWidget#mappingTableViewport {
     background: palette(alternate-base);
 }
 
@@ -430,20 +423,3 @@ QCheckBox::indicator:checked {
 QCheckBox::indicator:disabled {
     background: palette(button);
 }
-"""
-
-MAPPING_TABLE_VIEWPORT_QSS = "background: palette(alternate-base);"
-
-
-def _workflow_combo_arrow_path() -> str:
-    try:
-        resolved = Resources.get_in_icons("sys/chevron_down.svg", suppress=True)
-        if resolved:
-            return Path(resolved).resolve().as_posix()
-    except Exception:
-        pass
-    return (Path(__file__).resolve().parents[2] / "resources" / "icons" / "sys" / "chevron_down.svg").as_posix()
-
-
-def build_workflow_page_qss() -> str:
-    return WORKFLOW_PAGE_QSS.replace("__COMBO_ARROW_PATH__", _workflow_combo_arrow_path())

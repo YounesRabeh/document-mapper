@@ -37,6 +37,7 @@ def test_resources_resolve_from_project_root_not_cwd(tmp_path, monkeypatch):
 def test_default_template_and_locales_resolve_from_resources():
     default_template = AppPaths.default_template_path()
     locales_dir = AppPaths.locales_dir()
+    qss_dir = AppPaths.resource_root("resources") / "qss"
 
     assert default_template is not None
     assert default_template.exists()
@@ -44,6 +45,9 @@ def test_default_template_and_locales_resolve_from_resources():
     assert locales_dir is not None
     assert (locales_dir / "en.json").exists()
     assert (locales_dir / "it.json").exists()
+    assert (qss_dir / "main_window.qss").exists()
+    assert (qss_dir / "workflow_page.qss").exists()
+    assert (qss_dir / "template_manager_dialog.qss").exists()
 
 
 def test_legacy_gui_ui_factory_stack_is_removed():
@@ -51,3 +55,21 @@ def test_legacy_gui_ui_factory_stack_is_removed():
     assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "drag_drop.py").exists()
     assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "file_entry.py").exists()
     assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "menu_bar.py").exists()
+
+
+def test_inline_python_qss_modules_are_removed():
+    assert not (AppPaths.project_root() / "gui" / "styles" / "main_window.py").exists()
+    assert not (AppPaths.project_root() / "gui" / "styles" / "workflow.py").exists()
+
+
+def test_generated_ui_python_files_exist_only_in_gui_forms():
+    project_root = AppPaths.project_root()
+    generated_files = sorted(project_root.rglob("ui_*.py"))
+    expected_files = sorted((project_root / "gui" / "forms").glob("ui_*.py"))
+
+    assert generated_files == expected_files
+    assert expected_files
+
+    for generated in expected_files:
+        source_ui = generated.with_name(generated.name.removeprefix("ui_")).with_suffix(".ui")
+        assert source_ui.exists(), f"Missing .ui source for generated form: {generated}"

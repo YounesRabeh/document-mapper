@@ -21,7 +21,7 @@ from core.util.app_paths import AppPaths
 from gui.controllers import WorkflowStateController
 from gui.dialogs import TemplateManagerDialog
 from gui.forms import Ui_MainWindow
-from gui.styles import MAIN_WINDOW_QSS
+from gui.styles import apply_stylesheet
 from gui.windows.components import SidebarStageCard
 from gui.windows.constants import CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
 from gui.windows.project_actions import (
@@ -86,7 +86,7 @@ class MainWindow(QMainWindow):
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.setStyleSheet(MAIN_WINDOW_QSS)
+        apply_stylesheet(self, "main_window")
 
         self.window_root = self.ui.windowRoot
         self.sidebar = self.ui.workflowSidebarScroll

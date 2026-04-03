@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-MAIN_WINDOW_QSS = """
 QWidget#windowRoot {
     background: palette(window);
 }
@@ -163,6 +160,3 @@ QPushButton#sidebarUtilityButton:hover {
     border-color: palette(highlight);
     background: palette(button);
 }
-"""
-
-TEMPLATE_MANAGER_SECTION_TITLE_QSS = "font-weight: 700;"

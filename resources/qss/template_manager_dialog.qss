@@ -1,0 +1,3 @@
+QLabel[sectionTitle="true"] {
+    font-weight: 700;
+}

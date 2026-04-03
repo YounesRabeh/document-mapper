@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 
 from core.certificate.models import ProjectSession
 from core.manager.localization_manager import LocalizationManager
-from gui.styles import build_workflow_page_qss
+from gui.styles import apply_stylesheet
 
 PAGE_MIN_WIDTH = 860
 PAGE_MIN_HEIGHT = 560
@@ -134,7 +134,7 @@ class WorkflowPage(QWidget):
         self._translation_bindings: list[tuple[object, str, str]] = []
         self.setMinimumSize(PAGE_MIN_WIDTH, PAGE_MIN_HEIGHT)
         self.setObjectName("workflowPage")
-        self.setStyleSheet(build_workflow_page_qss())
+        apply_stylesheet(self, "workflow_page")
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

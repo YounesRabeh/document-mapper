@@ -30,7 +30,6 @@ from core.certificate.models import (
 from core.certificate.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_MappingPageForm
-from gui.styles import MAPPING_TABLE_VIEWPORT_QSS
 from gui.ui.elements.combo_box import ClickSelectComboBox
 from gui.workflow.base import PANEL_MIN_HEIGHT, SIDE_PANEL_MIN_WIDTH, WIDE_PANEL_MIN_WIDTH, WorkflowPage
 from gui.workflow.mapping_logic import MappingContextService
@@ -128,7 +127,7 @@ class MappingPage(WorkflowPage):
         self.mapping_table.setColumnWidth(0, 280)
         self.mapping_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.mapping_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.mapping_table.viewport().setStyleSheet(MAPPING_TABLE_VIEWPORT_QSS)
+        self.mapping_table.viewport().setObjectName("mappingTableViewport")
         self.mapping_table.itemSelectionChanged.connect(self._update_actions)
         self.add_button.clicked.connect(self._add_empty_mapping_row)
         self.refresh_button.clicked.connect(self._refresh_mapping_context)
