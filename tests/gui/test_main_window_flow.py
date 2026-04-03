@@ -175,7 +175,7 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
         mappings=[MappingEntry(placeholder="<NAME>", column_name="NAME")],
     )
     fake_store.loaded_session.selected_template = fake_store.loaded_session.templates[0].id
-    with patch.object(main_window_module.QFileDialog, "getExistingDirectory", return_value=""), patch.object(
+    with patch.object(
         main_window_module.QFileDialog,
         "getOpenFileName",
         return_value=("project.json", ""),
@@ -188,3 +188,21 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
     assert window.template_type_combo.currentText() == "Default template"
     assert window.template_combo.currentText() == "Default template 01"
+
+
+def test_open_project_uses_a_single_file_dialog(main_window_factory):
+    window, fake_store, main_window_module = main_window_factory()
+    fake_store.loaded_session = ProjectSession()
+
+    with patch.object(
+        main_window_module.QFileDialog,
+        "getOpenFileName",
+        return_value=("", ""),
+    ) as open_dialog, patch.object(
+        main_window_module.QFileDialog,
+        "getExistingDirectory",
+    ) as directory_dialog:
+        window._open_project()
+
+    open_dialog.assert_called_once()
+    directory_dialog.assert_not_called()

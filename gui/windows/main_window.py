@@ -398,18 +398,12 @@ class MainWindow(QMainWindow):
 
     def _open_project(self):
         start_dir = self.current_project_path or str(AppPaths.documents_dir())
-        path = QFileDialog.getExistingDirectory(
+        path, _ = QFileDialog.getOpenFileName(
             self,
             self.localization.t("dialog.open_project.title"),
             start_dir,
+            self.localization.t("dialog.project_files"),
         )
-        if not path:
-            path, _ = QFileDialog.getOpenFileName(
-                self,
-                self.localization.t("dialog.open_project.title"),
-                start_dir,
-                self.localization.t("dialog.project_files"),
-            )
         if not path:
             return
         try:
