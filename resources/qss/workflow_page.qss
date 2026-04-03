@@ -141,8 +141,18 @@ QComboBox QAbstractItemView {
     background: palette(base);
     color: palette(window-text);
     border: 1px solid palette(mid);
+    border-top: none;
+    border-radius: 0;
+    margin-top: -1px;
+    padding: 0;
     selection-background-color: palette(highlight);
     selection-color: palette(highlighted-text);
+}
+
+QComboBox QAbstractItemView::item {
+    padding: 6px 10px;
+    margin: 0;
+    border-radius: 0;
 }
 
 QComboBox QAbstractItemView::item:hover {
@@ -277,10 +287,10 @@ QTableWidget#mappingTable QLineEdit:focus {
 }
 
 QTableWidget#mappingTable QPushButton#mappingRowDeleteButton {
-    background: palette(base);
-    border: 1px solid palette(mid);
+    background: rgba(148, 32, 32, 0.16);
+    border: 1px solid rgba(204, 84, 84, 0.72);
     border-radius: 10px;
-    color: palette(window-text);
+    color: rgb(244, 120, 120);
     padding: 0;
     min-width: 32px;
     max-width: 32px;
@@ -291,14 +301,14 @@ QTableWidget#mappingTable QPushButton#mappingRowDeleteButton {
 }
 
 QTableWidget#mappingTable QPushButton#mappingRowDeleteButton:hover {
-    background: palette(button);
-    border-color: palette(highlight);
-    color: palette(window-text);
+    background: rgba(168, 36, 36, 0.28);
+    border-color: rgba(228, 108, 108, 0.9);
+    color: rgb(255, 146, 146);
 }
 
 QTableWidget#mappingTable QPushButton#mappingRowDeleteButton:pressed {
-    background: palette(midlight);
-    border-color: palette(midlight);
+    background: rgba(126, 24, 24, 0.34);
+    border-color: rgba(214, 96, 96, 0.9);
 }
 
 QWidget#mappingCellContainer {

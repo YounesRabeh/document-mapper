@@ -67,7 +67,7 @@ def _create_project_open_dialog(window, file_dialog_cls, start_dir: str):
     if hasattr(dialog, "setFileMode"):
         dialog.setFileMode(QFileDialog.FileMode.AnyFile)
     if hasattr(dialog, "setOption"):
-        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, False)
         dialog.setOption(QFileDialog.Option.ShowDirsOnly, False)
     if hasattr(dialog, "setFilter"):
         dialog.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)

@@ -340,7 +340,6 @@ class MappingPage(WorkflowPage):
         self.mapping_table.setCellWidget(row, 0, self._wrap_table_editor(placeholder_combo))
 
         combo = ClickSelectComboBox()
-        combo.addItem("")
         combo.addItems(self.columns)
         combo.setMinimumHeight(34)
         if column_name:
@@ -355,7 +354,7 @@ class MappingPage(WorkflowPage):
         container = QWidget()
         container.setObjectName("mappingCellContainer")
         layout = QHBoxLayout(container)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(6, 2, 6, 2)
         layout.setSpacing(6)
         layout.addWidget(editor, 1)
         if trailing_widget is not None:
@@ -367,7 +366,6 @@ class MappingPage(WorkflowPage):
         combo.setEditable(True)
         combo.setInsertPolicy(QComboBox.NoInsert)
         combo.setMinimumHeight(34)
-        combo.addItem("")
         for value in self.detected_placeholders:
             if combo.findText(value) == -1:
                 combo.addItem(value)

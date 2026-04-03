@@ -168,7 +168,7 @@ class WorkflowPage(QWidget):
         self.header_container.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.header_layout = QVBoxLayout(self.header_container)
         self.header_layout.setContentsMargins(0, 0, 0, 0)
-        self.header_layout.setSpacing(6)
+        self.header_layout.setSpacing(0)
         self.header_layout.addWidget(self.title_label)
         self.header_layout.addWidget(self.description_label)
 
