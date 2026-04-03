@@ -1,3 +1,87 @@
+QDialog#TemplateManagerDialog {
+    background: palette(window);
+}
+
+QWidget#typePanel,
+QWidget#templatePanel {
+    background: palette(button);
+    border: 1px solid palette(mid);
+    border-radius: 16px;
+}
+
 QLabel[sectionTitle="true"] {
-    font-weight: 700;
+    color: palette(window-text);
+    font-size: 15px;
+    font-weight: 800;
+}
+
+QListWidget {
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(window-text);
+    padding: 4px;
+}
+
+QListWidget::item {
+    padding: 10px 12px;
+    margin: 2px 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+QListWidget::item:selected,
+QListWidget::item:selected:active,
+QListWidget::item:selected:!active {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border: 1px solid palette(highlight);
+}
+
+QListWidget::item:hover {
+    background: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+}
+
+QLabel#statusLabel {
+    background: palette(alternate-base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(text);
+    padding: 10px 12px;
+}
+
+QPushButton {
+    background: palette(alternate-base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(button-text);
+    font-weight: 600;
+    min-height: 38px;
+    padding: 0 14px;
+}
+
+QPushButton:hover {
+    background: palette(button);
+    border-color: palette(highlight);
+}
+
+QPushButton:pressed {
+    background: palette(midlight);
+}
+
+QPushButton#cancelButton {
+    background: palette(base);
+}
+
+QPushButton#saveButton {
+    background: palette(highlight);
+    border-color: palette(highlight);
+    color: palette(highlighted-text);
+}
+
+QPushButton#saveButton:hover {
+    background: palette(link);
+    border-color: palette(link);
 }

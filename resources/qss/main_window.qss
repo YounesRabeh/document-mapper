@@ -13,12 +13,13 @@ QScrollArea#workflowSidebarScroll > QWidget > QWidget {
 }
 
 QFrame#workflowSidebar {
-    background: palette(alternate-base);
+    background: transparent;
     border: none;
 }
 
 QFrame#templateToolbar {
-    background: palette(base);
+    background: palette(alternate-base);
+    border: none;
     border-bottom: 1px solid palette(midlight);
 }
 
@@ -26,40 +27,85 @@ QLabel#templateToolbarLabel {
     color: palette(window-text);
     font-size: 12px;
     font-weight: 700;
+    letter-spacing: 0.2px;
 }
 
 QLabel#templateToolbarStatus {
     color: palette(text);
     font-size: 12px;
+    padding-top: 2px;
 }
 
 QComboBox#templateToolbarCombo {
-    min-height: 38px;
+    min-height: 40px;
     min-width: 220px;
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(window-text);
+    padding: 0 34px 0 12px;
+    font-weight: 500;
+}
+
+QComboBox#templateToolbarCombo:hover {
+    border-color: palette(highlight);
+}
+
+QComboBox#templateToolbarCombo:focus {
+    background: palette(base);
+    border-color: palette(highlight);
+}
+
+QComboBox#templateToolbarCombo::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 28px;
+    border-left: 1px solid palette(mid);
+    background: transparent;
+}
+
+QComboBox#templateToolbarCombo::down-arrow {
+    image: url("__COMBO_ARROW_PATH__");
+    width: 12px;
+    height: 12px;
 }
 
 QPushButton#templateToolbarButton {
-    min-height: 38px;
-    padding: 0 14px;
+    min-height: 40px;
+    padding: 0 16px;
+    background: palette(base);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(button-text);
+    font-weight: 600;
+}
+
+QPushButton#templateToolbarButton:hover {
+    background: palette(alternate-base);
+    border-color: palette(highlight);
+}
+
+QPushButton#templateToolbarButton:pressed {
+    background: palette(midlight);
 }
 
 QLabel#sidebarEyebrow {
-    color: palette(mid);
+    color: palette(link);
     font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.1px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
 }
 
 QLabel#sidebarTitle {
     color: palette(window-text);
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
 }
 
 QLabel#sidebarSubtitle {
     color: palette(text);
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.5;
 }
 
 QFrame#sidebarStageCard {
@@ -69,22 +115,22 @@ QFrame#sidebarStageCard {
 }
 
 QFrame#sidebarStageCard:hover {
-    background: palette(window);
-    border-color: palette(midlight);
+    background: palette(button);
+    border-color: palette(highlight);
 }
 
 QFrame#sidebarStageCard[completed="true"] {
-    background: palette(window);
-    border-color: palette(midlight);
+    background: palette(button);
+    border-color: palette(mid);
 }
 
 QFrame#sidebarStageCard[completed="true"]:hover {
-    background: palette(button);
-    border-color: palette(midlight);
+    background: palette(base);
+    border-color: palette(highlight);
 }
 
 QFrame#sidebarStageCard[active="true"] {
-    background: palette(button);
+    background: palette(base);
     border-color: palette(highlight);
 }
 
@@ -95,7 +141,7 @@ QFrame#sidebarStageCard[blocked="true"]:hover {
 }
 
 QLabel#sidebarStageIndex {
-    background: palette(button);
+    background: palette(window);
     color: palette(text);
     border-radius: 14px;
     padding: 6px 0;
@@ -109,7 +155,7 @@ QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageIndex {
 }
 
 QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageIndex {
-    background: palette(midlight);
+    background: palette(button);
     color: palette(window-text);
 }
 
@@ -127,18 +173,17 @@ QLabel#sidebarStageTitle {
 QLabel#sidebarStageDetail {
     color: palette(text);
     font-size: 12px;
-    opacity: 0.85;
+    line-height: 1.4;
 }
 
-QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageDetail {
-    color: palette(window-text);
-}
-
-QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
-    color: palette(window-text);
-}
-
+QFrame#sidebarStageCard[completed="true"] QLabel#sidebarStageDetail,
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail,
 QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
+    color: palette(window-text);
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageTitle,
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
     color: palette(window-text);
 }
 
@@ -148,15 +193,19 @@ QFrame#sidebarStageCard[blocked="true"] QLabel#sidebarStageDetail {
 }
 
 QPushButton#sidebarUtilityButton {
-    background: palette(window);
-    border: 1px solid palette(midlight);
+    background: palette(button);
+    border: 1px solid palette(mid);
     border-radius: 12px;
     color: palette(button-text);
     font-weight: 600;
-    padding: 10px 12px;
+    padding: 11px 12px;
 }
 
 QPushButton#sidebarUtilityButton:hover {
+    background: palette(alternate-base);
     border-color: palette(highlight);
-    background: palette(button);
+}
+
+QPushButton#sidebarUtilityButton:pressed {
+    background: palette(midlight);
 }

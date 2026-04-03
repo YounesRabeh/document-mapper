@@ -21,16 +21,16 @@ QLabel#workflowTitle {
 }
 
 QLabel#workflowDescription {
-    color: palette(window-text);
+    color: palette(text);
     font-size: 14px;
-    line-height: 1.45;
+    padding-bottom: 2px;
 }
 
 QFrame#workflowCard,
 QGroupBox {
-    background: palette(alternate-base);
-    border: 1px solid palette(midlight);
-    border-radius: 14px;
+    background: palette(button);
+    border: 1px solid palette(mid);
+    border-radius: 16px;
 }
 
 QFrame#workflowCardTitleBar {
@@ -40,41 +40,42 @@ QFrame#workflowCardTitleBar {
 
 QLabel#workflowCardTitle {
     color: palette(window-text);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
-    line-height: 1.3;
+    line-height: 1.25;
 }
 
 QLabel#workflowHint {
-    color: palette(window-text);
-    font-size: 13px;
+    color: palette(text);
+    font-size: 12px;
+    padding-bottom: 1px;
 }
 
 QLabel#workflowFieldLabel {
-    color: palette(text);
-    font-size: 14px;
-    font-weight: 500;
+    color: palette(window-text);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 QLabel#workflowStatus {
-    color: palette(window-text);
+    color: palette(text);
     font-size: 13px;
-    line-height: 1.4;
+    padding-bottom: 1px;
 }
 
 QLabel#workflowInfoBox {
     background: palette(base);
-    border: 1px solid palette(mid);
-    border-radius: 10px;
+    border: 1px solid palette(midlight);
+    border-radius: 12px;
     color: palette(text);
     padding: 12px 14px;
-    line-height: 1.45;
 }
 
 QGroupBox {
     margin-top: 0;
-    padding-top: 30px;
+    padding-top: 32px;
     color: palette(window-text);
+    font-size: 14px;
     font-weight: 700;
 }
 
@@ -92,9 +93,9 @@ QSpinBox,
 QPlainTextEdit {
     background: palette(base);
     border: 1px solid palette(mid);
-    border-radius: 10px;
-    color: palette(text);
-    padding: 8px 12px;
+    border-radius: 12px;
+    color: palette(window-text);
+    padding: 9px 12px;
     selection-background-color: palette(highlight);
     selection-color: palette(highlighted-text);
 }
@@ -103,11 +104,12 @@ QLineEdit:focus,
 QComboBox:focus,
 QSpinBox:focus,
 QPlainTextEdit:focus {
+    background: palette(base);
     border: 1px solid palette(highlight);
 }
 
 QLineEdit::placeholder {
-    color: palette(mid);
+    color: palette(placeholder-text);
 }
 
 QComboBox::drop-down,
@@ -137,10 +139,10 @@ QComboBox::down-arrow {
 
 QComboBox QAbstractItemView {
     background: palette(base);
-    color: palette(text);
+    color: palette(window-text);
     border: 1px solid palette(mid);
-    selection-background-color: palette(button);
-    selection-color: palette(text);
+    selection-background-color: palette(highlight);
+    selection-color: palette(highlighted-text);
 }
 
 QComboBox QAbstractItemView::item:hover {
@@ -152,20 +154,21 @@ QComboBox QAbstractItemView::item:selected,
 QComboBox QAbstractItemView::item:selected:active,
 QComboBox QAbstractItemView::item:selected:!active {
     background: palette(button);
-    color: palette(text);
+    color: palette(window-text);
 }
 
 QListView#tokenSuggestionPopup {
     background: palette(base);
     border: 1px solid palette(mid);
-    border-radius: 10px;
-    color: palette(text);
+    border-radius: 12px;
+    color: palette(window-text);
     outline: none;
     padding: 4px;
 }
 
 QListView#tokenSuggestionPopup::item {
-    padding: 6px 10px;
+    padding: 7px 10px;
+    border-radius: 8px;
 }
 
 QListView#tokenSuggestionPopup::item:hover {
@@ -174,16 +177,16 @@ QListView#tokenSuggestionPopup::item:hover {
 }
 
 QListView#tokenSuggestionPopup::item:selected {
-    background: palette(button);
-    color: palette(text);
+    background: palette(highlight);
+    color: palette(highlighted-text);
 }
 
 QListWidget,
 QTableWidget {
     background: palette(base);
     border: 1px solid palette(mid);
-    border-radius: 10px;
-    color: palette(text);
+    border-radius: 12px;
+    color: palette(window-text);
     padding: 0;
     selection-background-color: palette(highlight);
     selection-color: palette(highlighted-text);
@@ -194,16 +197,45 @@ QTableWidget:focus {
     border: 1px solid palette(highlight);
 }
 
+QListWidget::item {
+    padding: 10px 12px;
+    margin: 2px 0;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+QListWidget::item:selected,
+QListWidget::item:selected:active,
+QListWidget::item:selected:!active {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border: 1px solid palette(highlight);
+}
+
+QListWidget::item:hover {
+    background: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+}
+
+QListWidget::item:selected:hover,
+QListWidget::item:selected:active:hover,
+QListWidget::item:selected:!active:hover {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border: 1px solid palette(link);
+}
+
 QTableWidget::item {
     padding: 6px 10px;
 }
 
 QTableWidget#mappingTable {
     background: palette(alternate-base);
-    border: 1px solid palette(midlight);
+    border: 1px solid palette(mid);
     alternate-background-color: palette(alternate-base);
     selection-background-color: transparent;
-    selection-color: palette(text);
+    selection-color: palette(window-text);
     gridline-color: transparent;
 }
 
@@ -219,48 +251,41 @@ QTableWidget#mappingTable::item {
     border: none;
 }
 
-QTableWidget#mappingTable::item:selected {
-    background: transparent;
-    color: palette(text);
-    border: none;
-}
-
+QTableWidget#mappingTable::item:selected,
 QTableWidget#mappingTable::item:selected:active,
-QTableWidget#mappingTable::item:selected:!active {
+QTableWidget#mappingTable::item:selected:!active,
+QTableWidget#mappingTable::item:hover {
     background: transparent;
-    color: palette(text);
+    color: palette(window-text);
+    border: none;
 }
 
 QTableWidget#mappingTable QComboBox,
 QTableWidget#mappingTable QLineEdit {
     background: palette(base);
     border: 1px solid palette(mid);
-    border-radius: 8px;
-    padding: 4px 10px;
+    border-radius: 10px;
+    padding: 5px 10px;
     selection-background-color: palette(button);
-    selection-color: palette(text);
-}
-
-QTableWidget#mappingTable QComboBox {
-    background: palette(base);
+    selection-color: palette(window-text);
 }
 
 QTableWidget#mappingTable QComboBox:focus,
 QTableWidget#mappingTable QLineEdit:focus {
     background: palette(base);
-    border: 1px solid palette(midlight);
+    border: 1px solid palette(highlight);
 }
 
 QTableWidget#mappingTable QPushButton#mappingRowDeleteButton {
     background: palette(base);
     border: 1px solid palette(mid);
-    border-radius: 8px;
-    color: palette(text);
+    border-radius: 10px;
+    color: palette(window-text);
     padding: 0;
-    min-width: 30px;
-    max-width: 30px;
-    min-height: 30px;
-    max-height: 30px;
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 32px;
+    max-height: 32px;
     font-size: 18px;
     font-weight: 700;
 }
@@ -276,76 +301,49 @@ QTableWidget#mappingTable QPushButton#mappingRowDeleteButton:pressed {
     border-color: palette(midlight);
 }
 
-QTableWidget#mappingTable::item:hover {
-    background: transparent;
-}
-
 QWidget#mappingCellContainer {
     background: transparent;
     border: none;
 }
 
 QHeaderView::section {
-    background: palette(button);
+    background: palette(alternate-base);
     color: palette(window-text);
     border: none;
     border-bottom: 1px solid palette(mid);
-    padding: 8px 10px;
-    font-weight: 600;
+    padding: 10px 12px;
+    font-weight: 700;
 }
 
 QTableCornerButton::section {
-    background: palette(button);
+    background: palette(alternate-base);
     border: none;
     border-bottom: 1px solid palette(mid);
 }
 
-QListWidget::item {
-    padding: 8px 10px;
-    margin: 2px 0;
-    border: 1px solid transparent;
-    border-radius: 8px;
-}
-
-QListWidget::item:selected,
-QListWidget::item:selected:active,
-QListWidget::item:selected:!active {
-    background: palette(button);
-    color: palette(window-text);
-    border: 1px solid palette(midlight);
-}
-
-QListWidget::item:hover {
-    background: palette(alternate-base);
-    color: palette(window-text);
-    border: 1px solid palette(midlight);
-}
-
-QListWidget::item:selected:hover,
-QListWidget::item:selected:active:hover,
-QListWidget::item:selected:!active:hover {
-    background: palette(button);
-    color: palette(window-text);
-    border: 1px solid palette(midlight);
-}
-
 QPushButton {
-    background: palette(button);
+    background: palette(alternate-base);
     border: 1px solid palette(mid);
-    border-radius: 10px;
+    border-radius: 12px;
     color: palette(button-text);
     padding: 10px 16px;
     font-weight: 600;
-    min-height: 16px;
+    min-height: 18px;
 }
 
 QPushButton:hover {
-    background: palette(alternate-base);
+    background: palette(button);
     border-color: palette(highlight);
 }
 
 QPushButton:pressed {
     background: palette(midlight);
+}
+
+QPushButton:disabled {
+    background: palette(button);
+    border-color: palette(midlight);
+    color: palette(mid);
 }
 
 QPushButton#workflowPrimaryButton {
@@ -370,8 +368,8 @@ QCheckBox {
 
 QCheckBox::indicator {
     background: palette(base);
-    border: 1px solid palette(mid);
-    border-radius: 4px;
+    border: 1px solid palette(midlight);
+    border-radius: 5px;
     width: 16px;
     height: 16px;
 }
