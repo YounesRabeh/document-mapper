@@ -17,3 +17,11 @@ def test_save_project_defaults_to_documents_path(main_window_factory, tmp_path):
         window._save_project_as()
 
     assert save_dialog.call_args.args[2] == str(default_project_path)
+
+
+def test_save_project_keeps_current_project_path_as_directory(main_window_factory, tmp_path):
+    window, _fake_store, _main_window_module = main_window_factory()
+    project_dir = tmp_path / "portable-project"
+
+    assert window._save_project_to_path(project_dir) is True
+    assert window.current_project_path == str(project_dir.resolve())

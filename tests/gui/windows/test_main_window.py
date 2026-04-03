@@ -18,6 +18,47 @@ from core.manager.theme_manager import ThemeManager
 from tests.helpers.gui import assert_stage_state, mapping_combo
 
 
+class FakeProjectOpenDialog:
+    next_selected_path = ""
+    next_result = QDialog.DialogCode.Accepted
+    instances = []
+
+    def __init__(self, *_args, **_kwargs):
+        self.selected_path = self.__class__.next_selected_path
+        self.result = self.__class__.next_result
+        self.__class__.instances.append(self)
+
+    def setAcceptMode(self, *_args):
+        return None
+
+    def setFileMode(self, *_args):
+        return None
+
+    def setOption(self, *_args):
+        return None
+
+    def setFilter(self, *_args):
+        return None
+
+    def setNameFilter(self, *_args):
+        return None
+
+    def selectFile(self, *_args):
+        return None
+
+    def exec(self):
+        return self.result
+
+    def selectedFiles(self):
+        return [self.selected_path] if self.selected_path else []
+
+    @classmethod
+    def reset(cls):
+        cls.next_selected_path = ""
+        cls.next_result = QDialog.DialogCode.Accepted
+        cls.instances = []
+
+
 def _unlock_generate_stage(window):
     window.stage_cards[2].clicked.emit(2)
     column_combo = mapping_combo(window, 0, 1)
@@ -179,14 +220,16 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
         mappings=[MappingEntry(placeholder="<NAME>", column_name="NAME")],
     )
     fake_store.loaded_session.selected_template = fake_store.loaded_session.templates[0].id
-    with patch.object(
-        main_window_module.QFileDialog,
-        "getOpenFileName",
-        return_value=("project.json", ""),
-    ):
+    project_dir = temp_dir / "portable-project"
+    project_dir.mkdir(parents=True, exist_ok=True)
+    (project_dir / "project.json").write_text("{}", encoding="utf-8")
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(project_dir)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog):
         window._open_project()
 
     assert window.stage_manager.currentIndex() == 0
+    assert window.current_project_path == str(project_dir.resolve())
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=False, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
@@ -194,22 +237,35 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert window.template_combo.currentText() == "Default template 01"
 
 
-def test_open_project_uses_a_single_file_dialog(main_window_factory):
+def test_open_project_uses_a_single_dialog_instance(main_window_factory, tmp_path):
     window, fake_store, main_window_module = main_window_factory()
     fake_store.loaded_session = ProjectSession()
+    project_dir = tmp_path / "portable-project"
+    project_dir.mkdir(parents=True, exist_ok=True)
+    (project_dir / "project.json").write_text("{}", encoding="utf-8")
 
-    with patch.object(
-        main_window_module.QFileDialog,
-        "getOpenFileName",
-        return_value=("", ""),
-    ) as open_dialog, patch.object(
-        main_window_module.QFileDialog,
-        "getExistingDirectory",
-    ) as directory_dialog:
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(project_dir)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog):
         window._open_project()
 
-    open_dialog.assert_called_once()
-    directory_dialog.assert_not_called()
+    assert len(FakeProjectOpenDialog.instances) == 1
+
+
+def test_open_project_accepts_project_json_for_compatibility(main_window_factory, tmp_path):
+    window, fake_store, main_window_module = main_window_factory()
+    fake_store.loaded_session = ProjectSession()
+    project_dir = tmp_path / "portable-project"
+    project_dir.mkdir(parents=True, exist_ok=True)
+    manifest = project_dir / "project.json"
+    manifest.write_text("{}", encoding="utf-8")
+
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(manifest)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog):
+        window._open_project()
+
+    assert window.current_project_path == str(project_dir.resolve())
 
 
 def test_new_project_confirmation_cancel_keeps_current_session(prepared_window):
@@ -284,15 +340,52 @@ def test_open_project_applies_saved_project_theme(prepared_window):
 
     fake_store.loaded_session = ProjectSession(theme_mode=target_theme.name)
 
-    with patch.object(
-        main_window_module.QFileDialog,
-        "getOpenFileName",
-        return_value=("project.json", ""),
-    ):
+    project_dir = prepared_window.files.root / "portable-theme-project"
+    project_dir.mkdir(parents=True, exist_ok=True)
+    (project_dir / "project.json").write_text("{}", encoding="utf-8")
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(project_dir)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog):
         window._open_project()
 
     assert window.session.theme_mode == target_theme.name
     assert ThemeManager.get_current_theme() == target_theme
+
+
+def test_open_project_rejects_folder_without_project_manifest(main_window_factory, tmp_path):
+    window, fake_store, main_window_module = main_window_factory()
+    fake_store.loaded_session = ProjectSession()
+    invalid_project_dir = tmp_path / "empty-project"
+    invalid_project_dir.mkdir(parents=True, exist_ok=True)
+
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(invalid_project_dir)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog), patch.object(
+        main_window_module.QMessageBox,
+        "critical",
+    ) as critical:
+        window._open_project()
+
+    critical.assert_called_once()
+    assert "project.json" in critical.call_args.args[2]
+
+
+def test_open_project_rejects_non_manifest_file(main_window_factory, tmp_path):
+    window, fake_store, main_window_module = main_window_factory()
+    fake_store.loaded_session = ProjectSession()
+    invalid_file = tmp_path / "notes.json"
+    invalid_file.write_text("{}", encoding="utf-8")
+
+    FakeProjectOpenDialog.reset()
+    FakeProjectOpenDialog.next_selected_path = str(invalid_file)
+    with patch.object(main_window_module, "QFileDialog", FakeProjectOpenDialog), patch.object(
+        main_window_module.QMessageBox,
+        "critical",
+    ) as critical:
+        window._open_project()
+
+    critical.assert_called_once()
+    assert "project.json" in critical.call_args.args[2]
 
 
 def test_theme_toggle_debounces_last_session_persistence(main_window_factory):

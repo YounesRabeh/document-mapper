@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import QDir
+from PySide6.QtWidgets import QFileDialog, QDialog
+
 
 def new_project(window):
     if window.document.is_dirty or window.current_project_path:
@@ -30,20 +33,19 @@ def new_project(window):
 
 def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
     start_dir = window.current_project_path or str(app_paths_cls.documents_dir())
-    path, _ = file_dialog_cls.getOpenFileName(
-        window,
-        window.localization.t("dialog.open_project.title"),
-        start_dir,
-        window.localization.t("dialog.project_files"),
-    )
-    if not path:
+    dialog = _create_project_open_dialog(window, file_dialog_cls, start_dir)
+    if dialog.exec() != QDialog.DialogCode.Accepted:
         return
+
+    selected_path = _selected_project_path(dialog)
+    if not selected_path:
+        return
+
     try:
-        loaded_session = window.session_store.load(path)
+        project_dir = _normalize_project_selection(window, selected_path)
+        loaded_session = window.session_store.load(project_dir)
         window.template_catalog.seed_default_template(loaded_session)
-        selected_path = Path(path).expanduser().resolve()
-        project_path = selected_path if selected_path.is_dir() else selected_path.parent
-        window.document.load(loaded_session, project_path)
+        window.document.load(loaded_session, project_dir)
         window._apply_project_theme_mode(
             window.session.theme_mode,
             persist_to_session=True,
@@ -55,6 +57,58 @@ def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
         window.goto_stage(1)
     except Exception as exc:  # noqa: BLE001
         message_box_cls.critical(window, window.localization.t("dialog.open_project.failed_title"), str(exc))
+
+
+def _create_project_open_dialog(window, file_dialog_cls, start_dir: str):
+    dialog = file_dialog_cls(window, window.localization.t("dialog.open_project.title"), start_dir)
+    manifest_name = getattr(window.session_store, "project_filename", "project.json")
+    if hasattr(dialog, "setAcceptMode"):
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+    if hasattr(dialog, "setFileMode"):
+        dialog.setFileMode(QFileDialog.FileMode.AnyFile)
+    if hasattr(dialog, "setOption"):
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+        dialog.setOption(QFileDialog.Option.ShowDirsOnly, False)
+    if hasattr(dialog, "setFilter"):
+        dialog.setFilter(QDir.AllDirs | QDir.Files | QDir.NoDotAndDotDot)
+    if hasattr(dialog, "setNameFilter"):
+        dialog.setNameFilter(window.localization.t("dialog.project_files"))
+    if hasattr(dialog, "selectFile"):
+        dialog.selectFile(manifest_name)
+    return dialog
+
+
+def _selected_project_path(dialog) -> str:
+    if hasattr(dialog, "selectedFiles"):
+        selected = dialog.selectedFiles()
+        if selected:
+            return str(selected[0]).strip()
+    return ""
+
+
+def _normalize_project_selection(window, selected_path: str) -> Path:
+    candidate = Path(selected_path).expanduser().resolve()
+    manifest_name = getattr(window.session_store, "project_filename", "project.json")
+
+    if not candidate.exists():
+        raise FileNotFoundError(
+            window.localization.t("dialog.open_project.selection_missing", path=str(candidate))
+        )
+
+    if candidate.is_dir():
+        manifest_path = candidate / manifest_name
+        if not manifest_path.exists():
+            raise FileNotFoundError(
+                window.localization.t("dialog.open_project.folder_missing_manifest", name=manifest_name)
+            )
+        return candidate
+
+    if candidate.name != manifest_name:
+        raise ValueError(
+            window.localization.t("dialog.open_project.invalid_file_selection", name=manifest_name)
+        )
+
+    return candidate.parent
 
 
 def save_project(window):
