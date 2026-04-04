@@ -156,9 +156,9 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
-    assert window.template_type_combo.isEnabled() is True
-    assert window.template_type_combo.currentText() == "Default template"
-    assert window.template_combo.currentText() == "Default template 01"
+    assert window.template_type_combo.isEnabled() is False
+    assert window.template_type_combo.currentText() == "None"
+    assert window.template_combo.currentText() == "None"
 
     fake_store.loaded_session = ProjectSession(
         excel_path=str(workbook),
@@ -250,8 +250,8 @@ def test_new_project_confirmation_save_current_creates_empty_project(prepared_wi
     assert window.current_project_path is None
     assert window.session.excel_path == ""
     assert window.session.output_dir == ""
-    assert window.template_type_combo.currentText() == "Default template"
-    assert window.template_combo.currentText() == "Default template 01"
+    assert window.template_type_combo.currentText() == "None"
+    assert window.template_combo.currentText() == "None"
 
 
 def test_new_project_confirmation_save_copy_creates_unsaved_copy(prepared_window):

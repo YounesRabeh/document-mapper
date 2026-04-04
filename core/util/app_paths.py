@@ -13,7 +13,6 @@ class AppPaths:
     DEFAULT_PROJECT_FILENAME = "project.json"
     DEFAULT_LOG_FILENAME = "certificate_generation.log"
     DEFAULT_RESOURCES_DIRNAME = "resources"
-    DEFAULT_TEMPLATE_RELATIVE_PATH = Path("defaults") / "default_template_01.docx"
     DEFAULT_LOCALES_DIRNAME = "locales"
 
     @classmethod
@@ -103,13 +102,6 @@ class AppPaths:
     @classmethod
     def legacy_last_session_path(cls, filename: str) -> Path:
         return cls.legacy_resources_temp_dir() / filename
-
-    @classmethod
-    def default_template_path(cls) -> Path | None:
-        candidate = cls.resource_root() / cls.DEFAULT_TEMPLATE_RELATIVE_PATH
-        if candidate.exists():
-            return candidate.resolve()
-        return None
 
     @classmethod
     def locales_dir(cls) -> Path | None:

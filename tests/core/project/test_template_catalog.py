@@ -1,25 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from core.certificate.models import ProjectSession, ProjectTemplateEntry, ProjectTemplateType
 from core.project import TemplateCatalogService
-
-
-def test_seed_default_template_populates_empty_catalog(tmp_path):
-    default_template = tmp_path / "default_template_01.docx"
-    default_template.write_text("template", encoding="utf-8")
-    session = ProjectSession()
-
-    service = TemplateCatalogService(lambda: default_template)
-    service.seed_default_template(session)
-
-    assert [entry.name for entry in session.template_types] == ["Default template"]
-    assert len(session.templates) == 1
-    assert session.templates[0].label == "Default template 01"
-    assert session.selected_template_type == "Default template"
-    assert session.selected_template == session.templates[0].id
-    assert session.template_path == str(default_template)
 
 
 def test_build_unsaved_copy_detaches_managed_templates_from_project_dir(tmp_path):
@@ -44,7 +26,7 @@ def test_build_unsaved_copy_detaches_managed_templates_from_project_dir(tmp_path
         template_path=str(managed_template),
     )
 
-    copied = TemplateCatalogService(lambda: None).build_unsaved_copy(session, project_dir)
+    copied = TemplateCatalogService().build_unsaved_copy(session, project_dir)
 
     assert copied.template_path == ""
     assert copied.templates[0].is_managed is False
@@ -62,7 +44,7 @@ def test_store_template_override_in_project_creates_selected_entry(tmp_path):
         template_override_path=str(override_template),
     )
 
-    service = TemplateCatalogService(lambda: None)
+    service = TemplateCatalogService()
     service.store_template_override_in_project(session)
 
     assert session.template_override_path == ""
@@ -81,6 +63,6 @@ def test_unique_template_display_name_appends_counter_for_duplicates():
         ],
     )
 
-    service = TemplateCatalogService(lambda: Path("/tmp/default.docx"))
+    service = TemplateCatalogService()
 
     assert service.unique_template_display_name(session, "Letters", "Offer") == "Offer 3"

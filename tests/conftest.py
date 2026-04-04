@@ -54,10 +54,12 @@ def clear_test_settings(window_config):
 
 
 @pytest.fixture
-def main_window_factory(qapp, window_config, clear_test_settings):
+def main_window_factory(qapp, window_config, clear_test_settings, tmp_path):
     from gui.windows import main_window as main_window_module
 
     resources: list[tuple[object, ExitStack]] = []
+    state_dir = tmp_path / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
 
     def _factory(
         *,
@@ -74,6 +76,7 @@ def main_window_factory(qapp, window_config, clear_test_settings):
         stack.enter_context(patch.object(main_window_module, "ExcelDataService", return_value=excel))
         stack.enter_context(patch.object(main_window_module, "CertificateGenerator", side_effect=generator_side_effect))
         stack.enter_context(patch.object(main_window_module.ThemeManager, "_refresh_styled_widgets", return_value=None))
+        stack.enter_context(patch.object(main_window_module.AppPaths, "state_dir", return_value=state_dir))
         stack.enter_context(
             patch.object(
                 main_window_module,

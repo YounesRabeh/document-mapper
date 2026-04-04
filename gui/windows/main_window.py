@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         self.excel_service = ExcelDataService()
         self.template_service = TemplatePlaceholderService()
         self.generator = CertificateGenerator(self.excel_service)
-        self.template_catalog = TemplateCatalogService(lambda: None)
+        self.template_catalog = TemplateCatalogService()
         loaded_session = self.session_store.load_last_session()
         self.template_catalog.prune_unavailable_templates(
             loaded_session,
