@@ -71,31 +71,19 @@ class MappingContextService:
         detected_placeholders: list[str],
         current_mappings: list[MappingEntry],
     ) -> tuple[list[MappingEntry], list[MappingEntry]]:
-        merged_mappings: list[MappingEntry] = []
-        detected_lookup = {placeholder: None for placeholder in detected_placeholders}
+        del detected_placeholders
+
         manual_mappings = [
             MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
             for entry in current_mappings
         ]
 
-        for placeholder in detected_placeholders:
-            matching = next((entry for entry in manual_mappings if entry.placeholder == placeholder), None)
-            if matching is not None:
-                merged_mappings.append(matching)
-            else:
-                merged_mappings.append(MappingEntry(placeholder=placeholder))
-
-        for entry in manual_mappings:
-            placeholder = entry.placeholder.strip()
-            if not placeholder or placeholder not in detected_lookup:
-                merged_mappings.append(entry)
-
-        if not merged_mappings:
-            return [MappingEntry()], []
+        if not manual_mappings:
+            return [], []
 
         persisted_mappings = [
             MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
-            for entry in merged_mappings
+            for entry in manual_mappings
             if entry.placeholder or entry.column_name
         ]
-        return merged_mappings, persisted_mappings
+        return manual_mappings, persisted_mappings

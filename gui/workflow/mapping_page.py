@@ -346,6 +346,7 @@ class MappingPage(WorkflowPage):
             combo.setCurrentText(column_name)
         else:
             combo.setCurrentIndex(-1)
+            combo.setCurrentText("")
         combo.currentTextChanged.connect(self._sync_session_from_table)
         combo.installEventFilter(self)
         self.mapping_table.setCellWidget(row, 1, self._wrap_table_editor(combo, self._create_row_delete_button()))
@@ -373,7 +374,11 @@ class MappingPage(WorkflowPage):
                 combo.addItem(value)
         if placeholder and combo.findText(placeholder) == -1:
             combo.addItem(placeholder)
-        combo.setCurrentText(placeholder)
+        if placeholder:
+            combo.setCurrentText(placeholder)
+        else:
+            combo.setCurrentIndex(-1)
+            combo.clearEditText()
         combo.currentTextChanged.connect(self._sync_session_from_table)
         combo.installEventFilter(self)
         if combo.lineEdit() is not None:
