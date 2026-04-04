@@ -16,6 +16,10 @@ class WorkflowStateController:
     def __init__(self, generator):
         self.generator = generator
 
+    @staticmethod
+    def has_mapping_prerequisites(session: ProjectSession) -> bool:
+        return bool(session.excel_path and session.output_dir and session.template_path)
+
     def compute_states(
         self,
         session: ProjectSession,
@@ -24,11 +28,12 @@ class WorkflowStateController:
         stage_count: int,
     ) -> dict[int, WorkflowStageState]:
         current_stage = max(1, min(current_stage, stage_count or 1))
+        mapping_available = self.has_mapping_prerequisites(session)
         generate_available = not self.generator.validate_session(session)
         results_available = self.has_generation_results(last_result)
         blocked_by_stage = {
             1: False,
-            2: False,
+            2: not mapping_available,
             3: not generate_available,
             4: not results_available,
         }

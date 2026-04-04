@@ -129,6 +129,7 @@ class MappingPage(WorkflowPage):
         )
         self._refresh_mapping_help_text()
         self._reload_mapping_context()
+        self._update_interaction_state()
 
     def _current_delimiter(self) -> str:
         return self.delimiter_input.text().strip()
@@ -180,6 +181,34 @@ class MappingPage(WorkflowPage):
 
         self.columns = list(result.columns)
         self._refresh_output_naming_tokens()
+
+    def _mapping_prerequisites_ready(self) -> bool:
+        return bool(self.session.excel_path and self.session.output_dir and self.session.template_path)
+
+    def _update_interaction_state(self):
+        enabled = self._mapping_prerequisites_ready()
+        for widget in (
+            self.delimiter_input,
+            self.output_naming_schema_input,
+            self.mapping_table,
+            self.add_button,
+            self.refresh_button,
+        ):
+            widget.setEnabled(enabled)
+
+        if enabled:
+            return
+
+        blockers: list[str] = []
+        if not self.session.excel_path:
+            blockers.append(self.localization.t("runtime.select_excel_workbook"))
+        if not self.session.output_dir:
+            blockers.append(self.localization.t("runtime.choose_output_folder"))
+        if not self.session.template_path:
+            blockers.append(self.localization.t("runtime.select_word_template"))
+
+        self.validation_summary.setText(blockers[0] if blockers else "")
+        self.validation_output.setPlainText("\n".join(f"- {item}" for item in blockers))
 
     def _output_naming_tokens(self) -> list[str]:
         return self.mapping_context.output_naming_tokens(self.columns)
@@ -448,6 +477,10 @@ class MappingPage(WorkflowPage):
             self.session_changed.emit()
 
     def _refresh_validation(self):
+        if not self._mapping_prerequisites_ready():
+            self._update_interaction_state()
+            return
+
         errors = self.generator.validate_session(self.session)
         if errors:
             translated = [self.localization.translate_runtime_text(error) for error in errors]
@@ -471,6 +504,7 @@ class MappingPage(WorkflowPage):
         self._load_columns()
         self._load_template_placeholders()
         self._refresh_validation()
+        self._update_interaction_state()
         self._update_actions()
 
     def _update_actions(self, *_args):

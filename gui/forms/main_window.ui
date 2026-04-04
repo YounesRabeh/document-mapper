@@ -259,7 +259,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionNewProject"/>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
     <addaction name="actionSaveProjectAs"/>
@@ -290,11 +289,6 @@
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
-  <action name="actionNewProject">
-   <property name="text">
-    <string>New project</string>
-   </property>
-  </action>
   <action name="actionOpenProject">
    <property name="text">
     <string>Open project</string>

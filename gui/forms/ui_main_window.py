@@ -28,8 +28,6 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1280, 760)
-        self.actionNewProject = QAction(MainWindow)
-        self.actionNewProject.setObjectName(u"actionNewProject")
         self.actionOpenProject = QAction(MainWindow)
         self.actionOpenProject.setObjectName(u"actionOpenProject")
         self.actionSaveProject = QAction(MainWindow)
@@ -183,7 +181,6 @@ class Ui_MainWindow(object):
         self.menuBar.addAction(self.menuFile.menuAction())
         self.menuBar.addAction(self.menuView.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
-        self.menuFile.addAction(self.actionNewProject)
         self.menuFile.addAction(self.actionOpenProject)
         self.menuFile.addAction(self.actionSaveProject)
         self.menuFile.addAction(self.actionSaveProjectAs)
@@ -202,7 +199,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Document Mapper", None))
-        self.actionNewProject.setText(QCoreApplication.translate("MainWindow", u"New project", None))
         self.actionOpenProject.setText(QCoreApplication.translate("MainWindow", u"Open project", None))
         self.actionSaveProject.setText(QCoreApplication.translate("MainWindow", u"Save project", None))
         self.actionSaveProjectAs.setText(QCoreApplication.translate("MainWindow", u"Save project as...", None))
@@ -223,4 +219,3 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QCoreApplication.translate("MainWindow", u"View", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
-
