@@ -259,7 +259,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>

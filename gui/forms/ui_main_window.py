@@ -179,7 +179,6 @@ class Ui_MainWindow(object):
         self.menuBar.addAction(self.menuFile.menuAction())
         self.menuBar.addAction(self.menuView.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
-        self.menuFile.addAction(self.actionOpenProject)
         self.menuFile.addAction(self.actionSaveProject)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionExit)
