@@ -37,7 +37,7 @@ def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
                 window.localization.t("dialog.open_project.missing_internal_project", path=str(project_dir))
             )
         loaded_session = window.session_store.load(project_dir)
-        window.template_catalog.seed_default_template(loaded_session)
+        window.template_catalog.prune_unavailable_templates(loaded_session, project_dir)
         window.document.load(loaded_session, project_dir)
         window._apply_project_theme_mode(
             window.session.theme_mode,
@@ -95,7 +95,6 @@ def save_project_to_path(window, path: str | Path, *, message_box_cls):
 
 def activate_new_project(window, session, *, saved: bool):
     next_session = session.clone()
-    window.template_catalog.seed_default_template(next_session)
     window.document.activate(next_session, None, saved=saved)
     window._apply_project_theme_mode(
         window.session.theme_mode,
@@ -202,32 +201,50 @@ def sync_effective_template_path(window, session=None):
 def refresh_template_toolbar(window):
     selected_type = window.session.selected_template_type
     type_names = [entry.name for entry in window.session.template_types]
+    none_label = window.localization.t("common.none")
 
     window.template_type_combo.blockSignals(True)
     window.template_combo.blockSignals(True)
     try:
         window.template_type_combo.clear()
-        for type_name in type_names:
-            window.template_type_combo.addItem(type_name, type_name)
+        if type_names:
+            for type_name in type_names:
+                window.template_type_combo.addItem(type_name, type_name)
 
-        if selected_type:
-            index = window.template_type_combo.findData(selected_type)
-            if index >= 0:
-                window.template_type_combo.setCurrentIndex(index)
-        elif window.template_type_combo.count() > 0:
+            if selected_type:
+                index = window.template_type_combo.findData(selected_type)
+                if index >= 0:
+                    window.template_type_combo.setCurrentIndex(index)
+                else:
+                    window.session.selected_template_type = ""
+                    window.template_type_combo.setCurrentIndex(0)
+            else:
+                window.template_type_combo.setCurrentIndex(0)
+        else:
+            window.session.selected_template_type = ""
+            window.session.selected_template = ""
+            window.template_type_combo.addItem(none_label, "")
             window.template_type_combo.setCurrentIndex(0)
 
         current_type = window.session.selected_template_type
         template_entries = window.session.templates_for_type(current_type)
         window.template_combo.clear()
-        for entry in template_entries:
-            window.template_combo.addItem(entry.label, entry.id)
+        if template_entries:
+            for entry in template_entries:
+                window.template_combo.addItem(entry.label, entry.id)
 
-        if window.session.selected_template:
-            index = window.template_combo.findData(window.session.selected_template)
-            if index >= 0:
-                window.template_combo.setCurrentIndex(index)
-        elif window.template_combo.count() > 0:
+            if window.session.selected_template:
+                index = window.template_combo.findData(window.session.selected_template)
+                if index >= 0:
+                    window.template_combo.setCurrentIndex(index)
+                else:
+                    window.session.selected_template = ""
+                    window.template_combo.setCurrentIndex(0)
+            else:
+                window.template_combo.setCurrentIndex(0)
+        else:
+            window.session.selected_template = ""
+            window.template_combo.addItem(none_label, "")
             window.template_combo.setCurrentIndex(0)
 
         has_types = bool(type_names)

@@ -71,6 +71,7 @@
   "dialog.select_project_templates.title": "Importa template del progetto",
   "dialog.rename_template.title": "Rinomina template",
   "dialog.rename_template.prompt": "Nome template:",
+  "common.none": "Nessuno",
   "common.not_selected": "Non selezionato",
   "common.yes": "Sì",
   "common.no": "No",

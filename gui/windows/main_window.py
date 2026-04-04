@@ -73,9 +73,12 @@ class MainWindow(QMainWindow):
         self.excel_service = ExcelDataService()
         self.template_service = TemplatePlaceholderService()
         self.generator = CertificateGenerator(self.excel_service)
-        self.template_catalog = TemplateCatalogService(AppPaths.default_template_path)
+        self.template_catalog = TemplateCatalogService(lambda: None)
         loaded_session = self.session_store.load_last_session()
-        self.template_catalog.seed_default_template(loaded_session)
+        self.template_catalog.prune_unavailable_templates(
+            loaded_session,
+            AppPaths.internal_project_dir(),
+        )
         self.document = ProjectDocument(session=loaded_session)
         self.workflow_controller = WorkflowStateController(self.generator)
 

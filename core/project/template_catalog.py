@@ -17,6 +17,38 @@ class TemplateCatalogService:
     def __init__(self, default_template_path_provider: Callable[[], Path | None]):
         self._default_template_path_provider = default_template_path_provider
 
+    def prune_unavailable_templates(self, session: ProjectSession, project_dir: Path | None = None):
+        kept_entries: list[ProjectTemplateEntry] = []
+
+        for entry in session.templates:
+            candidate_path: Path | None = None
+            if entry.is_managed and entry.relative_path and project_dir is not None:
+                candidate_path = (project_dir / entry.relative_path).expanduser().resolve()
+            elif entry.source_path:
+                candidate_path = Path(entry.source_path).expanduser().resolve()
+            elif session.selected_template == entry.id and session.template_path:
+                candidate_path = Path(session.template_path).expanduser().resolve()
+
+            if candidate_path is None or candidate_path.exists():
+                kept_entries.append(entry)
+
+        if len(kept_entries) == len(session.templates):
+            return
+
+        session.templates = kept_entries
+        session.template_types = [
+            template_type
+            for template_type in session.template_types
+            if any(entry.type_name == template_type.name for entry in session.templates)
+        ]
+        if session.selected_template and session.selected_template_entry() is None:
+            session.selected_template = ""
+        if session.selected_template_type and not session.templates_for_type(session.selected_template_type):
+            session.selected_template_type = ""
+        if not session.templates:
+            session.template_path = ""
+        session._ensure_template_catalog_consistency()
+
     def seed_default_template(self, session: ProjectSession):
         if session.templates:
             return
