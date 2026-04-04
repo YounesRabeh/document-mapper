@@ -68,25 +68,29 @@ def save_project_to_path(window, path: str | Path, *, message_box_cls):
     if session_to_save is None:
         return False
 
-    saved_path = window.session_store.save(
-        session_to_save,
-        project_dir,
-        source_project_dir=source_project_dir,
-    )
-    loaded_session = window.session_store.load(project_dir)
-    _restore_local_session_fields(loaded_session, session_to_save)
-    loaded_session.template_path = window.session_store.resolve_effective_template_path(loaded_session, project_dir)
+    try:
+        saved_path = window.session_store.save(
+            session_to_save,
+            project_dir,
+            source_project_dir=source_project_dir,
+        )
+        loaded_session = window.session_store.load(project_dir)
+        loaded_session.template_path = window.session_store.resolve_effective_template_path(
+            loaded_session,
+            project_dir,
+        )
+    except Exception as exc:  # noqa: BLE001
+        message_box_cls.critical(
+            window,
+            window.localization.t("dialog.save_project.failed_title"),
+            str(exc),
+        )
+        return False
+
     window.document.load(loaded_session, Path(saved_path).parent)
     window._persist_last_session_async()
     window._refresh_pages()
     return True
-
-
-def _restore_local_session_fields(target_session, source_session):
-    target_session.excel_path = source_session.excel_path
-    target_session.output_dir = source_session.output_dir
-    target_session.license_path = source_session.license_path
-    target_session.template_override_path = source_session.template_override_path
 
 
 def activate_new_project(window, session, *, saved: bool):

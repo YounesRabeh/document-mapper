@@ -405,10 +405,20 @@ class MainWindow(QMainWindow):
             return
         if self._theme_persist_timer.isActive():
             self._theme_persist_timer.stop()
-        self._persist_last_session_async()
+        if action == "discard":
+            baseline_session = self.document.saved_session() or ProjectSession(
+                theme_mode=self.default_theme_mode
+            )
+            self._last_session_persistence.enqueue(baseline_session)
+        else:
+            self._persist_last_session_async()
         flushed = self._last_session_persistence.flush_and_stop(self.LAST_SESSION_FLUSH_TIMEOUT_SECONDS)
         if not flushed:
-            fallback_snapshot = self._last_session_persistence.latest_snapshot() or self.session.clone()
+            fallback_snapshot = self._last_session_persistence.latest_snapshot() or (
+                self.document.saved_session() if action == "discard" else self.session.clone()
+            )
+            if fallback_snapshot is None:
+                fallback_snapshot = ProjectSession(theme_mode=self.default_theme_mode)
             try:
                 self.session_store.save_last_session(fallback_snapshot)
             except Exception:  # noqa: BLE001

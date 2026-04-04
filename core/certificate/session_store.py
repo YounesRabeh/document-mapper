@@ -183,10 +183,12 @@ class ProjectSessionStore:
             else None
         )
         used_relative_paths = {entry.relative_path for entry in session.templates if entry.relative_path}
+        expected_relative_paths: set[str] = set()
 
         for entry in session.templates:
             if entry.is_managed and entry.relative_path and (project_dir / entry.relative_path).exists():
                 entry.source_path = ""
+                expected_relative_paths.add(entry.relative_path)
                 continue
 
             if entry.is_managed and entry.relative_path and source_project_root is not None:
@@ -197,11 +199,15 @@ class ProjectSessionStore:
                     shutil.copy2(managed_source_path, target_path)
                     entry.source_path = ""
                     used_relative_paths.add(entry.relative_path)
+                    expected_relative_paths.add(entry.relative_path)
                     continue
 
             source_path = Path(entry.source_path).expanduser().resolve() if entry.source_path else None
             if source_path is None or not source_path.exists():
-                continue
+                missing_path = entry.source_path or entry.relative_path or entry.label
+                raise FileNotFoundError(
+                    f"Template file not found for '{entry.label}': {missing_path}"
+                )
             relative_path = self._unique_managed_relative_path(
                 used_relative_paths,
                 source_path,
@@ -214,6 +220,31 @@ class ProjectSessionStore:
             entry.is_managed = True
             entry.source_path = ""
             used_relative_paths.add(entry.relative_path)
+            expected_relative_paths.add(entry.relative_path)
+
+        self._cleanup_removed_managed_templates(project_dir, expected_relative_paths)
+
+    def _cleanup_removed_managed_templates(self, project_dir: Path, expected_relative_paths: set[str]):
+        templates_dir = project_dir / self.managed_templates_dirname
+        if not templates_dir.exists():
+            return
+
+        expected_paths = {
+            str((project_dir / relative_path).resolve())
+            for relative_path in expected_relative_paths
+            if relative_path
+        }
+
+        for candidate in templates_dir.rglob("*"):
+            if candidate.is_file() and str(candidate.resolve()) not in expected_paths:
+                candidate.unlink(missing_ok=True)
+
+        for candidate in sorted(templates_dir.rglob("*"), key=lambda path: len(path.parts), reverse=True):
+            if candidate.is_dir():
+                try:
+                    candidate.rmdir()
+                except OSError:
+                    pass
 
     def _unique_managed_relative_path(
         self,

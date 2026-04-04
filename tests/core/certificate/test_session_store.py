@@ -39,19 +39,18 @@ def test_session_store_round_trip(tmp_path):
     saved_payload = json.loads(saved_path.read_text(encoding="utf-8"))
 
     assert saved_path == project_dir / "project.json"
-    assert "excel_path" not in saved_payload
-    assert "output_dir" not in saved_payload
-    assert "template_path" not in saved_payload
-    assert "template_override_path" not in saved_payload
-    assert "license_path" not in saved_payload
+    assert saved_payload["excel_path"] == "/tmp/data.xlsx"
+    assert saved_payload["output_dir"] == "/tmp/out"
+    assert saved_payload["template_override_path"] == ""
+    assert saved_payload["license_path"] == ""
     assert saved_payload["templates"][0]["relative_path"].startswith("templates/")
     assert "source_path" not in saved_payload["templates"][0]
     assert loaded.selected_template_type == "General"
     assert loaded.selected_template_entry() is not None
     assert loaded.selected_template_entry().is_managed is True
     assert Path(loaded.template_path).exists()
-    assert loaded.excel_path == ""
-    assert loaded.output_dir == ""
+    assert loaded.excel_path == "/tmp/data.xlsx"
+    assert loaded.output_dir == "/tmp/out"
     assert loaded.template_override_path == ""
     assert loaded.output_naming_schema == "{COGNOME}_{ROW}"
     assert loaded.placeholder_delimiter == "{{"

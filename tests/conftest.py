@@ -9,7 +9,12 @@ import pytest
 from PySide6.QtCore import QSettings
 from PySide6.QtWidgets import QApplication
 
-from tests.helpers.fakes import FakeExcelService, FakeGenerator, FakeSessionStore
+from tests.helpers.fakes import (
+    FakeExcelService,
+    FakeGenerator,
+    FakeLastSessionPersistenceService,
+    FakeSessionStore,
+)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -68,6 +73,14 @@ def main_window_factory(qapp, window_config, clear_test_settings):
         stack.enter_context(patch.object(main_window_module, "ProjectSessionStore", return_value=session_store))
         stack.enter_context(patch.object(main_window_module, "ExcelDataService", return_value=excel))
         stack.enter_context(patch.object(main_window_module, "CertificateGenerator", side_effect=generator_side_effect))
+        stack.enter_context(patch.object(main_window_module.ThemeManager, "_refresh_styled_widgets", return_value=None))
+        stack.enter_context(
+            patch.object(
+                main_window_module,
+                "LastSessionPersistenceService",
+                side_effect=lambda store: FakeLastSessionPersistenceService(store),
+            )
+        )
         window = main_window_module.MainWindow(window_config)
         resources.append((window, stack))
         return window, session_store, main_window_module
@@ -76,6 +89,7 @@ def main_window_factory(qapp, window_config, clear_test_settings):
 
     for window, stack in reversed(resources):
         try:
-            window.close()
+            with patch.object(window, "_confirm_close_action", return_value="discard"):
+                window.close()
         finally:
             stack.close()

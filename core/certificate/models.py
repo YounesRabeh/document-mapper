@@ -284,6 +284,11 @@ class ProjectSession:
 
     def to_project_dict(self) -> dict[str, Any]:
         return {
+            "excel_path": self.excel_path,
+            "template_path": self.template_path,
+            "template_override_path": self.template_override_path,
+            "output_dir": self.output_dir,
+            "license_path": self.license_path,
             "theme_mode": self.theme_mode,
             "selected_template_type": self.selected_template_type,
             "selected_template": self.selected_template,
@@ -385,11 +390,11 @@ class ProjectSession:
                     raw_delimiter = legacy_start
 
         session = cls(
-            excel_path="",
+            excel_path=str(payload.get("excel_path", "")).strip(),
             template_path=str(payload.get("template_path", "")).strip(),
-            template_override_path="",
-            output_dir="",
-            license_path="",
+            template_override_path=str(payload.get("template_override_path", "")).strip(),
+            output_dir=str(payload.get("output_dir", "")).strip(),
+            license_path=str(payload.get("license_path", "")).strip(),
             theme_mode=payload.get("theme_mode", ""),
             selected_template_type=str(payload.get("selected_template_type", "")).strip(),
             selected_template=str(payload.get("selected_template", "")).strip(),

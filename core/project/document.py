@@ -13,6 +13,7 @@ class ProjectDocument:
     project_path: str | None = None
     last_result: GenerationResult = field(default_factory=GenerationResult)
     _saved_snapshot: dict[str, Any] | None = field(default=None, init=False, repr=False)
+    _saved_session: ProjectSession | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self):
         self.session = self.session.clone()
@@ -55,9 +56,16 @@ class ProjectDocument:
             self.mark_saved()
         else:
             self._saved_snapshot = None
+            self._saved_session = None
 
     def mark_saved(self):
         self._saved_snapshot = self.snapshot()
+        self._saved_session = self.session.clone()
+
+    def saved_session(self) -> ProjectSession | None:
+        if self._saved_session is None:
+            return None
+        return self._saved_session.clone()
 
     def mark_unsaved(self):
         return None

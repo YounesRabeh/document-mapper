@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -91,11 +92,17 @@ class FakeSessionStore:
         return Path(tempfile.gettempdir()) / "last_session.json"
 
     def save(self, session, path, source_project_dir=None):
+        del source_project_dir
         self.session = session.clone()
+        self.loaded_session = self.session.clone()
         resolved = Path(path)
         if resolved.suffix.lower() == ".json":
-            return resolved
-        return resolved / "project.json"
+            project_json = resolved
+        else:
+            project_json = resolved / "project.json"
+        project_json.parent.mkdir(parents=True, exist_ok=True)
+        project_json.write_text(json.dumps(self.session.to_project_dict(), indent=2), encoding="utf-8")
+        return project_json
 
     def load(self, _path):
         if self.loaded_session is not None:
@@ -115,6 +122,29 @@ class FakeSessionStore:
             if selected_entry.relative_path:
                 return selected_entry.relative_path
         return session.template_path
+
+
+class FakeLastSessionPersistenceService:
+    def __init__(self, session_store):
+        self._session_store = session_store
+        self._latest_snapshot: ProjectSession | None = None
+
+    def enqueue(self, snapshot: ProjectSession):
+        self._latest_snapshot = snapshot.clone()
+        self._session_store.save_last_session(self._latest_snapshot.clone())
+
+    def latest_snapshot(self) -> ProjectSession | None:
+        if self._latest_snapshot is None:
+            return None
+        return self._latest_snapshot.clone()
+
+    def flush(self, timeout: float | None = None) -> bool:
+        del timeout
+        return True
+
+    def flush_and_stop(self, timeout: float | None = None) -> bool:
+        del timeout
+        return True
 
 
 class FakeDocument:

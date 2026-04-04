@@ -162,6 +162,7 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
 
     fake_store.loaded_session = ProjectSession(
         excel_path=str(workbook),
+        template_path=str(template),
         output_dir=str(temp_dir),
         template_types=[ProjectTemplateType("Default template")],
         templates=[
@@ -188,12 +189,12 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
     assert window.stage_manager.currentIndex() == 0
     assert window.current_project_path == str(project_dir.resolve())
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
-    assert_stage_state(window, 3, active=False, blocked=True, completed=False)
+    assert_stage_state(window, 3, active=False, blocked=False, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
     assert window.template_type_combo.currentText() == "Default template"
     assert window.template_combo.currentText() == "Default template 01"
-    assert window.session.excel_path == ""
-    assert window.session.output_dir == ""
+    assert window.session.excel_path == str(workbook)
+    assert window.session.output_dir == str(temp_dir)
 
 
 def test_open_project_loads_internal_project_directory(main_window_factory, tmp_path):
@@ -329,7 +330,12 @@ def test_close_event_flushes_pending_last_session_snapshot(main_window_factory):
     assert fake_store.session is None
 
     window._toggle_theme()
-    window.close()
+    with patch.object(window, "_confirm_close_action", return_value="save"), patch.object(
+        window,
+        "_save_project",
+        return_value=True,
+    ):
+        window.close()
 
     assert fake_store.session is not None
     assert fake_store.session.theme_mode == window.session.theme_mode

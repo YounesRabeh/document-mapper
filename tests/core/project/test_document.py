@@ -4,15 +4,21 @@ from core.certificate.models import ProjectSession
 from core.project import ProjectDocument
 
 
-def test_project_document_ignores_session_only_fields_in_project_snapshot():
+def test_project_document_tracks_persisted_project_fields_in_snapshot():
     document = ProjectDocument(session=ProjectSession())
 
     assert document.is_dirty is False
 
     document.session.excel_path = "/tmp/data.xlsx"
+    assert document.is_dirty is True
+
+    document.session.excel_path = ""
     assert document.is_dirty is False
 
     document.session.output_dir = "/tmp/out"
+    assert document.is_dirty is True
+
+    document.session.output_dir = ""
     assert document.is_dirty is False
 
     document.session.output_naming_schema = "{ROW}"
