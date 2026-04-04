@@ -97,6 +97,7 @@ def sync_effective_template_path(window, session=None):
 def refresh_template_toolbar(window):
     selected_type = window.session.selected_template_type
     type_names = [entry.name for entry in window.session.template_types]
+    none_label = window.localization.t("common.none")
 
     window.template_type_combo.blockSignals(True)
     window.template_combo.blockSignals(True)
@@ -112,7 +113,8 @@ def refresh_template_toolbar(window):
             elif window.template_type_combo.count() > 0:
                 window.template_type_combo.setCurrentIndex(0)
         else:
-            window.template_type_combo.setCurrentIndex(-1)
+            window.template_type_combo.addItem(none_label, "")
+            window.template_type_combo.setCurrentIndex(0)
 
         current_type = window.session.selected_template_type
         template_entries = window.session.templates_for_type(current_type)
@@ -127,7 +129,8 @@ def refresh_template_toolbar(window):
             elif window.template_combo.count() > 0:
                 window.template_combo.setCurrentIndex(0)
         else:
-            window.template_combo.setCurrentIndex(-1)
+            window.template_combo.addItem(none_label, "")
+            window.template_combo.setCurrentIndex(0)
 
         has_types = bool(type_names)
         has_templates = bool(template_entries)

@@ -56,6 +56,7 @@
   "dialog.select_project_templates.title": "Import project templates",
   "dialog.rename_template.title": "Rename template",
   "dialog.rename_template.prompt": "Template name:",
+  "common.none": "None",
   "common.not_selected": "Not selected",
   "common.yes": "Yes",
   "common.no": "No",
