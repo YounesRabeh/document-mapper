@@ -262,27 +262,12 @@ class ProjectSession:
         return [entry for entry in self.templates if entry.type_name == normalized]
 
     def to_dict(self) -> dict[str, Any]:
-        return {
-            "excel_path": self.excel_path,
-            "template_path": self.template_path,
-            "template_override_path": self.template_override_path,
-            "output_dir": self.output_dir,
-            "license_path": self.license_path,
-            "theme_mode": self.theme_mode,
-            "selected_template_type": self.selected_template_type,
-            "selected_template": self.selected_template,
-            "template_types": [entry.to_dict() for entry in self.template_types],
-            "templates": [entry.to_dict() for entry in self.templates],
-            "output_naming_schema": self.output_naming_schema,
-            "placeholder_delimiter": self.placeholder_delimiter,
-            "detected_placeholder_delimiter": self.detected_placeholder_delimiter,
-            "detected_placeholder_count": self.detected_placeholder_count,
-            "export_pdf": self.export_pdf,
-            "pdf_timeout_seconds": self.pdf_timeout_seconds,
-            "mappings": [entry.to_dict() for entry in self.mappings],
-        }
+        return self._to_payload(project_mode=False)
 
     def to_project_dict(self) -> dict[str, Any]:
+        return self._to_payload(project_mode=True)
+
+    def _to_payload(self, *, project_mode: bool) -> dict[str, Any]:
         return {
             "excel_path": self.excel_path,
             "template_path": self.template_path,
@@ -293,7 +278,10 @@ class ProjectSession:
             "selected_template_type": self.selected_template_type,
             "selected_template": self.selected_template,
             "template_types": [entry.to_dict() for entry in self.template_types],
-            "templates": [entry.to_project_dict() for entry in self.templates],
+            "templates": [
+                entry.to_project_dict() if project_mode else entry.to_dict()
+                for entry in self.templates
+            ],
             "output_naming_schema": self.output_naming_schema,
             "placeholder_delimiter": self.placeholder_delimiter,
             "detected_placeholder_delimiter": self.detected_placeholder_delimiter,
@@ -305,68 +293,17 @@ class ProjectSession:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "ProjectSession":
-        payload = data or {}
-        raw_timeout = payload.get("pdf_timeout_seconds", 300)
-        try:
-            timeout = int(raw_timeout)
-        except (TypeError, ValueError):
-            timeout = 300
-
-        raw_delimiter = str(payload.get("placeholder_delimiter", "")).strip()
-        raw_output_naming_schema = (
-            normalize_output_naming_schema(payload.get("output_naming_schema", ""))
-            if "output_naming_schema" in payload
-            else DEFAULT_OUTPUT_NAMING_SCHEMA
-        )
-        if not raw_delimiter:
-            legacy_start = str(payload.get("placeholder_start", "")).strip()
-            legacy_end = str(payload.get("placeholder_end", "")).strip()
-            if legacy_start and legacy_end:
-                if legacy_end == derive_placeholder_boundaries(legacy_start)[1]:
-                    raw_delimiter = legacy_start
-                elif legacy_start == legacy_end:
-                    raw_delimiter = legacy_start
-
-        session = cls(
-            excel_path=str(payload.get("excel_path", "")).strip(),
-            template_path=str(payload.get("template_path", "")).strip(),
-            template_override_path=str(payload.get("template_override_path", "")).strip(),
-            output_dir=str(payload.get("output_dir", "")).strip(),
-            license_path=str(payload.get("license_path", "")).strip(),
-            theme_mode=payload.get("theme_mode", ""),
-            selected_template_type=str(payload.get("selected_template_type", "")).strip(),
-            selected_template=str(payload.get("selected_template", "")).strip(),
-            template_types=[
-                ProjectTemplateType.from_dict(entry)
-                for entry in payload.get("template_types", [])
-                if isinstance(entry, dict)
-            ],
-            templates=[
-                ProjectTemplateEntry.from_dict(entry)
-                for entry in payload.get("templates", [])
-                if isinstance(entry, dict)
-            ],
-            output_naming_schema=raw_output_naming_schema,
-            placeholder_delimiter=raw_delimiter,
-            detected_placeholder_delimiter=str(payload.get("detected_placeholder_delimiter", "")).strip(),
-            detected_placeholder_count=payload.get("detected_placeholder_count", 0),
-            export_pdf=bool(payload.get("export_pdf", False)),
-            pdf_timeout_seconds=max(1, timeout),
-            mappings=[
-                MappingEntry.from_dict(entry)
-                for entry in payload.get("mappings", [])
-                if isinstance(entry, dict)
-            ],
-        )
-        session._migrate_legacy_template_fields(payload)
-        session._ensure_template_catalog_consistency()
-        return session
+        return cls._from_payload(data, project_mode=False)
 
     def clone(self) -> "ProjectSession":
         return ProjectSession.from_dict(self.to_dict())
 
     @classmethod
     def from_project_dict(cls, data: dict[str, Any] | None) -> "ProjectSession":
+        return cls._from_payload(data, project_mode=True)
+
+    @classmethod
+    def _from_payload(cls, data: dict[str, Any] | None, *, project_mode: bool) -> "ProjectSession":
         payload = data or {}
         raw_timeout = payload.get("pdf_timeout_seconds", 300)
         try:
@@ -404,7 +341,11 @@ class ProjectSession:
                 if isinstance(entry, dict)
             ],
             templates=[
-                ProjectTemplateEntry.from_project_dict(entry)
+                (
+                    ProjectTemplateEntry.from_project_dict(entry)
+                    if project_mode
+                    else ProjectTemplateEntry.from_dict(entry)
+                )
                 for entry in payload.get("templates", [])
                 if isinstance(entry, dict)
             ],

@@ -287,11 +287,6 @@
    <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
-  <action name="actionOpenProject">
-   <property name="text">
-    <string>Open project</string>
-   </property>
-  </action>
   <action name="actionSaveProject">
    <property name="text">
     <string>Save project</string>

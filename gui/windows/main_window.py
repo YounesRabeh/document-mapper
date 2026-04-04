@@ -31,11 +31,9 @@ from gui.windows.project_actions import (
     handle_template_selection_changed,
     handle_template_type_changed,
     manage_templates,
-    open_project,
     prepare_session_for_save,
     refresh_template_toolbar,
     save_project,
-    save_project_as,
     save_project_to_path,
     show_about,
     sync_effective_template_path,
@@ -120,7 +118,6 @@ class MainWindow(QMainWindow):
         self.view_menu = self.ui.menuView
         self.help_menu = self.ui.menuHelp
         self.language_menu = self.ui.menuLanguage
-        self.open_project_action = self.ui.actionOpenProject
         self.save_project_action = self.ui.actionSaveProject
         self.exit_action = self.ui.actionExit
         self.toggle_theme_action = self.ui.actionToggleTheme
@@ -215,7 +212,6 @@ class MainWindow(QMainWindow):
         self.document.last_result = value
 
     def _create_menu_bar(self):
-        self.open_project_action.triggered.connect(self._open_project)
         self.save_project_action.triggered.connect(self._save_project)
         self.exit_action.triggered.connect(self.close)
         self.toggle_theme_action.triggered.connect(self._toggle_theme)
@@ -241,19 +237,8 @@ class MainWindow(QMainWindow):
     def goto_stage(self, index: int):
         return goto_stage(self, index)
 
-    def _open_project(self):
-        open_project(self, file_dialog_cls=None, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
-
     def _save_project(self):
         return save_project(self, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
-
-    def _save_project_as(self, *, message_box_cls=QMessageBox):
-        return save_project_as(
-            self,
-            file_dialog_cls=None,
-            app_paths_cls=AppPaths,
-            message_box_cls=message_box_cls,
-        )
 
     def _save_project_to_path(self, path, *, message_box_cls=QMessageBox):
         return save_project_to_path(self, path, message_box_cls=message_box_cls)

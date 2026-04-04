@@ -18,7 +18,8 @@ class WorkflowStateController:
 
     @staticmethod
     def has_mapping_prerequisites(session: ProjectSession) -> bool:
-        return bool(session.excel_path and session.output_dir and session.template_path)
+        has_effective_template = bool(session.template_path and (session.selected_template or session.template_override_path))
+        return bool(session.excel_path and session.output_dir and has_effective_template)
 
     def compute_states(
         self,

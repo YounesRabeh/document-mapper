@@ -35,9 +35,6 @@ def test_project_document_returns_clean_when_changes_revert_to_saved_snapshot():
     document.session.output_naming_schema = "{NAME}_{LASTNAME}"
     assert document.is_dirty is False
 
-    document.mark_unsaved()
-    assert document.is_dirty is False
-
 
 def test_project_document_load_and_activate_reset_or_preserve_saved_state():
     loaded = ProjectSession(excel_path="/tmp/workbook.xlsx")

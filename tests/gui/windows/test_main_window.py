@@ -7,9 +7,6 @@ from PySide6.QtWidgets import QDialog
 
 from core.certificate.models import (
     GenerationResult,
-    MappingEntry,
-    ProjectSession,
-    ProjectTemplateEntry,
     ProjectTemplateType,
 )
 from core.enums.app_themes import AppTheme
@@ -139,102 +136,6 @@ def test_specific_template_section_is_always_visible(prepared_window):
 
     window.localization.set_language("it")
     assert window.setup_page.clear_override_button.text() == "Rimuovi template monouso"
-
-
-def test_open_project_recomputes_workflow_states(prepared_window):
-    window = prepared_window.window
-    fake_store = prepared_window.fake_store
-    main_window_module = prepared_window.main_window_module
-    workbook = prepared_window.files.workbook
-    template = prepared_window.files.template
-    temp_dir = prepared_window.files.root
-
-    _unlock_generate_stage(window)
-    assert_stage_state(window, 3, blocked=False)
-
-    fake_store.loaded_session = ProjectSession(
-        excel_path=str(workbook),
-        template_path=str(template),
-        output_dir=str(temp_dir),
-        template_types=[ProjectTemplateType("Default template")],
-        templates=[
-            ProjectTemplateEntry(
-                display_name="Default template 01",
-                type_name="Default template",
-                source_path=str(template),
-                is_managed=False,
-            )
-        ],
-        selected_template_type="Default template",
-        placeholder_delimiter="<",
-        detected_placeholder_delimiter="<",
-        detected_placeholder_count=1,
-        mappings=[MappingEntry(placeholder="<NAME>", column_name="NAME")],
-    )
-    fake_store.loaded_session.selected_template = fake_store.loaded_session.templates[0].id
-    project_dir = temp_dir / "portable-project"
-    project_dir.mkdir(parents=True, exist_ok=True)
-    (project_dir / "project.json").write_text("{}", encoding="utf-8")
-    with patch.object(main_window_module.AppPaths, "internal_project_dir", return_value=project_dir):
-        window._open_project()
-
-    assert window.stage_manager.currentIndex() == 0
-    assert window.current_project_path == str(project_dir.resolve())
-    assert_stage_state(window, 1, active=True, blocked=False, completed=False)
-    assert_stage_state(window, 3, active=False, blocked=False, completed=False)
-    assert_stage_state(window, 4, active=False, blocked=True, completed=False)
-    assert window.template_type_combo.currentText() == "Default template"
-    assert window.template_combo.currentText() == "Default template 01"
-    assert window.session.excel_path == str(workbook)
-    assert window.session.output_dir == str(temp_dir)
-
-
-def test_open_project_loads_internal_project_directory(main_window_factory, tmp_path):
-    window, fake_store, main_window_module = main_window_factory()
-    fake_store.loaded_session = ProjectSession()
-    project_dir = tmp_path / "portable-project"
-    project_dir.mkdir(parents=True, exist_ok=True)
-    (project_dir / "project.json").write_text("{}", encoding="utf-8")
-
-    with patch.object(main_window_module.AppPaths, "internal_project_dir", return_value=project_dir):
-        window._open_project()
-
-    assert window.current_project_path == str(project_dir.resolve())
-
-
-def test_open_project_reports_missing_internal_project(main_window_factory, tmp_path):
-    window, fake_store, main_window_module = main_window_factory()
-    fake_store.loaded_session = ProjectSession()
-    project_dir = tmp_path / "portable-project"
-    project_dir.mkdir(parents=True, exist_ok=True)
-
-    with patch.object(main_window_module.AppPaths, "internal_project_dir", return_value=project_dir), patch.object(
-        main_window_module.QMessageBox,
-        "critical",
-    ) as critical:
-        window._open_project()
-
-    critical.assert_called_once()
-    assert "No saved internal project" in critical.call_args.args[2]
-
-
-def test_open_project_applies_saved_project_theme(prepared_window):
-    window = prepared_window.window
-    fake_store = prepared_window.fake_store
-    main_window_module = prepared_window.main_window_module
-    target_theme = AppTheme.LIGHT if ThemeManager.get_current_theme() != AppTheme.LIGHT else AppTheme.DARK
-
-    fake_store.loaded_session = ProjectSession(theme_mode=target_theme.name)
-
-    project_dir = prepared_window.files.root / "portable-theme-project"
-    project_dir.mkdir(parents=True, exist_ok=True)
-    (project_dir / "project.json").write_text("{}", encoding="utf-8")
-    with patch.object(main_window_module.AppPaths, "internal_project_dir", return_value=project_dir):
-        window._open_project()
-
-    assert window.session.theme_mode == target_theme.name
-    assert ThemeManager.get_current_theme() == target_theme
-
 
 def test_theme_toggle_debounces_last_session_persistence(main_window_factory):
     window, fake_store, _main_window_module = main_window_factory()

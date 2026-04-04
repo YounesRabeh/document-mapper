@@ -14,6 +14,7 @@ from core.certificate.models import (
     ProjectTemplateType,
     normalize_template_name,
 )
+from core.project.template_catalog import TemplateCatalogService
 from core.util.app_paths import AppPaths
 
 
@@ -21,6 +22,7 @@ class ProjectSessionStore:
     last_session_filename = "last_session.json"
     project_filename = "project.json"
     managed_templates_dirname = "templates"
+    _template_catalog = TemplateCatalogService()
 
     def __init__(self, base_dir: str | Path | None = None):
         self._default_location = base_dir is None
@@ -262,18 +264,7 @@ class ProjectSessionStore:
         return candidate
 
     def resolve_effective_template_path(self, session: ProjectSession, project_dir: Path | None) -> str:
-        if session.template_override_path:
-            override_path = Path(session.template_override_path).expanduser().resolve()
-            return str(override_path)
-
-        selected_entry = session.selected_template_entry()
-        if selected_entry is not None:
-            if selected_entry.is_managed and selected_entry.relative_path and project_dir is not None:
-                return str((project_dir / selected_entry.relative_path).resolve())
-            if selected_entry.source_path:
-                return str(Path(selected_entry.source_path).expanduser().resolve())
-
-        return str(Path(session.template_path).expanduser().resolve()) if session.template_path else ""
+        return self._template_catalog.resolve_effective_template_path(session, project_dir)
 
     def _sanitize_template_filename(self, value: str) -> str:
         sanitized = normalize_template_name(value)

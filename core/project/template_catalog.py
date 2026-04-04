@@ -12,6 +12,36 @@ from core.certificate.models import (
 
 
 class TemplateCatalogService:
+    def normalize_template_selection(self, session: ProjectSession, project_dir: Path | None = None):
+        session._ensure_template_catalog_consistency()
+
+        available_type_names = {entry.name for entry in session.template_types}
+        if session.selected_template_type and session.selected_template_type not in available_type_names:
+            session.selected_template_type = ""
+
+        if not session.selected_template_type and session.template_types:
+            session.selected_template_type = session.template_types[0].name
+
+        selected_entry = session.selected_template_entry()
+        if selected_entry is not None and session.selected_template_type:
+            if selected_entry.type_name != session.selected_template_type:
+                session.selected_template = ""
+                selected_entry = None
+
+        available_templates = session.templates_for_type(session.selected_template_type)
+        if session.selected_template and selected_entry is None:
+            session.selected_template = ""
+
+        if not session.selected_template and available_templates:
+            session.selected_template = available_templates[0].id
+
+        if session.selected_template and not session.selected_template_type:
+            selected_entry = session.selected_template_entry()
+            if selected_entry is not None:
+                session.selected_template_type = selected_entry.type_name
+
+        session.template_path = self.resolve_effective_template_path(session, project_dir)
+
     def prune_unavailable_templates(self, session: ProjectSession, project_dir: Path | None = None):
         kept_entries: list[ProjectTemplateEntry] = []
 
@@ -28,6 +58,7 @@ class TemplateCatalogService:
                 kept_entries.append(entry)
 
         if len(kept_entries) == len(session.templates):
+            self.normalize_template_selection(session, project_dir)
             return
 
         session.templates = kept_entries
@@ -42,7 +73,21 @@ class TemplateCatalogService:
             session.selected_template_type = ""
         if not session.templates:
             session.template_path = ""
-        session._ensure_template_catalog_consistency()
+        self.normalize_template_selection(session, project_dir)
+
+    def resolve_effective_template_path(self, session: ProjectSession, project_dir: Path | None = None) -> str:
+        if session.template_override_path:
+            return str(Path(session.template_override_path).expanduser().resolve())
+
+        selected_entry = session.selected_template_entry()
+        if selected_entry is None:
+            return ""
+
+        if selected_entry.is_managed and selected_entry.relative_path and project_dir is not None:
+            return str((project_dir / selected_entry.relative_path).resolve())
+        if selected_entry.source_path:
+            return str(Path(selected_entry.source_path).expanduser().resolve())
+        return ""
 
     def build_unsaved_copy(self, session: ProjectSession, project_dir: Path | None) -> ProjectSession:
         copied_session = session.clone()

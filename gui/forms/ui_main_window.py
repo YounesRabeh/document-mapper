@@ -28,8 +28,6 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1280, 760)
-        self.actionOpenProject = QAction(MainWindow)
-        self.actionOpenProject.setObjectName(u"actionOpenProject")
         self.actionSaveProject = QAction(MainWindow)
         self.actionSaveProject.setObjectName(u"actionSaveProject")
         self.actionExit = QAction(MainWindow)
@@ -195,7 +193,6 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Document Mapper", None))
-        self.actionOpenProject.setText(QCoreApplication.translate("MainWindow", u"Open project", None))
         self.actionSaveProject.setText(QCoreApplication.translate("MainWindow", u"Save project", None))
         self.actionExit.setText(QCoreApplication.translate("MainWindow", u"Exit", None))
         self.actionToggleTheme.setText(QCoreApplication.translate("MainWindow", u"Toggle theme", None))

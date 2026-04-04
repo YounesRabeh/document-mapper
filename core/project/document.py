@@ -67,9 +67,6 @@ class ProjectDocument:
             return None
         return self._saved_session.clone()
 
-    def mark_unsaved(self):
-        return None
-
     @staticmethod
     def _normalize_project_path(project_path: str | Path | None) -> str | None:
         if not project_path:
