@@ -27,13 +27,10 @@ from gui.windows.components import SidebarStageCard
 from gui.windows.constants import CONTENT_MIN_WIDTH, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
 from gui.windows.last_session_persistence import LastSessionPersistenceService
 from gui.windows.project_actions import (
-    activate_new_project,
-    confirm_new_project_action,
     current_project_dir,
     handle_template_selection_changed,
     handle_template_type_changed,
     manage_templates,
-    new_project,
     open_project,
     prepare_session_for_save,
     refresh_template_toolbar,
@@ -123,10 +120,8 @@ class MainWindow(QMainWindow):
         self.view_menu = self.ui.menuView
         self.help_menu = self.ui.menuHelp
         self.language_menu = self.ui.menuLanguage
-        self.new_project_action = self.ui.actionNewProject
         self.open_project_action = self.ui.actionOpenProject
         self.save_project_action = self.ui.actionSaveProject
-        self.save_project_as_action = self.ui.actionSaveProjectAs
         self.exit_action = self.ui.actionExit
         self.toggle_theme_action = self.ui.actionToggleTheme
         self.about_action = self.ui.actionAbout
@@ -220,10 +215,8 @@ class MainWindow(QMainWindow):
         self.document.last_result = value
 
     def _create_menu_bar(self):
-        self.new_project_action.triggered.connect(self._new_project)
         self.open_project_action.triggered.connect(self._open_project)
         self.save_project_action.triggered.connect(self._save_project)
-        self.save_project_as_action.triggered.connect(self._save_project_as)
         self.exit_action.triggered.connect(self.close)
         self.toggle_theme_action.triggered.connect(self._toggle_theme)
         self.about_action.triggered.connect(self._show_about)
@@ -248,9 +241,6 @@ class MainWindow(QMainWindow):
     def goto_stage(self, index: int):
         return goto_stage(self, index)
 
-    def _new_project(self):
-        new_project(self)
-
     def _open_project(self):
         open_project(self, file_dialog_cls=None, message_box_cls=QMessageBox, app_paths_cls=AppPaths)
 
@@ -267,12 +257,6 @@ class MainWindow(QMainWindow):
 
     def _save_project_to_path(self, path, *, message_box_cls=QMessageBox):
         return save_project_to_path(self, path, message_box_cls=message_box_cls)
-
-    def _activate_new_project(self, session: ProjectSession, *, saved: bool):
-        activate_new_project(self, session, saved=saved)
-
-    def _confirm_new_project_action(self) -> str | None:
-        return confirm_new_project_action(self, message_box_cls=QMessageBox)
 
     def _prepare_session_for_save(self, project_dir):
         return prepare_session_for_save(self, project_dir, message_box_cls=QMessageBox)

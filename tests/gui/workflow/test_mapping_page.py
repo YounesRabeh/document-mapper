@@ -14,7 +14,15 @@ def _go_to_mapping(window):
     assert window.stage_manager.currentIndex() == 1
 
 
+def _add_first_mapping_row(window):
+    window.mapping_page.add_button.click()
+    placeholder_combo = mapping_combo(window, 0, 0)
+    placeholder_combo.setCurrentText("<NAME>")
+    return placeholder_combo
+
+
 def _assign_first_mapping(window):
+    _add_first_mapping_row(window)
     column_combo = mapping_combo(window, 0, 1)
     column_combo.setCurrentText("NAME")
     window.mapping_page._sync_session_from_table()
@@ -26,8 +34,7 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
 
     _go_to_mapping(window)
 
-    placeholder_combo = mapping_combo(window, 0, 0)
-    assert placeholder_combo.currentText() == "<NAME>"
+    assert window.mapping_page.mapping_table.rowCount() == 0
 
     _assign_first_mapping(window)
     assert_stage_state(window, 3, blocked=False, completed=False)
@@ -46,7 +53,7 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
     assert_stage_state(window, 3, blocked=True)
     assert window.mapping_page.detected_placeholders == []
     assert window.session.mappings == []
-    assert mapping_combo(window, 0, 0).currentText() == ""
+    assert window.mapping_page.mapping_table.rowCount() == 0
 
     window.mapping_page.delimiter_input.clear()
     assert window.session.placeholder_delimiter == ""
@@ -60,7 +67,7 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
 
     assert window.session.placeholder_delimiter == "<"
     assert_stage_state(window, 3, blocked=True)
-    assert mapping_combo(window, 0, 0).currentText() == "<NAME>"
+    assert window.mapping_page.mapping_table.rowCount() == 0
     assert window.session.detected_placeholder_delimiter == "<"
     assert window.session.detected_placeholder_count == 1
 

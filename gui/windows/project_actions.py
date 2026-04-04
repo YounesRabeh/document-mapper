@@ -2,30 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-def new_project(window):
-    if window.document.is_dirty or window.current_project_path:
-        action = window._confirm_new_project_action()
-        if action is None:
-            return
-        if action == "save_current":
-            if not window._save_project():
-                return
-            window._activate_new_project(window.session.__class__(), saved=False)
-            return
-        if action == "save_copy":
-            if not window._save_project():
-                return
-            window._activate_new_project(
-                window.template_catalog.build_unsaved_copy(window.session, window._current_project_dir()),
-                saved=False,
-            )
-            return
-        if action == "discard":
-            window._activate_new_project(window.session.__class__(), saved=False)
-            return
-
-    window._activate_new_project(window.session.__class__(), saved=False)
-
 
 def open_project(window, *, file_dialog_cls, message_box_cls, app_paths_cls):
     del file_dialog_cls
@@ -91,56 +67,6 @@ def save_project_to_path(window, path: str | Path, *, message_box_cls):
     window._persist_last_session_async()
     window._refresh_pages()
     return True
-
-
-def activate_new_project(window, session, *, saved: bool):
-    next_session = session.clone()
-    window.document.activate(next_session, None, saved=saved)
-    window._apply_project_theme_mode(
-        window.session.theme_mode,
-        persist_to_session=True,
-        save_last_session=False,
-        sync_document_snapshot=saved,
-    )
-    window._persist_last_session_async()
-    window._refresh_pages()
-    window.goto_stage(1)
-
-
-def confirm_new_project_action(window, *, message_box_cls):
-    message_box = message_box_cls(window)
-    message_box.setIcon(message_box_cls.Question)
-    message_box.setWindowTitle(window.localization.t("dialog.new_project_confirm.title"))
-    message_box.setText(window.localization.t("dialog.new_project_confirm.body"))
-    save_current_button = message_box.addButton(
-        window.localization.t("dialog.new_project_confirm.save_current"),
-        message_box_cls.AcceptRole,
-    )
-    save_copy_button = message_box.addButton(
-        window.localization.t("dialog.new_project_confirm.save_copy"),
-        message_box_cls.ActionRole,
-    )
-    discard_button = message_box.addButton(
-        window.localization.t("dialog.new_project_confirm.discard"),
-        message_box_cls.DestructiveRole,
-    )
-    cancel_button = message_box.addButton(
-        window.localization.t("dialog.new_project_confirm.cancel"),
-        message_box_cls.RejectRole,
-    )
-    message_box.exec()
-
-    clicked_button = message_box.clickedButton()
-    if clicked_button is save_current_button:
-        return "save_current"
-    if clicked_button is save_copy_button:
-        return "save_copy"
-    if clicked_button is discard_button:
-        return "discard"
-    if clicked_button is cancel_button:
-        return None
-    return None
-
 
 def prepare_session_for_save(window, project_dir: Path, *, message_box_cls):
     session_to_save = window.session.clone()

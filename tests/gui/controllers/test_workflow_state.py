@@ -18,7 +18,8 @@ def test_compute_states_blocks_generate_and_results_until_ready():
     states = controller.compute_states(ProjectSession(), GenerationResult(), current_stage=2, stage_count=4)
 
     assert states[1].completed is True
-    assert states[2].active is True
+    assert states[2].blocked is True
+    assert states[2].active is False
     assert states[3].blocked is True
     assert states[4].blocked is True
 
@@ -45,4 +46,4 @@ def test_resolve_fallback_stage_returns_highest_available_stage():
         stage_count=4,
     )
 
-    assert fallback == 2
+    assert fallback == 1

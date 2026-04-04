@@ -19,6 +19,9 @@ from tests.helpers.gui import assert_stage_state, mapping_combo
 
 def _unlock_generate_stage(window):
     window.stage_cards[2].clicked.emit(2)
+    window.mapping_page.add_button.click()
+    placeholder_combo = mapping_combo(window, 0, 0)
+    placeholder_combo.setCurrentText("<NAME>")
     column_combo = mapping_combo(window, 0, 1)
     column_combo.setCurrentText("NAME")
     window.mapping_page._sync_session_from_table()
@@ -138,7 +141,7 @@ def test_specific_template_section_is_always_visible(prepared_window):
     assert window.setup_page.clear_override_button.text() == "Rimuovi template monouso"
 
 
-def test_new_project_and_open_project_recompute_workflow_states(prepared_window):
+def test_open_project_recomputes_workflow_states(prepared_window):
     window = prepared_window.window
     fake_store = prepared_window.fake_store
     main_window_module = prepared_window.main_window_module
@@ -148,17 +151,6 @@ def test_new_project_and_open_project_recompute_workflow_states(prepared_window)
 
     _unlock_generate_stage(window)
     assert_stage_state(window, 3, blocked=False)
-
-    with patch.object(window, "_confirm_new_project_action", return_value="discard"):
-        window._new_project()
-    assert window.stage_manager.currentIndex() == 0
-    assert window.document.is_dirty is True
-    assert_stage_state(window, 1, active=True, blocked=False, completed=False)
-    assert_stage_state(window, 3, active=False, blocked=True, completed=False)
-    assert_stage_state(window, 4, active=False, blocked=True, completed=False)
-    assert window.template_type_combo.isEnabled() is False
-    assert window.template_type_combo.currentText() == "None"
-    assert window.template_combo.currentText() == "None"
 
     fake_store.loaded_session = ProjectSession(
         excel_path=str(workbook),
@@ -224,70 +216,6 @@ def test_open_project_reports_missing_internal_project(main_window_factory, tmp_
 
     critical.assert_called_once()
     assert "No saved internal project" in critical.call_args.args[2]
-
-
-def test_new_project_confirmation_cancel_keeps_current_session(prepared_window):
-    window = prepared_window.window
-    original_session = window.session.clone()
-
-    with patch.object(window, "_confirm_new_project_action", return_value=None):
-        window._new_project()
-
-    assert window.session.to_dict() == original_session.to_dict()
-
-
-def test_new_project_confirmation_save_current_creates_empty_project(prepared_window):
-    window = prepared_window.window
-
-    with patch.object(window, "_confirm_new_project_action", return_value="save_current"), patch.object(
-        window,
-        "_save_project",
-        return_value=True,
-    ) as save_project:
-        window._new_project()
-
-    save_project.assert_called_once()
-    assert window.current_project_path is None
-    assert window.session.excel_path == ""
-    assert window.session.output_dir == ""
-    assert window.template_type_combo.currentText() == "None"
-    assert window.template_combo.currentText() == "None"
-
-
-def test_new_project_confirmation_save_copy_creates_unsaved_copy(prepared_window):
-    window = prepared_window.window
-
-    _unlock_generate_stage(window)
-    original_session = window.session.clone()
-
-    with patch.object(window, "_confirm_new_project_action", return_value="save_copy"), patch.object(
-        window,
-        "_save_project",
-        return_value=True,
-    ) as save_project:
-        window._new_project()
-
-    save_project.assert_called_once()
-    assert window.current_project_path is None
-    assert window.session.excel_path == original_session.excel_path
-    assert window.session.output_dir == original_session.output_dir
-    assert window.session.output_naming_schema == original_session.output_naming_schema
-    assert window.session.mappings == original_session.mappings
-
-
-def test_theme_toggle_persists_on_project_and_new_project_resets_to_config(prepared_window):
-    window = prepared_window.window
-    original_theme = window.default_theme_mode
-
-    window._toggle_theme()
-
-    assert window.session.theme_mode != original_theme
-
-    with patch.object(window, "_confirm_new_project_action", return_value="discard"):
-        window._new_project()
-
-    assert window.session.theme_mode == window.default_theme_mode
-    assert ThemeManager.get_current_theme().name == window.default_theme_mode
 
 
 def test_open_project_applies_saved_project_theme(prepared_window):

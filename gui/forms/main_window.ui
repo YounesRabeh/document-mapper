@@ -261,7 +261,6 @@
     </property>
     <addaction name="actionOpenProject"/>
     <addaction name="actionSaveProject"/>
-    <addaction name="actionSaveProjectAs"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -297,11 +296,6 @@
   <action name="actionSaveProject">
    <property name="text">
     <string>Save project</string>
-   </property>
-  </action>
-  <action name="actionSaveProjectAs">
-   <property name="text">
-    <string>Save project as...</string>
    </property>
   </action>
   <action name="actionExit">

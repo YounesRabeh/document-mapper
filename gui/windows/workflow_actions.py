@@ -51,10 +51,8 @@ def retranslate_ui(window):
     window.help_menu.setTitle(window.localization.t("menu.help"))
     window.language_menu.setTitle(window.localization.t("menu.language"))
 
-    window.new_project_action.setText(window.localization.t("action.new_project"))
     window.open_project_action.setText(window.localization.t("action.open_project"))
     window.save_project_action.setText(window.localization.t("action.save_project"))
-    window.save_project_as_action.setText(window.localization.t("action.save_project_as"))
     window.exit_action.setText(window.localization.t("action.exit"))
     window.toggle_theme_action.setText(window.localization.t("action.toggle_theme"))
     window.about_action.setText(window.localization.t("action.about"))
