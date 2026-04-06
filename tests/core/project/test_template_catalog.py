@@ -35,6 +35,32 @@ def test_build_unsaved_copy_detaches_managed_templates_from_project_dir(tmp_path
     assert session.templates[0].is_managed is True
 
 
+def test_infer_project_dir_from_session_uses_selected_managed_template_path(tmp_path):
+    project_dir = tmp_path / "project"
+    templates_dir = project_dir / "templates"
+    templates_dir.mkdir(parents=True)
+    managed_template = templates_dir / "invoice.docx"
+    managed_template.write_text("managed", encoding="utf-8")
+
+    entry = ProjectTemplateEntry(
+        display_name="Invoice 01",
+        type_name="Invoices",
+        relative_path="templates/invoice.docx",
+        is_managed=True,
+    )
+    session = ProjectSession(
+        template_types=[ProjectTemplateType("Invoices")],
+        templates=[entry],
+        selected_template_type="Invoices",
+        selected_template=entry.id,
+        template_path=str(managed_template),
+    )
+
+    inferred = TemplateCatalogService().infer_project_dir_from_session(session)
+
+    assert inferred == project_dir.resolve()
+
+
 def test_store_template_override_in_project_creates_selected_entry(tmp_path):
     override_template = tmp_path / "Letter.docx"
     override_template.write_text("override", encoding="utf-8")

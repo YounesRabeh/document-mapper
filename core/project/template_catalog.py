@@ -12,6 +12,30 @@ from core.certificate.models import (
 
 
 class TemplateCatalogService:
+    def infer_project_dir_from_session(self, session: ProjectSession) -> Path | None:
+        selected_entry = session.selected_template_entry()
+        if selected_entry is None or not selected_entry.is_managed or not selected_entry.relative_path:
+            return None
+        if not session.template_path:
+            return None
+
+        template_path = Path(session.template_path).expanduser().resolve()
+        relative_parts = Path(selected_entry.relative_path).parts
+        if not relative_parts or len(template_path.parts) <= len(relative_parts):
+            return None
+
+        if tuple(part.casefold() for part in template_path.parts[-len(relative_parts):]) != tuple(
+            part.casefold() for part in relative_parts
+        ):
+            return None
+
+        project_dir = template_path
+        for _ in relative_parts:
+            project_dir = project_dir.parent
+        if not project_dir.exists():
+            return None
+        return project_dir.resolve()
+
     def normalize_template_selection(self, session: ProjectSession, project_dir: Path | None = None):
         session._ensure_template_catalog_consistency()
 

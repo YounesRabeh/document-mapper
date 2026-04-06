@@ -70,11 +70,12 @@ class MainWindow(QMainWindow):
         self.generator = CertificateGenerator(self.excel_service)
         self.template_catalog = TemplateCatalogService()
         loaded_session = self.session_store.load_last_session()
+        inferred_project_dir = self.template_catalog.infer_project_dir_from_session(loaded_session)
         self.template_catalog.prune_unavailable_templates(
             loaded_session,
-            AppPaths.internal_project_dir(),
+            inferred_project_dir,
         )
-        self.document = ProjectDocument(session=loaded_session)
+        self.document = ProjectDocument(session=loaded_session, project_path=inferred_project_dir)
         self.workflow_controller = WorkflowStateController(self.generator)
 
         initial_theme_mode = self.session.theme_mode or self.default_theme_mode

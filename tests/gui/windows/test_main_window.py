@@ -7,11 +7,14 @@ from PySide6.QtWidgets import QDialog
 
 from core.certificate.models import (
     GenerationResult,
+    ProjectSession,
+    ProjectTemplateEntry,
     ProjectTemplateType,
 )
 from core.enums.app_themes import AppTheme
 from core.manager.theme_manager import ThemeManager
 from tests.helpers.gui import assert_stage_state, mapping_combo
+from tests.helpers.fakes import FakeSessionStore
 
 
 def _unlock_generate_stage(window):
@@ -136,6 +139,39 @@ def test_specific_template_section_is_always_visible(prepared_window):
 
     window.localization.set_language("it")
     assert window.setup_page.clear_override_button.text() == "Rimuovi template monouso"
+
+
+def test_last_session_keeps_managed_template_available_without_resaving(main_window_factory, tmp_path):
+    project_dir = tmp_path / "saved-project"
+    templates_dir = project_dir / "templates"
+    templates_dir.mkdir(parents=True)
+    template_path = templates_dir / "docx_template_test.docx"
+    template_path.write_text("template", encoding="utf-8")
+
+    template_type = ProjectTemplateType("test")
+    template_entry = ProjectTemplateEntry(
+        display_name="docx_template_test",
+        type_name=template_type.name,
+        relative_path="templates/docx_template_test.docx",
+        is_managed=True,
+    )
+    last_session = ProjectSession(
+        excel_path="/tmp/data.xlsx",
+        output_dir="/tmp/out",
+        template_path=str(template_path),
+        selected_template_type=template_type.name,
+        selected_template=template_entry.id,
+        template_types=[template_type],
+        templates=[template_entry],
+    )
+    fake_store = FakeSessionStore()
+    fake_store.last_session = last_session
+    window, _fake_store, _main_window_module = main_window_factory(fake_store=fake_store)
+
+    assert window.current_project_path == str(project_dir.resolve())
+    assert window.session.template_path == str(template_path.resolve())
+    assert_stage_state(window, 2, blocked=False)
+
 
 def test_theme_toggle_debounces_last_session_persistence(main_window_factory):
     window, fake_store, _main_window_module = main_window_factory()

@@ -35,6 +35,19 @@ def test_compute_states_unlocks_generate_and_results_when_inputs_and_results_exi
     assert states[4].blocked is False
 
 
+def test_compute_states_unlocks_mapping_when_runtime_template_path_is_ready():
+    controller = WorkflowStateController(_GeneratorStub(errors=["missing data"]))
+    session = ProjectSession(
+        excel_path="/tmp/data.xlsx",
+        output_dir="/tmp/out",
+        template_path="/tmp/template.docx",
+    )
+
+    states = controller.compute_states(session, GenerationResult(), current_stage=1, stage_count=4)
+
+    assert states[2].blocked is False
+
+
 def test_resolve_fallback_stage_returns_highest_available_stage():
     controller = WorkflowStateController(_GeneratorStub(errors=["still blocked"]))
 
