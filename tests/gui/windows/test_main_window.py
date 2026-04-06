@@ -19,7 +19,6 @@ from tests.helpers.fakes import FakeSessionStore
 
 def _unlock_generate_stage(window):
     window.stage_cards[2].clicked.emit(2)
-    window.mapping_page.add_button.click()
     placeholder_combo = mapping_combo(window, 0, 0)
     placeholder_combo.setCurrentText("<NAME>")
     column_combo = mapping_combo(window, 0, 1)

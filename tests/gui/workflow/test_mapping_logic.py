@@ -53,7 +53,8 @@ def test_mapping_context_builds_rows_from_detected_and_manual_mappings():
         ],
     )
 
-    assert [entry.placeholder for entry in merged] == ["<NAME>", "<CUSTOM>"]
+    assert [entry.placeholder for entry in merged] == ["<NAME>", "<LASTNAME>", "<CUSTOM>"]
     assert merged[0].column_name == "NAME"
-    assert merged[1].column_name == "NOTE"
-    assert [entry.placeholder for entry in persisted] == ["<NAME>", "<CUSTOM>"]
+    assert merged[1].column_name == ""
+    assert merged[2].column_name == "NOTE"
+    assert [entry.placeholder for entry in persisted] == ["<NAME>", "<LASTNAME>", "<CUSTOM>"]

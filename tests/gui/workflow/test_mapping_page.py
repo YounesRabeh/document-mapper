@@ -15,7 +15,8 @@ def _go_to_mapping(window):
 
 
 def _add_first_mapping_row(window):
-    window.mapping_page.add_button.click()
+    if window.mapping_page.mapping_table.rowCount() == 0:
+        window.mapping_page.add_button.click()
     placeholder_combo = mapping_combo(window, 0, 0)
     placeholder_combo.setCurrentText("<NAME>")
     return placeholder_combo
@@ -34,7 +35,10 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
 
     _go_to_mapping(window)
 
-    assert window.mapping_page.mapping_table.rowCount() == 0
+    assert window.mapping_page.mapping_table.rowCount() == 1
+    assert mapping_combo(window, 0, 0).currentText() == "<NAME>"
+    assert window.session.mappings[0].placeholder == "<NAME>"
+    assert window.session.mappings[0].column_name == ""
 
     _assign_first_mapping(window)
     assert_stage_state(window, 3, blocked=False, completed=False)
@@ -67,12 +71,32 @@ def test_mapping_page_tracks_delimiter_detection_and_blocks_generate(prepared_wi
 
     assert window.session.placeholder_delimiter == "<"
     assert_stage_state(window, 3, blocked=True)
-    assert window.mapping_page.mapping_table.rowCount() == 0
+    assert window.mapping_page.mapping_table.rowCount() == 1
+    assert mapping_combo(window, 0, 0).currentText() == "<NAME>"
     assert window.session.detected_placeholder_delimiter == "<"
     assert window.session.detected_placeholder_count == 1
 
     _assign_first_mapping(window)
     assert_stage_state(window, 3, blocked=False)
+
+
+def test_refresh_reloads_detected_placeholders_into_table(prepared_window):
+    window = prepared_window.window
+
+    _go_to_mapping(window)
+    assert window.mapping_page.mapping_table.rowCount() == 1
+
+    window.mapping_page.mapping_table.removeRow(0)
+    window.mapping_page._sync_session_from_table()
+    assert window.mapping_page.mapping_table.rowCount() == 0
+    assert window.session.mappings == []
+
+    window.mapping_page.refresh_button.click()
+
+    assert window.mapping_page.mapping_table.rowCount() == 1
+    assert mapping_combo(window, 0, 0).currentText() == "<NAME>"
+    assert window.session.mappings[0].placeholder == "<NAME>"
+    assert window.session.mappings[0].column_name == ""
 
 
 def test_output_naming_schema_token_insertion_updates_session(prepared_window):

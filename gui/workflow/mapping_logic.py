@@ -71,19 +71,41 @@ class MappingContextService:
         detected_placeholders: list[str],
         current_mappings: list[MappingEntry],
     ) -> tuple[list[MappingEntry], list[MappingEntry]]:
-        del detected_placeholders
-
         manual_mappings = [
             MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
             for entry in current_mappings
         ]
 
-        if not manual_mappings:
-            return [], []
+        mapped_by_placeholder: dict[str, MappingEntry] = {}
+        for entry in manual_mappings:
+            placeholder = entry.placeholder.strip()
+            if placeholder and placeholder not in mapped_by_placeholder:
+                mapped_by_placeholder[placeholder] = entry
+
+        merged_mappings: list[MappingEntry] = []
+        detected_seen: set[str] = set()
+        for placeholder in detected_placeholders:
+            normalized_placeholder = placeholder.strip()
+            if not normalized_placeholder or normalized_placeholder in detected_seen:
+                continue
+            detected_seen.add(normalized_placeholder)
+            existing = mapped_by_placeholder.get(normalized_placeholder)
+            merged_mappings.append(
+                MappingEntry(
+                    placeholder=normalized_placeholder,
+                    column_name=existing.column_name if existing is not None else "",
+                )
+            )
+
+        for entry in manual_mappings:
+            placeholder = entry.placeholder.strip()
+            if placeholder and placeholder in detected_seen:
+                continue
+            merged_mappings.append(MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name))
 
         persisted_mappings = [
             MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
-            for entry in manual_mappings
+            for entry in merged_mappings
             if entry.placeholder or entry.column_name
         ]
-        return manual_mappings, persisted_mappings
+        return merged_mappings, persisted_mappings
