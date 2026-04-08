@@ -44,6 +44,7 @@ def handle_generation_result(window, result):
 
 def retranslate_ui(window):
     window.setWindowTitle(window.localization.t("app.name"))
+    window.sidebar_eyebrow.setText(window.localization.t("sidebar.eyebrow"))
     window.sidebar_title.setText(window.localization.t("sidebar.heading"))
     window.sidebar_subtitle.setText(window.localization.t("sidebar.subtitle"))
     window.file_menu.setTitle(window.localization.t("menu.file"))

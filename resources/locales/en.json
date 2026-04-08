@@ -6,6 +6,7 @@
   "menu.language": "Language",
   "menu.language.en": "English",
   "menu.language.it": "Italiano",
+  "sidebar.eyebrow": "Process",
   "sidebar.heading": "Workflow",
   "sidebar.subtitle": "Configure the workbook, choose a project template, generate documents, and review each batch.",
   "sidebar.stage.setup": "Setup",

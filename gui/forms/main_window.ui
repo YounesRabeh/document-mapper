@@ -76,7 +76,7 @@
         <item>
          <widget class="QLabel" name="sidebarEyebrow">
           <property name="text">
-           <string>WORKFLOW</string>
+           <string>PROCESS</string>
           </property>
          </widget>
         </item>

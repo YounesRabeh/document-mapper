@@ -199,7 +199,7 @@ class Ui_MainWindow(object):
         self.actionAbout.setText(QCoreApplication.translate("MainWindow", u"About", None))
         self.actionLanguageEn.setText(QCoreApplication.translate("MainWindow", u"English", None))
         self.actionLanguageIt.setText(QCoreApplication.translate("MainWindow", u"Italiano", None))
-        self.sidebarEyebrow.setText(QCoreApplication.translate("MainWindow", u"WORKFLOW", None))
+        self.sidebarEyebrow.setText(QCoreApplication.translate("MainWindow", u"PROCESS", None))
         self.sidebarTitle.setText(QCoreApplication.translate("MainWindow", u"Workflow", None))
         self.sidebarSubtitle.setText(QCoreApplication.translate("MainWindow", u"Configure, map, generate, and review each batch.", None))
         self.templateTypeLabel.setText(QCoreApplication.translate("MainWindow", u"Template type", None))

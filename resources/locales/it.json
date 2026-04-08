@@ -6,6 +6,7 @@
   "menu.language": "Lingua",
   "menu.language.en": "English",
   "menu.language.it": "Italiano",
+  "sidebar.eyebrow": "Processo",
   "sidebar.heading": "Workflow",
   "sidebar.subtitle": "Configura il file Excel, scegli un template di progetto, genera documenti e controlla ogni batch.",
   "sidebar.stage.setup": "Configurazione",
