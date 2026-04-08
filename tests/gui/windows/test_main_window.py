@@ -90,6 +90,12 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
 
     assert window.stage_manager.currentIndex() == 3
     assert "Created 1 of 1 DOCX documents." in window.results_page.summary_label.text()
+    assert window.results_page.errors_box.isHidden() is True
+    assert window.results_page.files_view_stack.currentWidget() == window.results_page.single_files_page
+    assert window.results_page.files_list.count() == 1
+    file_entry = window.results_page.files_list.itemWidget(window.results_page.files_list.item(0))
+    assert file_entry is not None
+    assert file_entry.open_button.text() == "Open"
     assert_stage_state(window, 3, completed=True)
     assert_stage_state(window, 4, active=True, blocked=False)
 
@@ -100,8 +106,37 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
     assert "esempio" in window.mapping_page.mapping_hint.text()
     assert window.mapping_page.output_naming_schema_label.text() == "Schema nome output"
     assert window.template_type_label.text() == "Tipo template"
+    file_entry = window.results_page.files_list.itemWidget(window.results_page.files_list.item(0))
+    assert file_entry.open_button.text() == "Apri"
     assert "Creati 1 documenti DOCX su 1." in window.results_page.summary_label.text()
     assert_stage_state(window, 4, active=True, blocked=False)
+
+
+def test_results_page_splits_docx_and_pdf_outputs(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+
+    result = GenerationResult(
+        total_rows=1,
+        success_count=1,
+        generated_docx_paths=[str(Path(temp_dir) / "docx" / "ADA_attestato_certificato.docx")],
+        generated_pdf_paths=[str(Path(temp_dir) / "pdf" / "ADA_attestato_certificato.pdf")],
+        log_path=str(Path(temp_dir) / "certificate_generation.log"),
+        errors=[],
+    )
+    window._handle_generation_result(result)
+
+    assert window.results_page.files_view_stack.currentWidget() == window.results_page.split_files_page
+    assert window.results_page.docx_files_list.count() == 1
+    assert window.results_page.pdf_files_list.count() == 1
+    docx_entry = window.results_page.docx_files_list.itemWidget(window.results_page.docx_files_list.item(0))
+    pdf_entry = window.results_page.pdf_files_list.itemWidget(window.results_page.pdf_files_list.item(0))
+    assert docx_entry is not None
+    assert pdf_entry is not None
+    assert docx_entry.open_button.text() == "Open"
+    assert pdf_entry.open_button.text() == "Open"
 
 
 def test_manage_templates_accepts_dialog_and_updates_session(prepared_window):

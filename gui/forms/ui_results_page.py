@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
-    QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
+    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
+    QSplitter, QStackedWidget, QVBoxLayout, QWidget)
 
 class Ui_ResultsPageForm(object):
     def setupUi(self, resultsPageForm):
@@ -126,11 +126,51 @@ class Ui_ResultsPageForm(object):
 
         self.filesCardLayout.addWidget(self.filesHeader)
 
-        self.filesList = QListWidget(self.filesCard)
-        self.filesList.setObjectName(u"filesList")
-        self.filesList.setMinimumSize(QSize(0, 170))
+        self.filesViewStack = QStackedWidget(self.filesCard)
+        self.filesViewStack.setObjectName(u"filesViewStack")
+        self.singleFilesPage = QWidget()
+        self.singleFilesPage.setObjectName(u"singleFilesPage")
+        self.singleFilesPageLayout = QVBoxLayout(self.singleFilesPage)
+        self.singleFilesPageLayout.setSpacing(0)
+        self.singleFilesPageLayout.setObjectName(u"singleFilesPageLayout")
+        self.singleFilesPageLayout.setContentsMargins(0, 0, 0, 0)
+        self.singleFilesContainer = QWidget(self.singleFilesPage)
+        self.singleFilesContainer.setObjectName(u"singleFilesContainer")
 
-        self.filesCardLayout.addWidget(self.filesList)
+        self.singleFilesPageLayout.addWidget(self.singleFilesContainer)
+
+        self.filesViewStack.addWidget(self.singleFilesPage)
+        self.splitFilesPage = QWidget()
+        self.splitFilesPage.setObjectName(u"splitFilesPage")
+        self.splitFilesPageLayout = QVBoxLayout(self.splitFilesPage)
+        self.splitFilesPageLayout.setSpacing(0)
+        self.splitFilesPageLayout.setObjectName(u"splitFilesPageLayout")
+        self.splitFilesPageLayout.setContentsMargins(0, 0, 0, 0)
+        self.filesSplitView = QSplitter(self.splitFilesPage)
+        self.filesSplitView.setObjectName(u"filesSplitView")
+        self.filesSplitView.setOrientation(Qt.Vertical)
+        self.docxFilesContainer = QFrame(self.filesSplitView)
+        self.docxFilesContainer.setObjectName(u"docxFilesContainer")
+        self.docxFilesContainer.setFrameShape(QFrame.NoFrame)
+        self.docxFilesContainerLayout = QVBoxLayout(self.docxFilesContainer)
+        self.docxFilesContainerLayout.setSpacing(0)
+        self.docxFilesContainerLayout.setObjectName(u"docxFilesContainerLayout")
+        self.docxFilesContainerLayout.setContentsMargins(0, 0, 0, 0)
+        self.filesSplitView.addWidget(self.docxFilesContainer)
+        self.pdfFilesContainer = QFrame(self.filesSplitView)
+        self.pdfFilesContainer.setObjectName(u"pdfFilesContainer")
+        self.pdfFilesContainer.setFrameShape(QFrame.NoFrame)
+        self.pdfFilesContainerLayout = QVBoxLayout(self.pdfFilesContainer)
+        self.pdfFilesContainerLayout.setSpacing(0)
+        self.pdfFilesContainerLayout.setObjectName(u"pdfFilesContainerLayout")
+        self.pdfFilesContainerLayout.setContentsMargins(0, 0, 0, 0)
+        self.filesSplitView.addWidget(self.pdfFilesContainer)
+
+        self.splitFilesPageLayout.addWidget(self.filesSplitView)
+
+        self.filesViewStack.addWidget(self.splitFilesPage)
+
+        self.filesCardLayout.addWidget(self.filesViewStack)
 
 
         self.rootLayout.addWidget(self.filesCard)
@@ -205,6 +245,9 @@ class Ui_ResultsPageForm(object):
 
         self.retranslateUi(resultsPageForm)
 
+        self.filesViewStack.setCurrentIndex(0)
+
+
         QMetaObject.connectSlotsByName(resultsPageForm)
     # setupUi
 
@@ -218,7 +261,7 @@ class Ui_ResultsPageForm(object):
         self.filesCountBadge.setText(QCoreApplication.translate("ResultsPageForm", u"0", None))
         self.errorsTitle.setText(QCoreApplication.translate("ResultsPageForm", u"Errors", None))
         self.errorsCountBadge.setText(QCoreApplication.translate("ResultsPageForm", u"0", None))
-        self.actionHint.setText(QCoreApplication.translate("ResultsPageForm", u"Double-click a generated file to open it instantly.", None))
+        self.actionHint.setText(QCoreApplication.translate("ResultsPageForm", u"Use Open on any generated file to launch it instantly.", None))
         self.openLogButton.setText(QCoreApplication.translate("ResultsPageForm", u"Open log", None))
         self.openOutputButton.setText(QCoreApplication.translate("ResultsPageForm", u"Open output folder", None))
         pass

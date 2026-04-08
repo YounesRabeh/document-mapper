@@ -229,13 +229,102 @@
        </widget>
       </item>
       <item>
-       <widget class="QListWidget" name="filesList">
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>170</height>
-         </size>
+       <widget class="QStackedWidget" name="filesViewStack">
+        <property name="currentIndex">
+         <number>0</number>
         </property>
+        <widget class="QWidget" name="singleFilesPage">
+         <layout class="QVBoxLayout" name="singleFilesPageLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QWidget" name="singleFilesContainer" native="true"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="splitFilesPage">
+         <layout class="QVBoxLayout" name="splitFilesPageLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QSplitter" name="filesSplitView">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <widget class="QFrame" name="docxFilesContainer">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <layout class="QVBoxLayout" name="docxFilesContainerLayout">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+            <widget class="QFrame" name="pdfFilesContainer">
+             <property name="frameShape">
+              <enum>QFrame::NoFrame</enum>
+             </property>
+             <layout class="QVBoxLayout" name="pdfFilesContainerLayout">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
        </widget>
       </item>
      </layout>
@@ -337,7 +426,7 @@
      <item>
       <widget class="QLabel" name="actionHint">
        <property name="text">
-        <string>Double-click a generated file to open it instantly.</string>
+        <string>Use Open on any generated file to launch it instantly.</string>
        </property>
        <property name="wordWrap">
         <bool>true</bool>

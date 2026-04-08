@@ -97,6 +97,8 @@ QLabel#summaryStatusBadge,
 QLabel#logStateBadge,
 QLabel#resultsStatusBadge,
 QLabel#filesCountBadge,
+QLabel#docxFilesCountBadge,
+QLabel#pdfFilesCountBadge,
 QLabel#errorsCountBadge {
     border-radius: 999px;
     padding: 6px 10px;
@@ -154,7 +156,9 @@ QLabel#logStateBadge[status="running"] {
     border: 1px solid palette(highlight);
 }
 
-QLabel#filesCountBadge[status="neutral"] {
+QLabel#filesCountBadge[status="neutral"],
+QLabel#docxFilesCountBadge[status="neutral"],
+QLabel#pdfFilesCountBadge[status="neutral"] {
     background: palette(highlight);
     color: palette(highlighted-text);
     border: 1px solid palette(highlight);
@@ -349,27 +353,104 @@ QListWidget#filesList {
     background: palette(base);
     border: 1px solid palette(midlight);
     border-radius: 14px;
-    padding: 10px;
+    padding: 8px;
+}
+
+QListWidget#docxFilesList,
+QListWidget#pdfFilesList {
+    background: palette(base);
+    border: 1px solid palette(midlight);
+    border-radius: 14px;
+    padding: 8px;
+}
+
+QSplitter#filesSplitView {
+    background: transparent;
 }
 
 QListWidget#filesList::item {
-    padding: 12px 14px;
-    margin: 2px 0;
-    border: 1px solid transparent;
+    padding: 0;
+    margin: 0 0 6px 0;
+    border: none;
     border-radius: 12px;
 }
 
-QListWidget#filesList::item:hover {
-    background: palette(alternate-base);
-    border: 1px solid palette(mid);
+QListWidget#docxFilesList::item,
+QListWidget#pdfFilesList::item {
+    padding: 0;
+    margin: 0 0 6px 0;
+    border: none;
+    border-radius: 12px;
 }
 
 QListWidget#filesList::item:selected,
 QListWidget#filesList::item:selected:active,
 QListWidget#filesList::item:selected:!active {
-    background: palette(button);
+    background: transparent;
     color: palette(window-text);
-    border: 1px solid palette(highlight);
+    border: none;
+}
+
+QListWidget#docxFilesList::item:selected,
+QListWidget#docxFilesList::item:selected:active,
+QListWidget#docxFilesList::item:selected:!active,
+QListWidget#pdfFilesList::item:selected,
+QListWidget#pdfFilesList::item:selected:active,
+QListWidget#pdfFilesList::item:selected:!active {
+    background: transparent;
+    color: palette(window-text);
+    border: none;
+}
+
+QSplitter#filesSplitView::handle:horizontal {
+    background: palette(button);
+    border-radius: 6px;
+    width: 14px;
+    margin: 28px 2px 8px 2px;
+}
+
+QSplitter#filesSplitView::handle:vertical {
+    background: palette(button);
+    border-radius: 6px;
+    height: 10px;
+    margin: 2px 28px 2px 28px;
+}
+
+QWidget#resultsFileEntry {
+    background: palette(alternate-base);
+    border: 1px solid palette(mid);
+    border-radius: 14px;
+}
+
+QWidget#resultsFileEntry:hover {
+    border-color: palette(highlight);
+}
+
+QLabel#resultsFileName {
+    color: palette(window-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+QPushButton#resultsFileOpenButton {
+    min-height: 34px;
+    min-width: 88px;
+    padding: 0 16px;
+    background: palette(button);
+    border: 1px solid palette(mid);
+    border-radius: 12px;
+    color: palette(button-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QPushButton#resultsFileOpenButton:hover {
+    background: palette(base);
+    border-color: palette(highlight);
+}
+
+QPushButton#resultsFileOpenButton:pressed {
+    background: palette(midlight);
 }
 
 QPlainTextEdit#errorsOutput {

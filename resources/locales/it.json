@@ -166,6 +166,8 @@
   "page.results.description": "Controlla l'output dell'ultima esecuzione, apri i file generati e verifica eventuali errori.",
   "status.no_generation_results": "Nessun risultato di generazione disponibile.",
   "group.generated_files": "File generati",
+  "group.generated_docx": "File DOCX",
+  "group.generated_pdf": "File PDF",
   "group.errors": "Errori",
   "group.run_summary": "Riepilogo esecuzione",
   "button.open_output_folder": "Apri cartella output",

@@ -166,6 +166,8 @@
   "page.results.description": "Review the output from the last run, open the generated files, and inspect any generation errors.",
   "status.no_generation_results": "No generation results yet.",
   "group.generated_files": "Generated files",
+  "group.generated_docx": "DOCX files",
+  "group.generated_pdf": "PDF files",
   "group.errors": "Errors",
   "group.run_summary": "Run summary",
   "button.open_output_folder": "Open output folder",

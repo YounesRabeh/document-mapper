@@ -4,13 +4,150 @@ from html import escape
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QListWidgetItem, QWidget
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QListWidgetItem,
+    QListWidget,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
 
 from core.certificate.models import GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
 from gui.forms import Ui_ResultsPageForm
 from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
+
+
+class ElidedLabel(QLabel):
+    def __init__(self, text: str = "", parent: QWidget | None = None):
+        super().__init__(parent)
+        self._full_text = ""
+        self.setWordWrap(False)
+        self.setText(text)
+
+    def setText(self, text: str):
+        self._full_text = str(text)
+        super().setText(self._elided_text())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        super().setText(self._elided_text())
+
+    def _elided_text(self) -> str:
+        if not self._full_text:
+            return ""
+        available_width = max(self.contentsRect().width(), 0)
+        if available_width <= 0:
+            return self._full_text
+        return self.fontMetrics().elidedText(self._full_text, Qt.TextElideMode.ElideRight, available_width)
+
+
+class ResultsFileEntry(QWidget):
+    def __init__(self, *, file_name: str, open_label: str, path: str, on_open):
+        super().__init__()
+        self._path = path
+        self._on_open = on_open
+        self.setObjectName("resultsFileEntry")
+        self.setMinimumHeight(64)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(12)
+
+        text_layout = QVBoxLayout()
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(2)
+
+        self.name_label = ElidedLabel(file_name)
+        self.name_label.setObjectName("resultsFileName")
+        self.name_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.name_label.setToolTip(file_name)
+        text_layout.addWidget(self.name_label)
+        self.setToolTip(path)
+
+        layout.addLayout(text_layout, 1)
+
+        self.open_button = QPushButton(open_label)
+        self.open_button.setObjectName("resultsFileOpenButton")
+        self.open_button.clicked.connect(self._handle_open)
+        layout.addWidget(self.open_button, 0, Qt.AlignVCenter)
+
+    def _handle_open(self):
+        self._on_open(self._path)
+
+
+class ResultsFilesPanel(QWidget):
+    def __init__(
+        self,
+        *,
+        list_object_name: str,
+        badge_object_name: str,
+        title_visible: bool = True,
+    ):
+        super().__init__()
+        self.setObjectName("resultsFilesPanel")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        self.header = QFrame()
+        self.header.setObjectName("resultsFilesPanelHeader")
+        header_layout = QHBoxLayout(self.header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(10)
+
+        self.title_label = QLabel()
+        self.title_label.setObjectName("workflowCardTitle")
+        header_layout.addWidget(self.title_label)
+
+        header_layout.addStretch(1)
+
+        self.count_badge = QLabel("0")
+        self.count_badge.setObjectName(badge_object_name)
+        self.count_badge.setAlignment(Qt.AlignCenter)
+        header_layout.addWidget(self.count_badge)
+
+        layout.addWidget(self.header)
+
+        self.list_widget = QListWidget()
+        self.list_widget.setObjectName(list_object_name)
+        self.list_widget.setMinimumHeight(PANEL_MIN_HEIGHT)
+        self.list_widget.setSpacing(8)
+        self.list_widget.setSelectionMode(self.list_widget.SelectionMode.NoSelection)
+        self.list_widget.setFocusPolicy(Qt.NoFocus)
+        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        layout.addWidget(self.list_widget)
+
+        self.set_header_visible(title_visible)
+
+    def set_header_visible(self, visible: bool):
+        self.header.setVisible(visible)
+
+    def populate_entries(self, *, paths: list[str], open_label: str, on_open, empty_text: str):
+        self.list_widget.clear()
+        for path in paths:
+            item = QListWidgetItem()
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            entry = ResultsFileEntry(
+                file_name=Path(path).name,
+                open_label=open_label,
+                path=path,
+                on_open=on_open,
+            )
+            item.setSizeHint(entry.sizeHint())
+            self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(item, entry)
+        if self.list_widget.count() == 0:
+            placeholder_item = QListWidgetItem(empty_text)
+            placeholder_item.setFlags(Qt.NoItemFlags)
+            self.list_widget.addItem(placeholder_item)
 
 
 class ResultsPage(WorkflowPage):
@@ -37,7 +174,13 @@ class ResultsPage(WorkflowPage):
         self.files_box = self.ui.filesCard
         self.files_title = self.ui.filesTitle
         self.files_count_badge = self.ui.filesCountBadge
-        self.files_list = self.ui.filesList
+        self.files_view_stack = self.ui.filesViewStack
+        self.single_files_page = self.ui.singleFilesPage
+        self.split_files_page = self.ui.splitFilesPage
+        self.files_split_view = self.ui.filesSplitView
+        self.single_files_container = self.ui.singleFilesContainer
+        self.docx_files_container = self.ui.docxFilesContainer
+        self.pdf_files_container = self.ui.pdfFilesContainer
         self.errors_box = self.ui.errorsCard
         self.errors_title = self.ui.errorsTitle
         self.errors_count_badge = self.ui.errorsCountBadge
@@ -57,6 +200,33 @@ class ResultsPage(WorkflowPage):
         self._bind_translation(self.open_output_button, "text", "button.open_output_folder")
         self._bind_translation(self.open_log_button, "text", "button.open_log")
 
+        self.single_files_panel = ResultsFilesPanel(
+            list_object_name="filesList",
+            badge_object_name="singleFilesCountBadge",
+            title_visible=False,
+        )
+        self.docx_files_panel = ResultsFilesPanel(
+            list_object_name="docxFilesList",
+            badge_object_name="docxFilesCountBadge",
+        )
+        self.pdf_files_panel = ResultsFilesPanel(
+            list_object_name="pdfFilesList",
+            badge_object_name="pdfFilesCountBadge",
+        )
+        self._attach_panel(self.single_files_container, self.single_files_panel)
+        self._attach_panel(self.docx_files_container, self.docx_files_panel)
+        self._attach_panel(self.pdf_files_container, self.pdf_files_panel)
+
+        self.files_list = self.single_files_panel.list_widget
+        self.docx_files_title = self.docx_files_panel.title_label
+        self.docx_files_count_badge = self.docx_files_panel.count_badge
+        self.docx_files_list = self.docx_files_panel.list_widget
+        self.pdf_files_title = self.pdf_files_panel.title_label
+        self.pdf_files_count_badge = self.pdf_files_panel.count_badge
+        self.pdf_files_list = self.pdf_files_panel.list_widget
+        self._bind_translation(self.docx_files_title, "upper_text", "group.generated_docx")
+        self._bind_translation(self.pdf_files_title, "upper_text", "group.generated_pdf")
+
         self.summary_label.setWordWrap(True)
         self.summary_label.setTextFormat(Qt.RichText)
         self.summary_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
@@ -65,9 +235,10 @@ class ResultsPage(WorkflowPage):
         self.action_hint.setWordWrap(True)
 
         self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.files_list.setMinimumHeight(PANEL_MIN_HEIGHT)
-        self.files_list.setSpacing(8)
-        self.files_list.itemDoubleClicked.connect(self._open_selected_item)
+        self.files_split_view.setChildrenCollapsible(False)
+        self.files_split_view.setHandleWidth(10)
+        self.files_split_view.setStretchFactor(0, 1)
+        self.files_split_view.setStretchFactor(1, 1)
 
         self.errors_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
         self.errors_output.setReadOnly(True)
@@ -82,27 +253,55 @@ class ResultsPage(WorkflowPage):
         self.refresh_from_session()
 
     def refresh_from_session(self):
-        total_files = len(self.result.generated_docx_paths) + len(self.result.generated_pdf_paths)
+        docx_paths = list(self.result.generated_docx_paths)
+        pdf_paths = list(self.result.generated_pdf_paths)
+        total_files = len(docx_paths) + len(pdf_paths)
         error_count = len(self.result.errors)
 
         self.summary_label.setText(self._build_summary_markup(total_files, error_count))
         self._refresh_visual_state(total_files, error_count)
 
-        self.files_list.clear()
-        for path in [*self.result.generated_docx_paths, *self.result.generated_pdf_paths]:
-            item = QListWidgetItem(Path(path).name)
-            item.setData(Qt.UserRole, path)
-            self.files_list.addItem(item)
-        if self.files_list.count() == 0:
-            placeholder_item = QListWidgetItem(self.localization.t("results.files.empty"))
-            placeholder_item.setFlags(Qt.NoItemFlags)
-            self.files_list.addItem(placeholder_item)
+        split_mode = bool(docx_paths and pdf_paths)
+        self.files_count_badge.setVisible(not split_mode)
+
+        if split_mode:
+            self.files_view_stack.setCurrentWidget(self.split_files_page)
+            self.docx_files_panel.populate_entries(
+                paths=docx_paths,
+                open_label=self.localization.t("button.open"),
+                on_open=self._open_path,
+                empty_text=self.localization.t("results.files.empty"),
+            )
+            self.pdf_files_panel.populate_entries(
+                paths=pdf_paths,
+                open_label=self.localization.t("button.open"),
+                on_open=self._open_path,
+                empty_text=self.localization.t("results.files.empty"),
+            )
+            self.docx_files_count_badge.setText(str(len(docx_paths)))
+            self.pdf_files_count_badge.setText(str(len(pdf_paths)))
+            self._set_state_property(self.docx_files_count_badge, "neutral")
+            self._set_state_property(self.pdf_files_count_badge, "neutral")
+            self.files_split_view.setSizes([1, 1])
+        else:
+            self.files_view_stack.setCurrentWidget(self.single_files_page)
+            self.single_files_panel.populate_entries(
+                paths=[*docx_paths, *pdf_paths],
+                open_label=self.localization.t("button.open"),
+                on_open=self._open_path,
+                empty_text=self.localization.t("results.files.empty"),
+            )
+            self.docx_files_list.clear()
+            self.pdf_files_list.clear()
+            self.docx_files_count_badge.clear()
+            self.pdf_files_count_badge.clear()
 
         if self.result.errors:
             translated = [self.localization.translate_runtime_text(error) for error in self.result.errors]
             self.errors_output.setPlainText("\n".join(translated))
         else:
-            self.errors_output.setPlainText(self.localization.t("results.no_generation_errors"))
+            self.errors_output.clear()
+        self.errors_box.setVisible(bool(self.result.errors))
 
     def _build_summary_markup(self, total_files: int, error_count: int) -> str:
         rows: list[tuple[str, str, bool]] = []
@@ -227,6 +426,14 @@ class ResultsPage(WorkflowPage):
         self._set_state_property(self.files_count_badge, "neutral" if total_files else "empty")
         self._set_state_property(self.errors_count_badge, "success" if error_count == 0 else "warning")
 
+    def _attach_panel(self, container: QWidget, panel: QWidget):
+        layout = container.layout()
+        if layout is None:
+            layout = QVBoxLayout(container)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+        layout.addWidget(panel)
+
     def _set_state_property(self, widget, state: str):
         if widget.property("status") == state:
             return
@@ -236,8 +443,7 @@ class ResultsPage(WorkflowPage):
         style.polish(widget)
         widget.update()
 
-    def _open_selected_item(self, item: QListWidgetItem):
-        path = item.data(Qt.UserRole)
+    def _open_path(self, path: str):
         if path:
             open_path(path)
 
