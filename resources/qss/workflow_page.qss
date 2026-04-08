@@ -34,7 +34,10 @@ QGroupBox {
 }
 
 QFrame#summaryCard,
-QFrame#logCard {
+QFrame#logCard,
+QFrame#resultsSummaryCard,
+QFrame#filesCard,
+QFrame#errorsCard {
     background: palette(button);
     border: 1px solid palette(mid);
     border-radius: 18px;
@@ -84,8 +87,17 @@ QFrame#summaryStatusPanel {
     border-radius: 14px;
 }
 
+QFrame#resultsStatusPanel {
+    background: palette(base);
+    border: 1px solid palette(midlight);
+    border-radius: 14px;
+}
+
 QLabel#summaryStatusBadge,
-QLabel#logStateBadge {
+QLabel#logStateBadge,
+QLabel#resultsStatusBadge,
+QLabel#filesCountBadge,
+QLabel#errorsCountBadge {
     border-radius: 999px;
     padding: 6px 10px;
     font-size: 10px;
@@ -112,6 +124,24 @@ QLabel#summaryStatusBadge[status="running"] {
     border: 1px solid palette(link);
 }
 
+QLabel#resultsStatusBadge[status="success"] {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border: 1px solid palette(highlight);
+}
+
+QLabel#resultsStatusBadge[status="warning"] {
+    background: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+}
+
+QLabel#resultsStatusBadge[status="empty"] {
+    background: palette(button);
+    color: palette(text);
+    border: 1px solid palette(mid);
+}
+
 QLabel#logStateBadge[status="neutral"] {
     background: palette(alternate-base);
     color: palette(text);
@@ -124,20 +154,47 @@ QLabel#logStateBadge[status="running"] {
     border: 1px solid palette(highlight);
 }
 
-QLabel#summaryStatusTitle {
+QLabel#filesCountBadge[status="neutral"] {
+    background: palette(highlight);
+    color: palette(highlighted-text);
+    border: 1px solid palette(highlight);
+}
+
+QLabel#filesCountBadge[status="empty"] {
+    background: palette(button);
+    color: palette(text);
+    border: 1px solid palette(mid);
+}
+
+QLabel#errorsCountBadge[status="success"] {
+    background: palette(button);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+}
+
+QLabel#errorsCountBadge[status="warning"] {
+    background: palette(alternate-base);
+    color: palette(window-text);
+    border: 1px solid palette(mid);
+}
+
+QLabel#summaryStatusTitle,
+QLabel#resultsStatusTitle {
     color: palette(window-text);
     font-size: 15px;
     font-weight: 800;
 }
 
 QLabel#summaryStatusHint,
-QLabel#actionHint {
+QLabel#actionHint,
+QLabel#resultsStatusHint {
     color: palette(text);
     font-size: 12px;
     line-height: 1.5;
 }
 
-QLabel#summaryOutput {
+QLabel#summaryOutput,
+QLabel#summaryLabel {
     background: palette(base);
     border: 1px solid palette(midlight);
     border-radius: 14px;
@@ -286,6 +343,41 @@ QTableWidget {
     padding: 0;
     selection-background-color: palette(highlight);
     selection-color: palette(highlighted-text);
+}
+
+QListWidget#filesList {
+    background: palette(base);
+    border: 1px solid palette(midlight);
+    border-radius: 14px;
+    padding: 10px;
+}
+
+QListWidget#filesList::item {
+    padding: 12px 14px;
+    margin: 2px 0;
+    border: 1px solid transparent;
+    border-radius: 12px;
+}
+
+QListWidget#filesList::item:hover {
+    background: palette(alternate-base);
+    border: 1px solid palette(mid);
+}
+
+QListWidget#filesList::item:selected,
+QListWidget#filesList::item:selected:active,
+QListWidget#filesList::item:selected:!active {
+    background: palette(button);
+    color: palette(window-text);
+    border: 1px solid palette(highlight);
+}
+
+QPlainTextEdit#errorsOutput {
+    background: palette(base);
+    border: 1px solid palette(midlight);
+    border-radius: 14px;
+    padding: 14px 16px;
+    line-height: 1.5;
 }
 
 QListWidget:focus,

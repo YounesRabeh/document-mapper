@@ -4,7 +4,7 @@
  <widget class="QWidget" name="resultsPageForm">
   <layout class="QVBoxLayout" name="rootLayout">
    <property name="spacing">
-    <number>16</number>
+    <number>18</number>
    </property>
    <property name="leftMargin">
     <number>0</number>
@@ -19,48 +19,221 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QLabel" name="summaryLabel">
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>72</height>
-      </size>
+    <widget class="QFrame" name="resultsSummaryCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
-     <property name="objectName">
-      <string notr="true">workflowStatus</string>
-     </property>
-     <property name="text">
-      <string>Summary</string>
-     </property>
-     <property name="wordWrap">
-      <bool>true</bool>
-     </property>
+     <layout class="QVBoxLayout" name="summaryLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
+      <property name="leftMargin">
+       <number>20</number>
+      </property>
+      <property name="topMargin">
+       <number>18</number>
+      </property>
+      <property name="rightMargin">
+       <number>20</number>
+      </property>
+      <property name="bottomMargin">
+       <number>18</number>
+      </property>
+      <item>
+       <widget class="QFrame" name="summaryTitleBar">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QHBoxLayout" name="summaryTitleLayout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="summaryTitle">
+           <property name="text">
+            <string>Run summary</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QFrame" name="resultsStatusPanel">
+        <property name="frameShape">
+         <enum>QFrame::StyledPanel</enum>
+        </property>
+        <layout class="QHBoxLayout" name="resultsStatusLayout">
+         <property name="spacing">
+          <number>14</number>
+         </property>
+         <property name="leftMargin">
+          <number>14</number>
+         </property>
+         <property name="topMargin">
+          <number>14</number>
+         </property>
+         <property name="rightMargin">
+          <number>14</number>
+         </property>
+         <property name="bottomMargin">
+          <number>14</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="resultsStatusBadge">
+           <property name="text">
+            <string>COMPLETE</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="resultsStatusTextLayout">
+           <property name="spacing">
+            <number>2</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="resultsStatusTitle">
+             <property name="text">
+              <string>Batch completed successfully.</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="resultsStatusHint">
+             <property name="text">
+              <string>Your documents are ready. Open a file below or jump straight to the output folder.</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="summaryLabel">
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>120</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Summary</string>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="filesBox">
-     <property name="title">
-      <string>Generated files</string>
+    <widget class="QFrame" name="filesCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
-     <layout class="QVBoxLayout" name="filesLayout">
+     <layout class="QVBoxLayout" name="filesCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
       <property name="leftMargin">
-       <number>12</number>
+       <number>20</number>
       </property>
       <property name="topMargin">
-       <number>12</number>
+       <number>18</number>
       </property>
       <property name="rightMargin">
-       <number>12</number>
+       <number>20</number>
       </property>
       <property name="bottomMargin">
-       <number>12</number>
+       <number>18</number>
       </property>
+      <item>
+       <widget class="QFrame" name="filesHeader">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QHBoxLayout" name="filesHeaderLayout">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="filesTitle">
+           <property name="text">
+            <string>Generated files</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="filesHeaderSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="filesCountBadge">
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
       <item>
        <widget class="QListWidget" name="filesList">
         <property name="minimumSize">
          <size>
           <width>0</width>
-          <height>150</height>
+          <height>170</height>
          </size>
         </property>
        </widget>
@@ -69,23 +242,80 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="errorsBox">
-     <property name="title">
-      <string>Errors</string>
+    <widget class="QFrame" name="errorsCard">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
-     <layout class="QVBoxLayout" name="errorsLayout">
+     <layout class="QVBoxLayout" name="errorsCardLayout">
+      <property name="spacing">
+       <number>14</number>
+      </property>
       <property name="leftMargin">
-       <number>12</number>
+       <number>20</number>
       </property>
       <property name="topMargin">
-       <number>12</number>
+       <number>18</number>
       </property>
       <property name="rightMargin">
-       <number>12</number>
+       <number>20</number>
       </property>
       <property name="bottomMargin">
-       <number>12</number>
+       <number>18</number>
       </property>
+      <item>
+       <widget class="QFrame" name="errorsHeader">
+        <property name="frameShape">
+         <enum>QFrame::NoFrame</enum>
+        </property>
+        <layout class="QHBoxLayout" name="errorsHeaderLayout">
+         <property name="spacing">
+          <number>12</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="errorsTitle">
+           <property name="text">
+            <string>Errors</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="errorsHeaderSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="errorsCountBadge">
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
       <item>
        <widget class="QPlainTextEdit" name="errorsOutput">
         <property name="minimumSize">
@@ -101,6 +331,19 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="actionRow">
+     <property name="spacing">
+      <number>12</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="actionHint">
+       <property name="text">
+        <string>Double-click a generated file to open it instantly.</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
      <item>
       <spacer name="actionStretch">
        <property name="orientation">

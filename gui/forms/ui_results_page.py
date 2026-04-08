@@ -15,7 +15,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QGroupBox, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
     QSizePolicy, QSpacerItem, QVBoxLayout, QWidget)
 
@@ -24,47 +24,167 @@ class Ui_ResultsPageForm(object):
         if not resultsPageForm.objectName():
             resultsPageForm.setObjectName(u"resultsPageForm")
         self.rootLayout = QVBoxLayout(resultsPageForm)
-        self.rootLayout.setSpacing(16)
+        self.rootLayout.setSpacing(18)
         self.rootLayout.setObjectName(u"rootLayout")
         self.rootLayout.setContentsMargins(0, 0, 0, 0)
-        self.summaryLabel = QLabel(resultsPageForm)
+        self.resultsSummaryCard = QFrame(resultsPageForm)
+        self.resultsSummaryCard.setObjectName(u"resultsSummaryCard")
+        self.resultsSummaryCard.setFrameShape(QFrame.StyledPanel)
+        self.summaryLayout = QVBoxLayout(self.resultsSummaryCard)
+        self.summaryLayout.setSpacing(14)
+        self.summaryLayout.setObjectName(u"summaryLayout")
+        self.summaryLayout.setContentsMargins(20, 18, 20, 18)
+        self.summaryTitleBar = QFrame(self.resultsSummaryCard)
+        self.summaryTitleBar.setObjectName(u"summaryTitleBar")
+        self.summaryTitleBar.setFrameShape(QFrame.NoFrame)
+        self.summaryTitleLayout = QHBoxLayout(self.summaryTitleBar)
+        self.summaryTitleLayout.setSpacing(0)
+        self.summaryTitleLayout.setObjectName(u"summaryTitleLayout")
+        self.summaryTitleLayout.setContentsMargins(0, 0, 0, 0)
+        self.summaryTitle = QLabel(self.summaryTitleBar)
+        self.summaryTitle.setObjectName(u"summaryTitle")
+
+        self.summaryTitleLayout.addWidget(self.summaryTitle)
+
+
+        self.summaryLayout.addWidget(self.summaryTitleBar)
+
+        self.resultsStatusPanel = QFrame(self.resultsSummaryCard)
+        self.resultsStatusPanel.setObjectName(u"resultsStatusPanel")
+        self.resultsStatusPanel.setFrameShape(QFrame.StyledPanel)
+        self.resultsStatusLayout = QHBoxLayout(self.resultsStatusPanel)
+        self.resultsStatusLayout.setSpacing(14)
+        self.resultsStatusLayout.setObjectName(u"resultsStatusLayout")
+        self.resultsStatusLayout.setContentsMargins(14, 14, 14, 14)
+        self.resultsStatusBadge = QLabel(self.resultsStatusPanel)
+        self.resultsStatusBadge.setObjectName(u"resultsStatusBadge")
+        self.resultsStatusBadge.setAlignment(Qt.AlignCenter)
+
+        self.resultsStatusLayout.addWidget(self.resultsStatusBadge)
+
+        self.resultsStatusTextLayout = QVBoxLayout()
+        self.resultsStatusTextLayout.setSpacing(2)
+        self.resultsStatusTextLayout.setObjectName(u"resultsStatusTextLayout")
+        self.resultsStatusTitle = QLabel(self.resultsStatusPanel)
+        self.resultsStatusTitle.setObjectName(u"resultsStatusTitle")
+        self.resultsStatusTitle.setWordWrap(True)
+
+        self.resultsStatusTextLayout.addWidget(self.resultsStatusTitle)
+
+        self.resultsStatusHint = QLabel(self.resultsStatusPanel)
+        self.resultsStatusHint.setObjectName(u"resultsStatusHint")
+        self.resultsStatusHint.setWordWrap(True)
+
+        self.resultsStatusTextLayout.addWidget(self.resultsStatusHint)
+
+
+        self.resultsStatusLayout.addLayout(self.resultsStatusTextLayout)
+
+
+        self.summaryLayout.addWidget(self.resultsStatusPanel)
+
+        self.summaryLabel = QLabel(self.resultsSummaryCard)
         self.summaryLabel.setObjectName(u"summaryLabel")
-        self.summaryLabel.setMinimumSize(QSize(0, 72))
-        self.summaryLabel.setObjectName(u"workflowStatus")
+        self.summaryLabel.setMinimumSize(QSize(0, 120))
         self.summaryLabel.setWordWrap(True)
+        self.summaryLabel.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignTop)
 
-        self.rootLayout.addWidget(self.summaryLabel)
+        self.summaryLayout.addWidget(self.summaryLabel)
 
-        self.filesBox = QGroupBox(resultsPageForm)
-        self.filesBox.setObjectName(u"filesBox")
-        self.filesLayout = QVBoxLayout(self.filesBox)
-        self.filesLayout.setObjectName(u"filesLayout")
-        self.filesLayout.setContentsMargins(12, 12, 12, 12)
-        self.filesList = QListWidget(self.filesBox)
+
+        self.rootLayout.addWidget(self.resultsSummaryCard)
+
+        self.filesCard = QFrame(resultsPageForm)
+        self.filesCard.setObjectName(u"filesCard")
+        self.filesCard.setFrameShape(QFrame.StyledPanel)
+        self.filesCardLayout = QVBoxLayout(self.filesCard)
+        self.filesCardLayout.setSpacing(14)
+        self.filesCardLayout.setObjectName(u"filesCardLayout")
+        self.filesCardLayout.setContentsMargins(20, 18, 20, 18)
+        self.filesHeader = QFrame(self.filesCard)
+        self.filesHeader.setObjectName(u"filesHeader")
+        self.filesHeader.setFrameShape(QFrame.NoFrame)
+        self.filesHeaderLayout = QHBoxLayout(self.filesHeader)
+        self.filesHeaderLayout.setSpacing(12)
+        self.filesHeaderLayout.setObjectName(u"filesHeaderLayout")
+        self.filesHeaderLayout.setContentsMargins(0, 0, 0, 0)
+        self.filesTitle = QLabel(self.filesHeader)
+        self.filesTitle.setObjectName(u"filesTitle")
+
+        self.filesHeaderLayout.addWidget(self.filesTitle)
+
+        self.filesHeaderSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.filesHeaderLayout.addItem(self.filesHeaderSpacer)
+
+        self.filesCountBadge = QLabel(self.filesHeader)
+        self.filesCountBadge.setObjectName(u"filesCountBadge")
+        self.filesCountBadge.setAlignment(Qt.AlignCenter)
+
+        self.filesHeaderLayout.addWidget(self.filesCountBadge)
+
+
+        self.filesCardLayout.addWidget(self.filesHeader)
+
+        self.filesList = QListWidget(self.filesCard)
         self.filesList.setObjectName(u"filesList")
-        self.filesList.setMinimumSize(QSize(0, 150))
+        self.filesList.setMinimumSize(QSize(0, 170))
 
-        self.filesLayout.addWidget(self.filesList)
+        self.filesCardLayout.addWidget(self.filesList)
 
 
-        self.rootLayout.addWidget(self.filesBox)
+        self.rootLayout.addWidget(self.filesCard)
 
-        self.errorsBox = QGroupBox(resultsPageForm)
-        self.errorsBox.setObjectName(u"errorsBox")
-        self.errorsLayout = QVBoxLayout(self.errorsBox)
-        self.errorsLayout.setObjectName(u"errorsLayout")
-        self.errorsLayout.setContentsMargins(12, 12, 12, 12)
-        self.errorsOutput = QPlainTextEdit(self.errorsBox)
+        self.errorsCard = QFrame(resultsPageForm)
+        self.errorsCard.setObjectName(u"errorsCard")
+        self.errorsCard.setFrameShape(QFrame.StyledPanel)
+        self.errorsCardLayout = QVBoxLayout(self.errorsCard)
+        self.errorsCardLayout.setSpacing(14)
+        self.errorsCardLayout.setObjectName(u"errorsCardLayout")
+        self.errorsCardLayout.setContentsMargins(20, 18, 20, 18)
+        self.errorsHeader = QFrame(self.errorsCard)
+        self.errorsHeader.setObjectName(u"errorsHeader")
+        self.errorsHeader.setFrameShape(QFrame.NoFrame)
+        self.errorsHeaderLayout = QHBoxLayout(self.errorsHeader)
+        self.errorsHeaderLayout.setSpacing(12)
+        self.errorsHeaderLayout.setObjectName(u"errorsHeaderLayout")
+        self.errorsHeaderLayout.setContentsMargins(0, 0, 0, 0)
+        self.errorsTitle = QLabel(self.errorsHeader)
+        self.errorsTitle.setObjectName(u"errorsTitle")
+
+        self.errorsHeaderLayout.addWidget(self.errorsTitle)
+
+        self.errorsHeaderSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.errorsHeaderLayout.addItem(self.errorsHeaderSpacer)
+
+        self.errorsCountBadge = QLabel(self.errorsHeader)
+        self.errorsCountBadge.setObjectName(u"errorsCountBadge")
+        self.errorsCountBadge.setAlignment(Qt.AlignCenter)
+
+        self.errorsHeaderLayout.addWidget(self.errorsCountBadge)
+
+
+        self.errorsCardLayout.addWidget(self.errorsHeader)
+
+        self.errorsOutput = QPlainTextEdit(self.errorsCard)
         self.errorsOutput.setObjectName(u"errorsOutput")
         self.errorsOutput.setMinimumSize(QSize(0, 150))
 
-        self.errorsLayout.addWidget(self.errorsOutput)
+        self.errorsCardLayout.addWidget(self.errorsOutput)
 
 
-        self.rootLayout.addWidget(self.errorsBox)
+        self.rootLayout.addWidget(self.errorsCard)
 
         self.actionRow = QHBoxLayout()
+        self.actionRow.setSpacing(12)
         self.actionRow.setObjectName(u"actionRow")
+        self.actionHint = QLabel(resultsPageForm)
+        self.actionHint.setObjectName(u"actionHint")
+        self.actionHint.setWordWrap(True)
+
+        self.actionRow.addWidget(self.actionHint)
+
         self.actionStretch = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.actionRow.addItem(self.actionStretch)
@@ -89,9 +209,16 @@ class Ui_ResultsPageForm(object):
     # setupUi
 
     def retranslateUi(self, resultsPageForm):
+        self.summaryTitle.setText(QCoreApplication.translate("ResultsPageForm", u"Run summary", None))
+        self.resultsStatusBadge.setText(QCoreApplication.translate("ResultsPageForm", u"COMPLETE", None))
+        self.resultsStatusTitle.setText(QCoreApplication.translate("ResultsPageForm", u"Batch completed successfully.", None))
+        self.resultsStatusHint.setText(QCoreApplication.translate("ResultsPageForm", u"Your documents are ready. Open a file below or jump straight to the output folder.", None))
         self.summaryLabel.setText(QCoreApplication.translate("ResultsPageForm", u"Summary", None))
-        self.filesBox.setTitle(QCoreApplication.translate("ResultsPageForm", u"Generated files", None))
-        self.errorsBox.setTitle(QCoreApplication.translate("ResultsPageForm", u"Errors", None))
+        self.filesTitle.setText(QCoreApplication.translate("ResultsPageForm", u"Generated files", None))
+        self.filesCountBadge.setText(QCoreApplication.translate("ResultsPageForm", u"0", None))
+        self.errorsTitle.setText(QCoreApplication.translate("ResultsPageForm", u"Errors", None))
+        self.errorsCountBadge.setText(QCoreApplication.translate("ResultsPageForm", u"0", None))
+        self.actionHint.setText(QCoreApplication.translate("ResultsPageForm", u"Double-click a generated file to open it instantly.", None))
         self.openLogButton.setText(QCoreApplication.translate("ResultsPageForm", u"Open log", None))
         self.openOutputButton.setText(QCoreApplication.translate("ResultsPageForm", u"Open output folder", None))
         pass
