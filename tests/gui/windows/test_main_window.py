@@ -32,6 +32,7 @@ def test_workflow_rail_stays_synced_with_real_stage_state(prepared_window):
 
     assert len(window.stage_cards) == 4
     assert window.sidebar_title.text() == "Workflow"
+    assert window.template_toolbar.isHidden() is False
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 2, active=False, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
@@ -50,6 +51,7 @@ def test_workflow_rail_stays_synced_with_real_stage_state(prepared_window):
 
     window.stage_cards[2].clicked.emit(2)
     assert window.stage_manager.currentIndex() == 1
+    assert window.template_toolbar.isHidden() is True
     assert_stage_state(window, 1, completed=True)
     assert_stage_state(window, 2, active=True, blocked=False, completed=False)
     assert_stage_state(window, 4, blocked=True)

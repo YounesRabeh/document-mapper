@@ -3,9 +3,15 @@ from __future__ import annotations
 from core.util.logger import Logger
 
 
+def update_template_toolbar_visibility(window):
+    current_stage = window.stage_manager.currentIndex() + 1
+    window.template_toolbar.setVisible(current_stage == 1)
+
+
 def refresh_pages(window):
     window._sync_effective_template_path()
     window._refresh_template_toolbar()
+    update_template_toolbar_visibility(window)
     window.setup_page.bind_session(window.session)
     window.mapping_page.bind_session(window.session)
     window.generate_page.bind_session(window.session)
@@ -68,6 +74,7 @@ def retranslate_ui(window):
         card.retranslate()
     window._sync_effective_template_path()
     window._refresh_template_toolbar()
+    update_template_toolbar_visibility(window)
     window._refresh_workflow_state()
 
 
@@ -89,6 +96,7 @@ def handle_stage_changed(window, current_index: int):
         window.generate_page.bind_session(window.session)
     elif stage_number == 4:
         window.results_page.bind_result(window.last_result, window.session)
+    update_template_toolbar_visibility(window)
     current_page = window.stage_manager.currentWidget()
     if hasattr(current_page, "scroll_to_top"):
         current_page.scroll_to_top()
