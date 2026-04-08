@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QPlainTextEdit, QPushButton, QSizePolicy, QSpacerItem,
+    QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
     QVBoxLayout, QWidget)
 
 class Ui_GeneratePageForm(object):
@@ -125,7 +125,7 @@ class Ui_GeneratePageForm(object):
 
         self.logLayout.addWidget(self.logTitleBar)
 
-        self.logOutput = QPlainTextEdit(self.logCard)
+        self.logOutput = QTextEdit(self.logCard)
         self.logOutput.setObjectName(u"logOutput")
         self.logOutput.setMinimumSize(QSize(0, 220))
 

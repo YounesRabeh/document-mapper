@@ -223,7 +223,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPlainTextEdit" name="logOutput">
+       <widget class="QTextEdit" name="logOutput">
         <property name="minimumSize">
          <size>
           <width>0</width>

@@ -3,7 +3,8 @@ from __future__ import annotations
 from html import escape
 
 from PySide6.QtCore import QObject, QThread, Signal, Qt
-from PySide6.QtWidgets import QMessageBox, QSizePolicy, QWidget
+from PySide6.QtGui import QPalette, QTextCursor
+from PySide6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit, QWidget
 
 from core.certificate.generator import CertificateGenerator
 from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, ProjectSession
@@ -82,7 +83,9 @@ class GeneratePage(WorkflowPage):
         self.log_box.setMinimumHeight(PANEL_MIN_HEIGHT + 80)
         self.log_output.setReadOnly(True)
         self.log_output.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
-        self.log_output.setLineWrapMode(self.log_output.LineWrapMode.NoWrap)
+        self.log_output.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.log_output.setUndoRedoEnabled(False)
+        self.log_output.document().setDocumentMargin(0)
 
         self.generate_button.clicked.connect(self._start_generation)
         self.retranslate_ui()
@@ -111,7 +114,7 @@ class GeneratePage(WorkflowPage):
         self._worker = GenerationWorker(self.generator, session_copy)
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
-        self._worker.log_message.connect(self.log_output.appendPlainText)
+        self._worker.log_message.connect(self._append_log_entry)
         self._worker.finished.connect(self._handle_finished)
         self._worker.failed.connect(self._handle_failed)
         self._worker.finished.connect(self._thread.quit)
@@ -121,14 +124,14 @@ class GeneratePage(WorkflowPage):
         self.refresh_from_session()
 
     def _handle_finished(self, result: GenerationResult):
-        self.log_output.appendPlainText(self.localization.t("log.generation_finished"))
+        self._append_log_entry(self.localization.t("log.generation_finished"))
         self.generate_button.setEnabled(True)
         self.results_ready.emit(result)
         self._cleanup_thread()
         self.refresh_from_session()
 
     def _handle_failed(self, error_message: str):
-        self.log_output.appendPlainText(
+        self._append_log_entry(
             self.localization.t("log.generation_failed", error=self.localization.translate_runtime_text(error_message))
         )
         self.generate_button.setEnabled(True)
@@ -286,3 +289,84 @@ class GeneratePage(WorkflowPage):
         style.unpolish(widget)
         style.polish(widget)
         widget.update()
+
+    def _append_log_entry(self, message: str):
+        self.log_output.append(self._render_log_entry(message))
+        self.log_output.moveCursor(QTextCursor.MoveOperation.End)
+        self.log_output.ensureCursorVisible()
+
+    def _render_log_entry(self, message: str) -> str:
+        level, body = self._split_log_message(message)
+        colors = self._log_level_colors(level)
+        safe_level = escape(level)
+        safe_body = escape(body)
+        return (
+            "<div style='margin: 0 0 8px 0; padding: 10px 12px; "
+            f"background: {colors['row_bg']}; border: 1px solid {colors['row_border']}; border-radius: 12px;'>"
+            "<table width='100%' cellspacing='0' cellpadding='0'>"
+            "<tr>"
+            "<td valign='top' width='92' style='padding: 0 12px 0 0;'>"
+            "<span style='display: inline-block; padding: 4px 8px; border-radius: 999px; "
+            f"background: {colors['badge_bg']}; color: {colors['badge_fg']}; "
+            "font-size: 10px; font-weight: 800; letter-spacing: 0.8px;'>"
+            f"{safe_level}"
+            "</span>"
+            "</td>"
+            "<td valign='middle' style='font-size: 13px; line-height: 1.45; "
+            f"color: {colors['text']};'>{safe_body}</td>"
+            "</tr>"
+            "</table>"
+            "</div>"
+        )
+
+    def _split_log_message(self, message: str) -> tuple[str, str]:
+        text = str(message or "").strip()
+        if " | " in text:
+            level, body = text.split(" | ", 1)
+            return level.strip().upper(), body.strip()
+        return "INFO", text
+
+    def _log_level_colors(self, level: str) -> dict[str, str]:
+        palette = self.log_output.palette()
+        row_bg = palette.color(QPalette.ColorRole.AlternateBase).name()
+        row_border = palette.color(QPalette.ColorRole.Midlight).name()
+        default_text = palette.color(QPalette.ColorRole.WindowText).name()
+        neutral_badge_fg = palette.color(QPalette.ColorRole.HighlightedText).name()
+        mapping = {
+            "INFO": {
+                "badge_bg": "#3d6fa1",
+                "badge_fg": neutral_badge_fg,
+                "row_bg": row_bg,
+                "row_border": row_border,
+                "text": default_text,
+            },
+            "PROCESS": {
+                "badge_bg": "#5d5ad6",
+                "badge_fg": neutral_badge_fg,
+                "row_bg": row_bg,
+                "row_border": row_border,
+                "text": default_text,
+            },
+            "SUCCESS": {
+                "badge_bg": "#2d8a57",
+                "badge_fg": neutral_badge_fg,
+                "row_bg": row_bg,
+                "row_border": row_border,
+                "text": default_text,
+            },
+            "WARNING": {
+                "badge_bg": "#b17a25",
+                "badge_fg": neutral_badge_fg,
+                "row_bg": row_bg,
+                "row_border": row_border,
+                "text": default_text,
+            },
+            "ERROR": {
+                "badge_bg": "#b44747",
+                "badge_fg": neutral_badge_fg,
+                "row_bg": row_bg,
+                "row_border": row_border,
+                "text": default_text,
+            },
+        }
+        return mapping.get(level, mapping["INFO"])
