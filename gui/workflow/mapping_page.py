@@ -13,16 +13,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.certificate.excel_service import ExcelDataService
-from core.certificate.generator import CertificateGenerator
-from core.certificate.models import (
+from core.mapping.excel_service import ExcelDataService
+from core.mapping.generator import DocumentGenerator
+from core.mapping.models import (
     DEFAULT_OUTPUT_NAMING_SCHEMA,
     DEFAULT_PLACEHOLDER_DELIMITER,
     MappingEntry,
     derive_placeholder_boundaries,
     normalize_placeholder_delimiter,
 )
-from core.certificate.template_service import TemplatePlaceholderService
+from core.mapping.template_service import TemplatePlaceholderService
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_MappingPageForm
 from gui.ui.elements.combo_box import ClickSelectComboBox
@@ -34,7 +34,7 @@ class MappingPage(WorkflowPage):
     def __init__(
         self,
         excel_service: ExcelDataService,
-        generator: CertificateGenerator,
+        generator: DocumentGenerator,
         localization: LocalizationManager,
         template_service: TemplatePlaceholderService | None = None,
     ):
@@ -112,6 +112,7 @@ class MappingPage(WorkflowPage):
         self.validation_summary.setWordWrap(True)
         self.validation_output.setReadOnly(True)
         self.validation_output.setMaximumBlockCount(200)
+        self.validation_output.setVisible(False)
 
         self.retranslate_ui()
 
@@ -208,7 +209,9 @@ class MappingPage(WorkflowPage):
             blockers.append(self.localization.t("runtime.select_word_template"))
 
         self.validation_summary.setText(blockers[0] if blockers else "")
-        self.validation_output.setPlainText("\n".join(f"- {item}" for item in blockers))
+        detail_lines = [f"- {item}" for item in blockers[1:]]
+        self.validation_output.setPlainText("\n".join(detail_lines))
+        self.validation_output.setVisible(bool(detail_lines))
 
     def _output_naming_tokens(self) -> list[str]:
         return self.mapping_context.output_naming_tokens(self.columns)
@@ -488,10 +491,12 @@ class MappingPage(WorkflowPage):
                 self.localization.t("status.validation_issues", count=len(translated))
             )
             self.validation_output.setPlainText("\n".join(f"- {error}" for error in translated))
+            self.validation_output.setVisible(True)
         else:
             ready_text = self.localization.t("status.ready_to_generate")
             self.validation_summary.setText(ready_text)
-            self.validation_output.setPlainText(self.localization.t("status.validation_ready_detail"))
+            self.validation_output.clear()
+            self.validation_output.setVisible(False)
 
     def retranslate_page(self):
         self._refresh_mapping_help_text()

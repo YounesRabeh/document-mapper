@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.certificate.models import ProjectSession
+from core.mapping.models import ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from gui.styles import apply_stylesheet
 

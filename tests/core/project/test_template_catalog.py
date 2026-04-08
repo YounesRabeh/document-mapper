@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.certificate.models import ProjectSession, ProjectTemplateEntry, ProjectTemplateType
+from core.mapping.models import ProjectSession, ProjectTemplateEntry, ProjectTemplateType
 from core.project import TemplateCatalogService
 
 

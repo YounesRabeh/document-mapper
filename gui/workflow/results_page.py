@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.certificate.models import GenerationResult, ProjectSession
+from core.mapping.models import GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from core.util.system_info import open_path
 from gui.forms import Ui_ResultsPageForm
@@ -53,12 +53,12 @@ class ResultsFileEntry(QWidget):
         self._path = path
         self._on_open = on_open
         self.setObjectName("resultsFileEntry")
-        self.setMinimumHeight(64)
+        self.setMinimumHeight(52)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 10)
-        layout.setSpacing(12)
+        layout.setContentsMargins(12, 7, 12, 7)
+        layout.setSpacing(10)
 
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
@@ -119,7 +119,7 @@ class ResultsFilesPanel(QWidget):
         self.list_widget = QListWidget()
         self.list_widget.setObjectName(list_object_name)
         self.list_widget.setMinimumHeight(PANEL_MIN_HEIGHT)
-        self.list_widget.setSpacing(8)
+        self.list_widget.setSpacing(4)
         self.list_widget.setSelectionMode(self.list_widget.SelectionMode.NoSelection)
         self.list_widget.setFocusPolicy(Qt.NoFocus)
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -329,14 +329,6 @@ class ResultsPage(WorkflowPage):
                     ),
                 ]
             )
-            if self.result.last_certificate_number:
-                rows.append(
-                    (
-                        self.localization.t("results.metric.last_reference"),
-                        self.result.last_certificate_number,
-                        True,
-                    )
-                )
             if self.result.log_path:
                 rows.append(
                     (

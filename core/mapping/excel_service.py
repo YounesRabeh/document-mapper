@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.certificate.models import ExcelPreview, MappingEntry
+from core.mapping.models import ExcelPreview, MappingEntry
 
 
 def normalize_column_name(value: str) -> str:

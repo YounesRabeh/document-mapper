@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 import time
 
-from core.certificate.models import ProjectSession
+from core.mapping.models import ProjectSession
 
 
 class LastSessionPersistenceService:

@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 
-from core.certificate.models import (
+from core.mapping.models import (
     DEFAULT_IMPORTED_TEMPLATE_TYPE,
     DEFAULT_IMPORTED_TEMPLATE_NAME,
     MappingEntry,

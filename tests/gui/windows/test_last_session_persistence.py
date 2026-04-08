@@ -4,7 +4,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-from core.certificate.models import ProjectSession
+from core.mapping.models import ProjectSession
 from gui.windows.last_session_persistence import LastSessionPersistenceService
 
 

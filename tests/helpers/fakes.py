@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-from core.certificate.excel_service import ExcelDataService, normalize_column_name
-from core.certificate.models import GenerationResult, MappingEntry, ProjectSession
+from core.mapping.excel_service import ExcelDataService, normalize_column_name
+from core.mapping.models import GenerationResult, MappingEntry, ProjectSession
 
 
 class FakeExcelService:

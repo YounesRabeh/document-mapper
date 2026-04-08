@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from core.certificate.models import MappingEntry
+from core.mapping.models import MappingEntry
 from gui.workflow.mapping_logic import MappingContextService
 
 

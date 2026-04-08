@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from core.certificate.models import (
+from core.mapping.models import (
     DEFAULT_OUTPUT_NAMING_SCHEMA,
     DEFAULT_PLACEHOLDER_DELIMITER,
     ProjectSession,
-    normalize_certificate_type,
+    normalize_template_name,
     normalize_theme_mode,
 )
 
 
-def test_normalize_certificate_type_strips_template_extension():
+def test_normalize_template_name_strips_template_extension():
     assert (
-        normalize_certificate_type("MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx")
+        normalize_template_name("MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx")
         == "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C"
     )
 

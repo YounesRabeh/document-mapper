@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from core.certificate.excel_service import ExcelDataService, normalize_column_name
-from core.certificate.models import MappingEntry
+from core.mapping.excel_service import ExcelDataService, normalize_column_name
+from core.mapping.models import MappingEntry
 
 
 def test_normalize_column_name():

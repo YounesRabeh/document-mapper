@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from core.certificate.generator import CertificateGenerator
-from core.certificate.models import ProjectSession
+from core.mapping.generator import DocumentGenerator
+from core.mapping.models import ProjectSession
 from tests.helpers.fakes import FakeExcelService
 
 
-def test_generator_sanitizes_certificate_type_filename_fragment(tmp_path):
+def test_generator_sanitizes_template_name_filename_fragment(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
-    generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    generator = DocumentGenerator(excel_service=FakeExcelService(dataframe))
     template_path = tmp_path / "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx"
 
     output_path = generator._build_docx_output_path(
@@ -31,7 +31,7 @@ def test_generator_sanitizes_certificate_type_filename_fragment(tmp_path):
 
 def test_generator_resolves_output_naming_schema_tokens(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
-    generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    generator = DocumentGenerator(excel_service=FakeExcelService(dataframe))
     template_path = tmp_path / "MODELLO ATTESTATO integrale PS 12 ORE tipo B e C.docx"
 
     output_path = generator._build_docx_output_path(
@@ -51,7 +51,7 @@ def test_generator_resolves_output_naming_schema_tokens(tmp_path):
 
 def test_generator_falls_back_to_row_name_when_schema_resolves_empty(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
-    generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    generator = DocumentGenerator(excel_service=FakeExcelService(dataframe))
 
     output_path = generator._build_docx_output_path(
         ProjectSession(
@@ -69,7 +69,7 @@ def test_generator_falls_back_to_row_name_when_schema_resolves_empty(tmp_path):
 
 def test_generator_appends_counter_for_duplicate_output_names(tmp_path):
     dataframe = pd.DataFrame([{"NOME": "Ada", "COGNOME": "Lovelace"}])
-    generator = CertificateGenerator(excel_service=FakeExcelService(dataframe))
+    generator = DocumentGenerator(excel_service=FakeExcelService(dataframe))
     used_output_basenames: dict[str, int] = {}
     session = ProjectSession(
         output_dir=str(tmp_path),

@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from core.certificate.models import MappingEntry, ProjectSession, ProjectTemplateEntry, ProjectTemplateType
-from core.certificate.session_store import ProjectSessionStore
+from core.mapping.models import MappingEntry, ProjectSession, ProjectTemplateEntry, ProjectTemplateType
+from core.mapping.session_store import ProjectSessionStore
 from core.util.app_paths import AppPaths
 
 
@@ -73,7 +73,6 @@ def test_session_store_loads_legacy_files(tmp_path):
             '"template_path": "/tmp/template.docx", '
             '"output_dir": "/tmp/out", '
             '"license_path": "/tmp/license.xml", '
-            '"certificate_type": "attestato", '
             '"toPDF": true, '
             '"toPDF_timeout": 180'
             "}"

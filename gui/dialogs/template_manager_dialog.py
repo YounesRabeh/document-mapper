@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QDialog,
 )
 
-from core.certificate.models import (
+from core.mapping.models import (
     DEFAULT_IMPORTED_TEMPLATE_TYPE,
     ProjectSession,
     ProjectTemplateEntry,

@@ -74,7 +74,7 @@ def main_window_factory(qapp, window_config, clear_test_settings, tmp_path):
         stack = ExitStack()
         stack.enter_context(patch.object(main_window_module, "ProjectSessionStore", return_value=session_store))
         stack.enter_context(patch.object(main_window_module, "ExcelDataService", return_value=excel))
-        stack.enter_context(patch.object(main_window_module, "CertificateGenerator", side_effect=generator_side_effect))
+        stack.enter_context(patch.object(main_window_module, "DocumentGenerator", side_effect=generator_side_effect))
         stack.enter_context(patch.object(main_window_module.ThemeManager, "_refresh_styled_widgets", return_value=None))
         stack.enter_context(patch.object(main_window_module.AppPaths, "state_dir", return_value=state_dir))
         stack.enter_context(

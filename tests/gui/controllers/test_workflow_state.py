@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.certificate.models import GenerationResult, ProjectSession
+from core.mapping.models import GenerationResult, ProjectSession
 from gui.controllers import WorkflowStateController
 
 

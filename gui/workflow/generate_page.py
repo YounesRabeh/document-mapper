@@ -6,8 +6,8 @@ from PySide6.QtCore import QObject, QThread, Signal, Qt
 from PySide6.QtGui import QPalette, QTextCursor
 from PySide6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit, QWidget
 
-from core.certificate.generator import CertificateGenerator
-from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, ProjectSession
+from core.mapping.generator import DocumentGenerator
+from core.mapping.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_GeneratePageForm
 from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
@@ -18,7 +18,7 @@ class GenerationWorker(QObject):
     finished = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, generator: CertificateGenerator, session: ProjectSession):
+    def __init__(self, generator: DocumentGenerator, session: ProjectSession):
         super().__init__()
         self.generator = generator
         self.session = session
@@ -35,7 +35,7 @@ class GenerationWorker(QObject):
 class GeneratePage(WorkflowPage):
     results_ready = Signal(object)
 
-    def __init__(self, generator: CertificateGenerator, localization: LocalizationManager):
+    def __init__(self, generator: DocumentGenerator, localization: LocalizationManager):
         super().__init__(
             localization,
             "page.generate.title",

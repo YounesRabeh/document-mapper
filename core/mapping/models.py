@@ -25,10 +25,6 @@ def normalize_template_name(value: str) -> str:
     return normalized.strip()
 
 
-def normalize_certificate_type(value: str) -> str:
-    return normalize_template_name(value)
-
-
 def normalize_template_type_name(value: str) -> str:
     normalized = re.sub(r"\s+", " ", str(value or "").strip())
     if normalized.casefold() == "imported":
@@ -233,10 +229,6 @@ class ProjectSession:
         return derive_placeholder_boundaries(self.placeholder_delimiter)[1]
 
     @property
-    def certificate_type(self) -> str:
-        return self.active_template_name
-
-    @property
     def active_template_name(self) -> str:
         if self.template_override_path:
             return normalize_template_name(Path(self.template_override_path).name)
@@ -370,10 +362,7 @@ class ProjectSession:
             return
 
         legacy_template_path = str(payload.get("template_path", "")).strip()
-        legacy_label = normalize_certificate_type(payload.get("certificate_type", "")) or (
-            normalize_template_name(Path(legacy_template_path).name) if legacy_template_path else ""
-        )
-        if not legacy_template_path and not legacy_label:
+        if not legacy_template_path:
             return
 
         imported_type = ProjectTemplateType(DEFAULT_IMPORTED_TEMPLATE_TYPE)
@@ -457,7 +446,6 @@ class GenerationResult:
     success_count: int = 0
     generated_docx_paths: list[str] = field(default_factory=list)
     generated_pdf_paths: list[str] = field(default_factory=list)
-    last_certificate_number: str | None = None
     log_path: str = ""
     errors: list[str] = field(default_factory=list)
 

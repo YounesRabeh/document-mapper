@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from PySide6.QtWidgets import QDialog
 
-from core.certificate.models import (
+from core.mapping.models import (
     GenerationResult,
     ProjectSession,
     ProjectTemplateEntry,
@@ -83,7 +83,7 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
         success_count=1,
         generated_docx_paths=[str(Path(temp_dir) / "docx" / "ADA_attestato_certificato.docx")],
         generated_pdf_paths=[],
-        log_path=str(Path(temp_dir) / "certificate_generation.log"),
+        log_path=str(Path(temp_dir) / "generation.log"),
         errors=[],
     )
     window._handle_generation_result(result)
@@ -123,7 +123,7 @@ def test_results_page_splits_docx_and_pdf_outputs(prepared_window):
         success_count=1,
         generated_docx_paths=[str(Path(temp_dir) / "docx" / "ADA_attestato_certificato.docx")],
         generated_pdf_paths=[str(Path(temp_dir) / "pdf" / "ADA_attestato_certificato.pdf")],
-        log_path=str(Path(temp_dir) / "certificate_generation.log"),
+        log_path=str(Path(temp_dir) / "generation.log"),
         errors=[],
     )
     window._handle_generation_result(result)

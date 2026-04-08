@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from core.certificate.template_service import TemplatePlaceholderService
+from core.mapping.template_service import TemplatePlaceholderService
 
 
 def test_extracts_placeholders_from_docx(tmp_path):

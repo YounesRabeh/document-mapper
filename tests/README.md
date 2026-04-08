@@ -58,7 +58,7 @@ python -m pytest tests/gui/workflow/test_mapping_page.py -k delimiter -q
 
 ## Structure
 
-- `tests/core/certificate/`: Excel, generator, session, template, and model tests
+- `tests/core/mapping/`: Excel, generator, session, template, and model tests
 - `tests/core/project/`: project document and template-catalog tests
 - `tests/core/util/`: app-path and resource resolution tests
 - `tests/core/manager/`: localization catalog and manager-level tests

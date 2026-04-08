@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from core.certificate.models import GenerationResult, ProjectSession
+from core.mapping.models import GenerationResult, ProjectSession
 
 
 @dataclass(slots=True)

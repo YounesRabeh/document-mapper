@@ -5,7 +5,7 @@ from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from core.certificate.models import DEFAULT_OUTPUT_NAMING_SCHEMA
+from core.mapping.models import DEFAULT_OUTPUT_NAMING_SCHEMA
 from tests.helpers.gui import assert_stage_state, mapping_combo
 
 

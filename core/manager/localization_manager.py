@@ -71,7 +71,6 @@ class LocalizationManager(QObject):
 
         exact = {
             "Select an Excel workbook.": self.t("runtime.select_excel_workbook"),
-            "Select a Word certificate template.": self.t("runtime.select_word_template"),
             "Select a project template or set a template override.": self.t("runtime.select_word_template"),
             "Choose an output folder.": self.t("runtime.choose_output_folder"),
             "Set a placeholder delimiter before continuing.": self.t("runtime.placeholder_delimiter_required"),
@@ -80,9 +79,6 @@ class LocalizationManager(QObject):
             ),
             "Set an output naming schema before continuing.": self.t("runtime.output_naming_schema_required"),
             "Add at least one placeholder mapping.": self.t("runtime.add_placeholder_mapping"),
-            "Spire.Doc is not installed. Install the runtime dependency before generating certificates.": self.t(
-                "runtime.spire_not_installed"
-            ),
             "Spire.Doc is not installed. Install the runtime dependency before generating documents.": self.t(
                 "runtime.spire_not_installed"
             ),

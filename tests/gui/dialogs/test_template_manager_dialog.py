@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from PySide6.QtWidgets import QMessageBox
 
-from core.certificate.models import ProjectSession, ProjectTemplateEntry, ProjectTemplateType
+from core.mapping.models import ProjectSession, ProjectTemplateEntry, ProjectTemplateType
 from core.manager.localization_manager import LocalizationManager
 from gui.dialogs.template_manager_dialog import TemplateManagerDialog
 

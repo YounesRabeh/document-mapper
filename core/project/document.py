@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from core.certificate.models import GenerationResult, ProjectSession
+from core.mapping.models import GenerationResult, ProjectSession
 
 
 @dataclass(slots=True)
@@ -23,7 +23,6 @@ class ProjectDocument:
             success_count=self.last_result.success_count,
             generated_docx_paths=list(self.last_result.generated_docx_paths),
             generated_pdf_paths=list(self.last_result.generated_pdf_paths),
-            last_certificate_number=self.last_result.last_certificate_number,
             log_path=self.last_result.log_path,
             errors=list(self.last_result.errors),
         )

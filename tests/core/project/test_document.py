@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from core.certificate.models import ProjectSession
+from core.mapping.models import ProjectSession
 from core.project import ProjectDocument
 
 

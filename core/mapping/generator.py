@@ -10,8 +10,8 @@ from typing import Callable
 
 import pandas as pd
 
-from core.certificate.excel_service import ExcelDataService, normalize_column_name
-from core.certificate.models import (
+from core.mapping.excel_service import ExcelDataService, normalize_column_name
+from core.mapping.models import (
     GenerationResult,
     MappingEntry,
     ProjectSession,
@@ -26,7 +26,6 @@ OUTPUT_SCHEMA_TOKEN_PATTERN = re.compile(r"\{([^{}]+)\}")
 OUTPUT_SCHEMA_BUILTINS = {
     "ROW",
     "TEMPLATE",
-    "CERTIFICATE_TYPE",
 }
 FIRST_NAME_ALIASES = (
     normalize_column_name("NAME"),
@@ -43,14 +42,10 @@ DATE_ALIASES = frozenset(
         normalize_column_name("DATA"),
     )
 )
-CERTIFICATE_NUMBER_ALIASES = (
-    normalize_column_name("CERTIFICATE_NO"),
-    normalize_column_name("NUMERO-ATTESTATO"),
-)
 UPPERCASE_TEXT_ALIASES = frozenset((*FIRST_NAME_ALIASES, *LAST_NAME_ALIASES))
 
 
-class CertificateGenerator:
+class DocumentGenerator:
     def __init__(
         self,
         excel_service: ExcelDataService | None = None,
@@ -136,7 +131,6 @@ class CertificateGenerator:
         generated_docx_paths: list[str] = []
         generated_pdf_paths: list[str] = []
         generation_errors: list[str] = []
-        last_certificate_number: str | None = None
         used_output_basenames: dict[str, int] = {}
 
         document_cls, file_format = self._load_spire_dependencies()
@@ -160,10 +154,6 @@ class CertificateGenerator:
                     f"PROCESS | Generating document for {participant_name} ({index + 1}/{total_rows})",
                     progress_callback,
                 )
-
-                last_certificate_value = self._first_row_value(row, column_lookup, CERTIFICATE_NUMBER_ALIASES)
-                if last_certificate_value:
-                    last_certificate_number = last_certificate_value
 
                 document = document_cls()
                 document.LoadFromFile(session.template_path)
@@ -191,13 +181,6 @@ class CertificateGenerator:
                 progress_callback,
             )
 
-        if last_certificate_number is not None:
-            self._write_log(
-                log_path,
-                f"INFO | Last certificate number seen: {last_certificate_number}",
-                progress_callback,
-            )
-
         self._write_log(
             log_path,
             f"INFO | Generation complete: {len(generated_docx_paths)}/{total_rows} DOCX files created.",
@@ -209,7 +192,6 @@ class CertificateGenerator:
             success_count=len(generated_docx_paths),
             generated_docx_paths=generated_docx_paths,
             generated_pdf_paths=generated_pdf_paths,
-            last_certificate_number=last_certificate_number,
             log_path=str(log_path),
             errors=generation_errors,
         )
@@ -359,7 +341,7 @@ class CertificateGenerator:
         normalized = normalize_column_name(token)
         if normalized == "ROW":
             return str(row_index + 1)
-        if normalized in {"TEMPLATE", "CERTIFICATE_TYPE"}:
+        if normalized == "TEMPLATE":
             return session.active_template_name
 
         column_name = column_lookup.get(normalized)
@@ -443,7 +425,7 @@ class CertificateGenerator:
     def _resolve_log_path(self, session: ProjectSession) -> Path:
         base_dir = Path(session.output_dir).resolve() if session.output_dir else AppPaths.logs_dir()
         base_dir.mkdir(parents=True, exist_ok=True)
-        return base_dir / "certificate_generation.log"
+        return base_dir / "generation.log"
 
     def _validate_output_dir(self, output_dir: str) -> str | None:
         target = Path(output_dir).expanduser()
@@ -477,7 +459,7 @@ class CertificateGenerator:
         message: str,
         progress_callback: LogCallback | None = None,
     ):
-        Logger.info(message, tag="CertificateGenerator")
+        Logger.info(message, tag="DocumentGenerator")
         with open(log_path, "a", encoding="utf-8") as handle:
             handle.write(message + "\n")
         if progress_callback:

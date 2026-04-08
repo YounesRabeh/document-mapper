@@ -9,11 +9,11 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
-from core.certificate.excel_service import ExcelDataService
-from core.certificate.generator import CertificateGenerator
-from core.certificate.models import GenerationResult, ProjectSession
-from core.certificate.session_store import ProjectSessionStore
-from core.certificate.template_service import TemplatePlaceholderService
+from core.mapping.excel_service import ExcelDataService
+from core.mapping.generator import DocumentGenerator
+from core.mapping.models import GenerationResult, ProjectSession
+from core.mapping.session_store import ProjectSessionStore
+from core.mapping.template_service import TemplatePlaceholderService
 from core.enums.app_themes import AppTheme
 from core.manager.localization_manager import LocalizationManager
 from core.manager.theme_manager import ThemeManager
@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
         self.session_store = ProjectSessionStore()
         self.excel_service = ExcelDataService()
         self.template_service = TemplatePlaceholderService()
-        self.generator = CertificateGenerator(self.excel_service)
+        self.generator = DocumentGenerator(self.excel_service)
         self.template_catalog = TemplateCatalogService()
         loaded_session = self.session_store.load_last_session()
         inferred_project_dir = self.template_catalog.infer_project_dir_from_session(loaded_session)

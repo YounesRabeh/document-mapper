@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from core.certificate.models import (
+from core.mapping.models import (
     DEFAULT_IMPORTED_TEMPLATE_TYPE,
     ProjectSession,
     ProjectTemplateEntry,

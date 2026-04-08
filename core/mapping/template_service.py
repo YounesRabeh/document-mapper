@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 from xml.etree import ElementTree
 
-from core.certificate.models import DEFAULT_PLACEHOLDER_DELIMITER, derive_placeholder_boundaries
+from core.mapping.models import DEFAULT_PLACEHOLDER_DELIMITER, derive_placeholder_boundaries
 
 
 def _build_placeholder_pattern(delimiter: str) -> tuple[re.Pattern[str], str, str] | None:

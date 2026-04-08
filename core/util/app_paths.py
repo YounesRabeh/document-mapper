@@ -11,7 +11,7 @@ class AppPaths:
     DEFAULT_APP_SLUG = "document-mapper"
     DEFAULT_PROJECT_DIRNAME = "document-mapper-project"
     DEFAULT_PROJECT_FILENAME = "project.json"
-    DEFAULT_LOG_FILENAME = "certificate_generation.log"
+    DEFAULT_LOG_FILENAME = "generation.log"
     DEFAULT_RESOURCES_DIRNAME = "resources"
     DEFAULT_LOCALES_DIRNAME = "locales"
 

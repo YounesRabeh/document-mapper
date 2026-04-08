@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from core.certificate.models import MappingEntry
+from core.mapping.models import MappingEntry
 
 
 @dataclass(slots=True)

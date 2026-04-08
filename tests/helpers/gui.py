@@ -4,7 +4,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QComboBox
 
-from core.certificate.models import ProjectTemplateEntry, ProjectTemplateType, normalize_template_name
+from core.mapping.models import ProjectTemplateEntry, ProjectTemplateType, normalize_template_name
 
 
 def assert_stage_state(window, stage_index: int, *, active=None, blocked=None, completed=None):
