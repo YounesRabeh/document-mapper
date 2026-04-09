@@ -43,6 +43,8 @@
   "dialog.generation_overwrite.title": "Overwrite existing output files?",
   "dialog.generation_overwrite.body": "{count} output file(s) already exist and will be replaced.\n\n{preview}\n\nDo you want to continue?",
   "dialog.generation_overwrite.more": "... and {count} more.",
+  "dialog.generation_cache_reset.title": "Clear cached output before generating?",
+  "dialog.generation_cache_reset.body": "This output folder already contains generated cache from this app session.\n\nDOCX/PDF cache and the generation log will be removed before the new run.\n\nDo you want to continue?",
   "dialog.generation_failed.title": "Generation failed",
   "dialog.template_override_save.title": "Store specific template?",
   "dialog.template_override_save.body": "The specific template '{path}' is active. Do you want to copy it into the project templates folder before saving?",

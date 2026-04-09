@@ -210,14 +210,17 @@ class EnvironmentSetup:
             for key, value in values.items():
                 config[f"{section.upper()}_{key.upper()}"] = value
 
-        # Merge `.env` overrides
+        # Merge `.env` overrides only for known config keys.
+        # This avoids importing unrelated process env vars such as PATH/XDG_*.
         if self.env_loaded:
-            for key, value in os.environ.items():
-                if key.isupper():
-                    try:
-                        config[key] = self._auto_cast(key, value)
-                    except Exception:
-                        config[key] = value  # Fallback
+            for key in tuple(config.keys()):
+                if key not in os.environ:
+                    continue
+                value = os.environ.get(key)
+                try:
+                    config[key] = self._auto_cast(key, value)
+                except Exception:
+                    config[key] = value  # Fallback
 
         # Add meta flag
         config["IS_DEV_MODE"] = self.is_dev

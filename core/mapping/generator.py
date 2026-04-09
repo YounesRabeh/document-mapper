@@ -106,13 +106,11 @@ class DocumentGenerator:
     def existing_output_conflicts(self, session: ProjectSession) -> list[str]:
         if not session.output_dir or not session.excel_path:
             return []
-        if not Path(session.excel_path).exists():
-            return []
+        excel_path = Path(session.excel_path).expanduser().resolve()
+        if not excel_path.exists():
+            raise FileNotFoundError(f"Excel file not found: {session.excel_path}")
 
-        try:
-            dataframe = self.excel_service.read_dataframe(session.excel_path)
-        except Exception:
-            return []
+        dataframe = self.excel_service.read_dataframe(str(excel_path))
 
         output_root = Path(session.output_dir).resolve()
         docx_dir = output_root / "docx"

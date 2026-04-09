@@ -55,3 +55,16 @@ def test_generated_ui_python_files_exist_only_in_gui_forms():
     for generated in expected_files:
         source_ui = generated.with_name(generated.name.removeprefix("ui_")).with_suffix(".ui")
         assert source_ui.exists(), f"Missing .ui source for generated form: {generated}"
+
+
+def test_environment_setup_ignores_unrelated_uppercase_env_vars(tmp_path, monkeypatch):
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP_LANGUAGE=en\n", encoding="utf-8")
+    unrelated_dir = tmp_path / "should_not_be_created"
+    monkeypatch.setenv("DOCUMENT_MAPPER_TEST_RANDOM_DIR", str(unrelated_dir))
+
+    setup = EnvironmentSetup(env_path=str(env_file))
+    config = setup.load()
+
+    assert "DOCUMENT_MAPPER_TEST_RANDOM_DIR" not in config
+    assert unrelated_dir.exists() is False

@@ -270,17 +270,19 @@ def test_archive_page_prefills_root_and_keeps_run_name_empty_on_new_result(prepa
     assert window.archive_page.archive_run_name_input.text() == ""
 
 
-def test_generate_page_prompts_before_overwriting_existing_outputs(prepared_window):
+def test_generate_page_prompts_before_clearing_session_output_cache(prepared_window):
     window = prepared_window.window
+    temp_dir = Path(prepared_window.files.root)
 
     _unlock_generate_stage(window)
     window.stage_cards[3].clicked.emit(3)
+    window.generate_page._has_generated_in_app_session = True
 
-    with patch.object(
-        window.generate_page.generator,
-        "existing_output_conflicts",
-        return_value=["/tmp/out/docx/ADA.docx"],
-    ), patch(
+    cached_docx_dir = temp_dir / "docx"
+    cached_docx_dir.mkdir(parents=True, exist_ok=True)
+    (cached_docx_dir / "ADA.docx").write_text("cached", encoding="utf-8")
+
+    with patch(
         "gui.workflow.generate_page.QMessageBox.question",
         return_value=QMessageBox.StandardButton.No,
     ) as question_mock:

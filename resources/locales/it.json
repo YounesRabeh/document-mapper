@@ -43,6 +43,8 @@
   "dialog.generation_overwrite.title": "Sovrascrivere i file output esistenti?",
   "dialog.generation_overwrite.body": "{count} file di output esistono già e verranno sostituiti.\n\n{preview}\n\nVuoi continuare?",
   "dialog.generation_overwrite.more": "... e altri {count}.",
+  "dialog.generation_cache_reset.title": "Svuotare la cache output prima di generare?",
+  "dialog.generation_cache_reset.body": "Questa cartella output contiene già cache generata in questa sessione dell'app.\n\nLa cache DOCX/PDF e il file di log verranno rimossi prima del nuovo avvio.\n\nVuoi continuare?",
   "dialog.generation_failed.title": "Generazione non riuscita",
   "dialog.template_override_save.title": "Salvare il template specifico?",
   "dialog.template_override_save.body": "Il template specifico '{path}' è attivo. Vuoi copiarlo nella cartella template del progetto prima di salvare?",
