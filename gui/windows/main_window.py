@@ -125,6 +125,10 @@ class MainWindow(QMainWindow):
         self.about_action = self.ui.actionAbout
         self.language_en_action = self.ui.actionLanguageEn
         self.language_it_action = self.ui.actionLanguageIt
+        self.language_es_action = self.ui.actionLanguageEs
+        self.language_fr_action = self.ui.actionLanguageFr
+        self.language_de_action = self.ui.actionLanguageDe
+        self.language_ru_action = self.ui.actionLanguageRu
 
         self.ui.workflowSidebar.setObjectName("workflowSidebar")
         self.template_type_label.setObjectName("templateToolbarLabel")
@@ -226,11 +230,27 @@ class MainWindow(QMainWindow):
         self.language_action_group.setExclusive(True)
         self.language_action_group.addAction(self.language_en_action)
         self.language_action_group.addAction(self.language_it_action)
+        self.language_action_group.addAction(self.language_es_action)
+        self.language_action_group.addAction(self.language_fr_action)
+        self.language_action_group.addAction(self.language_de_action)
+        self.language_action_group.addAction(self.language_ru_action)
         self.language_en_action.triggered.connect(
             lambda checked: checked and self.localization.set_language("en")
         )
         self.language_it_action.triggered.connect(
             lambda checked: checked and self.localization.set_language("it")
+        )
+        self.language_es_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("es")
+        )
+        self.language_fr_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("fr")
+        )
+        self.language_de_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("de")
+        )
+        self.language_ru_action.triggered.connect(
+            lambda checked: checked and self.localization.set_language("ru")
         )
 
     def _refresh_pages(self):

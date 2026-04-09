@@ -195,8 +195,21 @@ def manage_templates(window, *, dialog_cls, accepted_code):
 
 
 def show_about(window, *, message_box_cls):
+    version = str(window.config.get("APP_VERSION", "")).strip()
+    author = str(window.config.get("APP_AUTHOR", "")).strip()
+
+    details: list[str] = []
+    if version:
+        details.append(window.localization.t("dialog.about.version", value=version))
+    if author:
+        details.append(window.localization.t("dialog.about.author", value=author))
+
+    body = window.localization.t("dialog.about.body")
+    if details:
+        body = f"{body}\n\n" + "\n".join(details)
+
     message_box_cls.information(
         window,
         window.localization.t("dialog.about.title"),
-        window.localization.t("dialog.about.body"),
+        body,
     )

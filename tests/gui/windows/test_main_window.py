@@ -474,3 +474,17 @@ def test_close_event_flushes_pending_last_session_snapshot(main_window_factory):
 
     assert fake_store.session is not None
     assert fake_store.session.theme_mode == window.session.theme_mode
+
+
+def test_about_popup_includes_version_and_author(prepared_window):
+    window = prepared_window.window
+    window.config["APP_VERSION"] = "9.9.1"
+    window.config["APP_AUTHOR"] = "QA Team"
+
+    with patch("gui.windows.main_window.QMessageBox.information") as info_mock:
+        window._show_about()
+
+    info_mock.assert_called_once()
+    body = info_mock.call_args.args[2]
+    assert "Version: 9.9.1" in body
+    assert "Author: QA Team" in body

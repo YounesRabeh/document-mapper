@@ -12,10 +12,10 @@ from core.util.app_paths import AppPaths
 def _load_translation_catalogs() -> dict[str, dict[str, str]]:
     locales_dir = AppPaths.locales_dir()
     if locales_dir is None:
-        return {"en": {}, "it": {}}
+        return {"en": {}, "it": {}, "es": {}, "fr": {}, "de": {}, "ru": {}}
 
     catalogs: dict[str, dict[str, str]] = {}
-    for language in ("en", "it"):
+    for language in ("en", "it", "es", "fr", "de", "ru"):
         path = locales_dir / f"{language}.json"
         if not path.exists():
             catalogs[language] = {}
@@ -25,6 +25,10 @@ def _load_translation_catalogs() -> dict[str, dict[str, str]]:
         catalogs[language] = {str(key): str(value) for key, value in payload.items()}
     catalogs.setdefault("en", {})
     catalogs.setdefault("it", {})
+    catalogs.setdefault("es", {})
+    catalogs.setdefault("fr", {})
+    catalogs.setdefault("de", {})
+    catalogs.setdefault("ru", {})
     return catalogs
 
 
@@ -33,7 +37,7 @@ TRANSLATIONS = _load_translation_catalogs()
 
 class LocalizationManager(QObject):
     language_changed = Signal(str)
-    supported_languages = ("en", "it")
+    supported_languages = ("en", "it", "es", "fr", "de", "ru")
 
     def __init__(self, config: dict | None = None):
         super().__init__()

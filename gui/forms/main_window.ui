@@ -269,6 +269,10 @@
     </property>
     <addaction name="actionLanguageEn"/>
     <addaction name="actionLanguageIt"/>
+    <addaction name="actionLanguageEs"/>
+    <addaction name="actionLanguageFr"/>
+    <addaction name="actionLanguageDe"/>
+    <addaction name="actionLanguageRu"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -318,6 +322,38 @@
   <action name="actionLanguageIt">
    <property name="text">
     <string>Italiano</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionLanguageEs">
+   <property name="text">
+    <string>Español</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionLanguageFr">
+   <property name="text">
+    <string>Français</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionLanguageDe">
+   <property name="text">
+    <string>Deutsch</string>
+   </property>
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+  </action>
+  <action name="actionLanguageRu">
+   <property name="text">
+    <string>Русский</string>
    </property>
    <property name="checkable">
     <bool>true</bool>

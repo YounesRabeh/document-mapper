@@ -71,8 +71,16 @@ def retranslate_ui(window):
 
     window.language_en_action.setText(window.localization.t("menu.language.en"))
     window.language_it_action.setText(window.localization.t("menu.language.it"))
+    window.language_es_action.setText(window.localization.t("menu.language.es"))
+    window.language_fr_action.setText(window.localization.t("menu.language.fr"))
+    window.language_de_action.setText(window.localization.t("menu.language.de"))
+    window.language_ru_action.setText(window.localization.t("menu.language.ru"))
     window.language_en_action.setChecked(window.localization.current_language == "en")
     window.language_it_action.setChecked(window.localization.current_language == "it")
+    window.language_es_action.setChecked(window.localization.current_language == "es")
+    window.language_fr_action.setChecked(window.localization.current_language == "fr")
+    window.language_de_action.setChecked(window.localization.current_language == "de")
+    window.language_ru_action.setChecked(window.localization.current_language == "ru")
     for card in window.stage_cards.values():
         card.retranslate()
     window._sync_effective_template_path()
