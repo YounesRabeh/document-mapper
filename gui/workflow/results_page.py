@@ -22,6 +22,11 @@ from core.util.system_info import open_path
 from gui.forms import Ui_ResultsPageForm
 from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
 
+FILES_LIST_MIN_HEIGHT = 140
+FILES_LIST_MAX_HEIGHT = 260
+FILE_ENTRY_ESTIMATED_HEIGHT = 56
+FILES_LIST_VERTICAL_PADDING = 12
+
 
 class ElidedLabel(QLabel):
     def __init__(self, text: str = "", parent: QWidget | None = None):
@@ -57,7 +62,7 @@ class ResultsFileEntry(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 7, 12, 7)
+        layout.setContentsMargins(12, 7, 18, 7)
         layout.setSpacing(10)
 
         text_layout = QVBoxLayout()
@@ -92,10 +97,12 @@ class ResultsFilesPanel(QWidget):
     ):
         super().__init__()
         self.setObjectName("resultsFilesPanel")
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
+        layout.setAlignment(Qt.AlignTop)
 
         self.header = QFrame()
         self.header.setObjectName("resultsFilesPanelHeader")
@@ -118,7 +125,9 @@ class ResultsFilesPanel(QWidget):
 
         self.list_widget = QListWidget()
         self.list_widget.setObjectName(list_object_name)
-        self.list_widget.setMinimumHeight(PANEL_MIN_HEIGHT)
+        self.list_widget.setMinimumHeight(FILES_LIST_MIN_HEIGHT)
+        self.list_widget.setMaximumHeight(FILES_LIST_MAX_HEIGHT)
+        self.list_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.list_widget.setSpacing(4)
         self.list_widget.setSelectionMode(self.list_widget.SelectionMode.NoSelection)
         self.list_widget.setFocusPolicy(Qt.NoFocus)
@@ -148,6 +157,13 @@ class ResultsFilesPanel(QWidget):
             placeholder_item = QListWidgetItem(empty_text)
             placeholder_item.setFlags(Qt.NoItemFlags)
             self.list_widget.addItem(placeholder_item)
+        self._adjust_list_height(self.list_widget.count())
+
+    def _adjust_list_height(self, rows: int):
+        desired_height = (max(rows, 1) * FILE_ENTRY_ESTIMATED_HEIGHT) + FILES_LIST_VERTICAL_PADDING
+        clamped_height = max(FILES_LIST_MIN_HEIGHT, min(FILES_LIST_MAX_HEIGHT, desired_height))
+        self.list_widget.setMinimumHeight(clamped_height)
+        self.list_widget.setMaximumHeight(clamped_height)
 
 
 class ResultsPage(WorkflowPage):
@@ -162,6 +178,12 @@ class ResultsPage(WorkflowPage):
         self.ui = Ui_ResultsPageForm()
         self.form_root = QWidget()
         self.ui.setupUi(self.form_root)
+        self.form_root.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        self.ui.rootLayout.setSizeConstraint(self.ui.rootLayout.SizeConstraint.SetMinimumSize)
+        self.ui.rootLayout.setAlignment(Qt.AlignTop)
+        self.ui.filesCardLayout.setAlignment(Qt.AlignTop)
+        self.ui.singleFilesPageLayout.setAlignment(Qt.AlignTop)
+        self.ui.splitFilesPageLayout.setAlignment(Qt.AlignTop)
         self.body_layout.addWidget(self.form_root)
 
         self.summary_card = self.ui.resultsSummaryCard
@@ -234,7 +256,9 @@ class ResultsPage(WorkflowPage):
         self.results_status_hint.setWordWrap(True)
         self.action_hint.setWordWrap(True)
 
-        self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 40)
+        self.files_box.setMinimumHeight(PANEL_MIN_HEIGHT + 20)
+        self.files_box.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        self.files_view_stack.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.files_split_view.setChildrenCollapsible(False)
         self.files_split_view.setHandleWidth(10)
         self.files_split_view.setStretchFactor(0, 1)
@@ -295,6 +319,8 @@ class ResultsPage(WorkflowPage):
             self.pdf_files_list.clear()
             self.docx_files_count_badge.clear()
             self.pdf_files_count_badge.clear()
+
+        self._sync_files_stack_height(split_mode)
 
         if self.result.errors:
             translated = [self.localization.translate_runtime_text(error) for error in self.result.errors]
@@ -424,7 +450,20 @@ class ResultsPage(WorkflowPage):
             layout = QVBoxLayout(container)
             layout.setContentsMargins(0, 0, 0, 0)
             layout.setSpacing(0)
+        layout.setAlignment(Qt.AlignTop)
         layout.addWidget(panel)
+
+    def _sync_files_stack_height(self, split_mode: bool):
+        if split_mode:
+            desired = (
+                self.docx_files_panel.sizeHint().height()
+                + self.pdf_files_panel.sizeHint().height()
+                + self.files_split_view.handleWidth()
+            )
+        else:
+            desired = self.single_files_panel.sizeHint().height()
+        desired = max(120, desired)
+        self.files_view_stack.setFixedHeight(desired)
 
     def _set_state_property(self, widget, state: str):
         if widget.property("status") == state:

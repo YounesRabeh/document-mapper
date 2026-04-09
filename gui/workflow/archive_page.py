@@ -162,7 +162,7 @@ class ArchivePage(WorkflowPage):
                 self.localization.t(f"results.archive.format.{archive_format}"),
                 archive_format,
             )
-        preferred = current if current in formats else ("zip" if "zip" in formats else formats[0])
+        preferred = current if current in formats else ("folder" if "folder" in formats else formats[0])
         index = formats.index(preferred)
         self.archive_format_combo.setCurrentIndex(index)
         self.archive_format_combo.blockSignals(False)
