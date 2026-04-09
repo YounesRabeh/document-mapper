@@ -72,7 +72,6 @@ def test_workflow_rail_stays_synced_with_real_stage_state(prepared_window):
     assert window.stage_manager.currentIndex() == 0
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
 
-    assert not hasattr(window.setup_page, "certificate_type_input")
     assert window.template_type_combo.count() == 1
     assert window.template_type_combo.currentText() == "General"
     assert window.template_combo.count() == 1
@@ -187,6 +186,18 @@ def test_archive_page_shows_archive_controls(prepared_window):
     assert window.archive_page.open_archive_button.isHidden() is False
 
 
+def test_archive_page_defaults_format_to_folder(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+    result = _result_with_existing_outputs(Path(temp_dir), include_pdf=True)
+    window._handle_generation_result(result)
+    window.stage_cards[5].clicked.emit(5)
+
+    assert window.archive_page.archive_format_combo.currentData() == "folder"
+
+
 def test_archive_page_archive_output_creates_zip_and_enables_open(prepared_window):
     window = prepared_window.window
     temp_dir = prepared_window.files.root
@@ -290,6 +301,76 @@ def test_generate_page_prompts_before_clearing_session_output_cache(prepared_win
 
     question_mock.assert_called_once()
     assert window.generate_page._thread is None
+
+
+def test_generate_page_output_cache_helpers_detect_and_clear_artifacts(prepared_window):
+    window = prepared_window.window
+    temp_dir = Path(prepared_window.files.root)
+    output_dir = str(temp_dir)
+
+    docx_dir = temp_dir / "docx"
+    pdf_dir = temp_dir / "pdf"
+    docx_dir.mkdir(parents=True, exist_ok=True)
+    pdf_dir.mkdir(parents=True, exist_ok=True)
+    (docx_dir / "ADA.docx").write_text("docx", encoding="utf-8")
+    (pdf_dir / "ADA.pdf").write_text("pdf", encoding="utf-8")
+    (temp_dir / "generation.log").write_text("log", encoding="utf-8")
+
+    assert window.generate_page._has_output_cache(output_dir) is True
+
+    window.generate_page._clear_output_cache(output_dir)
+
+    assert (temp_dir / "docx").exists() is False
+    assert (temp_dir / "pdf").exists() is False
+    assert (temp_dir / "generation.log").exists() is False
+    assert window.generate_page._has_output_cache(output_dir) is False
+
+
+def test_generate_page_output_cache_helpers_include_legacy_log(prepared_window):
+    window = prepared_window.window
+    temp_dir = Path(prepared_window.files.root)
+    output_dir = str(temp_dir)
+
+    legacy_log = temp_dir / "certificate_generation.log"
+    legacy_log.write_text("legacy", encoding="utf-8")
+
+    assert window.generate_page._has_output_cache(output_dir) is True
+    window.generate_page._clear_output_cache(output_dir)
+    assert legacy_log.exists() is False
+
+
+def test_generate_page_cache_artifacts_handles_invalid_output_dir(prepared_window):
+    window = prepared_window.window
+
+    assert window.generate_page._cache_artifacts("\0") == []
+    assert window.generate_page._has_output_cache("\0") is False
+
+
+def test_generate_page_marks_session_as_generated_only_when_files_exist(prepared_window):
+    window = prepared_window.window
+
+    assert window.generate_page._has_generated_in_app_session is False
+
+    window.generate_page._handle_finished(
+        GenerationResult(
+            total_rows=1,
+            success_count=1,
+            generated_docx_paths=["/tmp/fake.docx"],
+            generated_pdf_paths=[],
+            log_path="",
+            errors=[],
+        )
+    )
+    assert window.generate_page._has_generated_in_app_session is True
+
+
+def test_generate_page_does_not_mark_session_generated_for_empty_result(prepared_window):
+    window = prepared_window.window
+
+    window.generate_page._has_generated_in_app_session = False
+    window.generate_page._handle_finished(GenerationResult())
+
+    assert window.generate_page._has_generated_in_app_session is False
 
 
 def test_manage_templates_accepts_dialog_and_updates_session(prepared_window):

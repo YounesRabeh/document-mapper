@@ -154,7 +154,7 @@ class GeneratePage(WorkflowPage):
             return []
         try:
             root = Path(output_dir).expanduser().resolve()
-        except OSError:
+        except (OSError, ValueError):
             return []
         artifacts = [
             root / "docx",

@@ -70,10 +70,6 @@ class FakeGenerator:
                 errors.append(f"Mapping row {index} is missing an Excel column.")
         return errors
 
-    def existing_output_conflicts(self, _session: ProjectSession) -> list[str]:
-        return []
-
-
 class FakeSessionStore:
     def __init__(self):
         self.session: ProjectSession | None = None
