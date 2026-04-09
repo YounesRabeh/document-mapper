@@ -21,6 +21,7 @@ def test_session_store_round_trip(tmp_path):
     session = ProjectSession(
         excel_path="/tmp/data.xlsx",
         output_dir="/tmp/out",
+        archive_root_dir="/tmp/archive-root",
         theme_mode="DARK",
         selected_template_type="General",
         selected_template=template_entry.id,
@@ -41,6 +42,7 @@ def test_session_store_round_trip(tmp_path):
     assert saved_path == project_dir / "project.json"
     assert saved_payload["excel_path"] == "/tmp/data.xlsx"
     assert saved_payload["output_dir"] == "/tmp/out"
+    assert saved_payload["archive_root_dir"] == "/tmp/archive-root"
     assert saved_payload["template_override_path"] == ""
     assert saved_payload["license_path"] == ""
     assert saved_payload["templates"][0]["relative_path"].startswith("templates/")
@@ -51,6 +53,7 @@ def test_session_store_round_trip(tmp_path):
     assert Path(loaded.template_path).exists()
     assert loaded.excel_path == "/tmp/data.xlsx"
     assert loaded.output_dir == "/tmp/out"
+    assert loaded.archive_root_dir == "/tmp/archive-root"
     assert loaded.template_override_path == ""
     assert loaded.output_naming_schema == "{COGNOME}_{ROW}"
     assert loaded.placeholder_delimiter == "{{"
@@ -149,6 +152,7 @@ def test_last_session_round_trip_preserves_local_machine_paths(tmp_path):
     session = ProjectSession(
         excel_path="/tmp/data.xlsx",
         output_dir="/tmp/out",
+        archive_root_dir="/tmp/archive-root",
         template_override_path="/tmp/override.docx",
         license_path="/tmp/license.xml",
     )
@@ -158,6 +162,7 @@ def test_last_session_round_trip_preserves_local_machine_paths(tmp_path):
 
     assert loaded.excel_path == "/tmp/data.xlsx"
     assert loaded.output_dir == "/tmp/out"
+    assert loaded.archive_root_dir == "/tmp/archive-root"
     assert loaded.template_override_path == "/tmp/override.docx"
     assert loaded.license_path == "/tmp/license.xml"
 

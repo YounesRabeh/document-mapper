@@ -216,6 +216,9 @@ class Ui_ResultsPageForm(object):
 
         self.rootLayout.addWidget(self.errorsCard)
 
+        self.actionsLayout = QVBoxLayout()
+        self.actionsLayout.setSpacing(10)
+        self.actionsLayout.setObjectName(u"actionsLayout")
         self.actionRow = QHBoxLayout()
         self.actionRow.setSpacing(12)
         self.actionRow.setObjectName(u"actionRow")
@@ -240,7 +243,10 @@ class Ui_ResultsPageForm(object):
         self.actionRow.addWidget(self.openOutputButton)
 
 
-        self.rootLayout.addLayout(self.actionRow)
+        self.actionsLayout.addLayout(self.actionRow)
+
+
+        self.rootLayout.addLayout(self.actionsLayout)
 
 
         self.retranslateUi(resultsPageForm)

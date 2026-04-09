@@ -419,46 +419,53 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="actionRow">
+   <layout class="QVBoxLayout" name="actionsLayout">
      <property name="spacing">
-      <number>12</number>
+      <number>10</number>
      </property>
      <item>
-      <widget class="QLabel" name="actionHint">
-       <property name="text">
-        <string>Use Open on any generated file to launch it instantly.</string>
+      <layout class="QHBoxLayout" name="actionRow">
+       <property name="spacing">
+        <number>12</number>
        </property>
-       <property name="wordWrap">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="actionStretch">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="openLogButton">
-       <property name="text">
-        <string>Open log</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="openOutputButton">
-       <property name="text">
-        <string>Open output folder</string>
-       </property>
-      </widget>
+       <item>
+        <widget class="QLabel" name="actionHint">
+         <property name="text">
+          <string>Use Open on any generated file to launch it instantly.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="actionStretch">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="openLogButton">
+         <property name="text">
+          <string>Open log</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="openOutputButton">
+         <property name="text">
+          <string>Open output folder</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>

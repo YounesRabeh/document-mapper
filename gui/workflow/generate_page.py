@@ -103,6 +103,10 @@ class GeneratePage(WorkflowPage):
             self.refresh_from_session()
             return
 
+        conflicts = self.generator.existing_output_conflicts(self.session)
+        if conflicts and not self._confirm_output_overwrite(conflicts):
+            return
+
         if self._thread is not None:
             return
 
@@ -122,6 +126,32 @@ class GeneratePage(WorkflowPage):
         self._thread.finished.connect(self._thread.deleteLater)
         self._thread.start()
         self.refresh_from_session()
+
+    def _confirm_output_overwrite(self, conflicts: list[str]) -> bool:
+        preview_limit = 8
+        shown_paths = conflicts[:preview_limit]
+        preview_lines = [f"- {path}" for path in shown_paths]
+        if len(conflicts) > preview_limit:
+            preview_lines.append(
+                self.localization.t(
+                    "dialog.generation_overwrite.more",
+                    count=len(conflicts) - preview_limit,
+                )
+            )
+        preview = "\n".join(preview_lines)
+        message = self.localization.t(
+            "dialog.generation_overwrite.body",
+            count=len(conflicts),
+            preview=preview,
+        )
+        decision = QMessageBox.question(
+            self,
+            self.localization.t("dialog.generation_overwrite.title"),
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return decision == QMessageBox.StandardButton.Yes
 
     def _handle_finished(self, result: GenerationResult):
         self._append_log_entry(self.localization.t("log.generation_finished"))

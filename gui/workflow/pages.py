@@ -10,6 +10,7 @@ from .base import (
 )
 from .generate_page import GeneratePage, GenerationWorker
 from .mapping_page import MappingPage
+from .archive_page import ArchivePage
 from .results_page import ResultsPage
 from .setup_page import SetupPage
 
@@ -27,4 +28,5 @@ __all__ = [
     "GenerationWorker",
     "GeneratePage",
     "ResultsPage",
+    "ArchivePage",
 ]

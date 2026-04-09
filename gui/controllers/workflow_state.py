@@ -35,8 +35,9 @@ class WorkflowStateController:
             1: False,
             2: not mapping_available,
             3: not generate_available,
-            4: not results_available,
         }
+        for index in range(4, stage_count + 1):
+            blocked_by_stage[index] = not results_available
         return {
             index: WorkflowStageState(
                 active=index == current_stage and not blocked_by_stage[index],

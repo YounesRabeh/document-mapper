@@ -49,7 +49,7 @@ from gui.windows.workflow_actions import (
     resolve_fallback_stage,
     retranslate_ui,
 )
-from gui.workflow.pages import GeneratePage, MappingPage, ResultsPage, SetupPage
+from gui.workflow.pages import ArchivePage, GeneratePage, MappingPage, ResultsPage, SetupPage
 
 
 class MainWindow(QMainWindow):
@@ -144,6 +144,7 @@ class MainWindow(QMainWindow):
             (2, "sidebar.stage.mapping", "sidebar.stage.mapping.detail"),
             (3, "sidebar.stage.generate", "sidebar.stage.generate.detail"),
             (4, "sidebar.stage.results", "sidebar.stage.results.detail"),
+            (5, "sidebar.stage.archive", "sidebar.stage.archive.detail"),
         ):
             card = SidebarStageCard(index, title_key, detail_key, self.localization)
             card.clicked.connect(self.goto_stage)
@@ -163,17 +164,20 @@ class MainWindow(QMainWindow):
         )
         self.generate_page = GeneratePage(self.generator, self.localization)
         self.results_page = ResultsPage(self.localization)
+        self.archive_page = ArchivePage(self.localization)
 
         self.stage_manager.addWidget(self.setup_page)
         self.stage_manager.addWidget(self.mapping_page)
         self.stage_manager.addWidget(self.generate_page)
         self.stage_manager.addWidget(self.results_page)
+        self.stage_manager.addWidget(self.archive_page)
         self._last_valid_stage = 1
         self.stage_manager.currentChanged.connect(self._handle_stage_changed)
 
         self.generate_page.results_ready.connect(self._handle_generation_result)
         self.setup_page.session_changed.connect(self._persist_last_session)
         self.mapping_page.session_changed.connect(self._persist_last_session)
+        self.archive_page.session_changed.connect(self._persist_last_session)
 
         self._create_menu_bar()
         self.theme_manager.theme_changed.connect(self._handle_theme_changed)

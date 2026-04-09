@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from PySide6.QtWidgets import QDialog
+from PySide6.QtWidgets import QDialog, QMessageBox
 
 from core.mapping.models import (
     GenerationResult,
@@ -27,16 +27,46 @@ def _unlock_generate_stage(window):
     window.mapping_page.refresh_button.click()
 
 
+def _result_with_existing_outputs(
+    root_dir: Path,
+    *,
+    include_pdf: bool = False,
+    errors: list[str] | None = None,
+) -> GenerationResult:
+    docx_dir = root_dir / "docx"
+    docx_dir.mkdir(parents=True, exist_ok=True)
+    docx_path = docx_dir / "ADA_attestato_certificato.docx"
+    docx_path.write_text("docx", encoding="utf-8")
+
+    pdf_paths: list[str] = []
+    if include_pdf:
+        pdf_dir = root_dir / "pdf"
+        pdf_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = pdf_dir / "ADA_attestato_certificato.pdf"
+        pdf_path.write_text("pdf", encoding="utf-8")
+        pdf_paths = [str(pdf_path)]
+
+    return GenerationResult(
+        total_rows=1,
+        success_count=1,
+        generated_docx_paths=[str(docx_path)],
+        generated_pdf_paths=pdf_paths,
+        log_path=str(root_dir / "generation.log"),
+        errors=errors or [],
+    )
+
+
 def test_workflow_rail_stays_synced_with_real_stage_state(prepared_window):
     window = prepared_window.window
 
-    assert len(window.stage_cards) == 4
+    assert len(window.stage_cards) == 5
     assert window.sidebar_title.text() == "Workflow"
     assert window.template_toolbar.isHidden() is False
     assert_stage_state(window, 1, active=True, blocked=False, completed=False)
     assert_stage_state(window, 2, active=False, blocked=False, completed=False)
     assert_stage_state(window, 3, active=False, blocked=True, completed=False)
     assert_stage_state(window, 4, active=False, blocked=True, completed=False)
+    assert_stage_state(window, 5, active=False, blocked=True, completed=False)
 
     window.stage_manager.setCurrentIndex(2)
     assert window.stage_manager.currentIndex() == 0
@@ -57,6 +87,8 @@ def test_workflow_rail_stays_synced_with_real_stage_state(prepared_window):
     assert_stage_state(window, 4, blocked=True)
 
     window.stage_cards[4].clicked.emit(4)
+    assert window.stage_manager.currentIndex() == 1
+    window.stage_cards[5].clicked.emit(5)
     assert window.stage_manager.currentIndex() == 1
 
 
@@ -98,6 +130,7 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
     assert file_entry.open_button.text() == "Open"
     assert_stage_state(window, 3, completed=True)
     assert_stage_state(window, 4, active=True, blocked=False)
+    assert_stage_state(window, 5, active=False, blocked=False)
 
     window.localization.set_language("it")
 
@@ -110,6 +143,7 @@ def test_generation_results_and_localization_keep_workflow_state(prepared_window
     assert file_entry.open_button.text() == "Apri"
     assert "Creati 1 documenti DOCX su 1." in window.results_page.summary_label.text()
     assert_stage_state(window, 4, active=True, blocked=False)
+    assert_stage_state(window, 5, active=False, blocked=False)
 
 
 def test_results_page_splits_docx_and_pdf_outputs(prepared_window):
@@ -137,6 +171,123 @@ def test_results_page_splits_docx_and_pdf_outputs(prepared_window):
     assert pdf_entry is not None
     assert docx_entry.open_button.text() == "Open"
     assert pdf_entry.open_button.text() == "Open"
+
+
+def test_archive_page_shows_archive_controls(prepared_window):
+    window = prepared_window.window
+
+    assert window.archive_page.archive_root_label.isHidden() is False
+    assert window.archive_page.archive_root_input.isHidden() is False
+    assert window.archive_page.archive_root_browse_button.isHidden() is False
+    assert window.archive_page.archive_run_name_label.isHidden() is False
+    assert window.archive_page.archive_run_name_input.isHidden() is False
+    assert window.archive_page.archive_format_label.isHidden() is False
+    assert window.archive_page.archive_format_combo.isHidden() is False
+    assert window.archive_page.archive_output_button.isHidden() is False
+    assert window.archive_page.open_archive_button.isHidden() is False
+
+
+def test_archive_page_archive_output_creates_zip_and_enables_open(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+    result = _result_with_existing_outputs(Path(temp_dir), include_pdf=True)
+    window._handle_generation_result(result)
+    window.stage_cards[5].clicked.emit(5)
+
+    archive_root = Path(temp_dir) / "archives"
+    window.archive_page.archive_root_input.setText(str(archive_root))
+    window.archive_page.archive_run_name_input.setText("run 01")
+    format_index = window.archive_page.archive_format_combo.findData("zip")
+    if format_index >= 0:
+        window.archive_page.archive_format_combo.setCurrentIndex(format_index)
+
+    with patch("gui.workflow.archive_page.QMessageBox.information") as info_mock:
+        window.archive_page.archive_output_button.click()
+
+    archive_path = archive_root / "run_01.zip"
+    assert archive_path.exists()
+    assert window.archive_page.open_archive_button.isEnabled() is True
+    info_mock.assert_called_once()
+
+    with patch("gui.workflow.archive_page.open_path") as open_path_mock:
+        window.archive_page.open_archive_button.click()
+    open_path_mock.assert_called_once_with(str(archive_path))
+
+
+def test_archive_page_archive_output_prompts_before_overwrite(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+    result = _result_with_existing_outputs(Path(temp_dir), include_pdf=False)
+    window._handle_generation_result(result)
+    window.stage_cards[5].clicked.emit(5)
+
+    archive_root = Path(temp_dir) / "archives"
+    window.archive_page.archive_root_input.setText(str(archive_root))
+    window.archive_page.archive_run_name_input.setText("run 01")
+    format_index = window.archive_page.archive_format_combo.findData("zip")
+    if format_index >= 0:
+        window.archive_page.archive_format_combo.setCurrentIndex(format_index)
+
+    with patch("gui.workflow.archive_page.QMessageBox.information"):
+        window.archive_page.archive_output_button.click()
+
+    with patch(
+        "gui.workflow.archive_page.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.Yes,
+    ) as question_mock, patch("gui.workflow.archive_page.QMessageBox.information") as info_mock:
+        window.archive_page.archive_output_button.click()
+
+    question_mock.assert_called_once()
+    info_mock.assert_called_once()
+
+
+def test_archive_page_archive_action_is_disabled_for_runs_with_errors(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+    result = _result_with_existing_outputs(Path(temp_dir), include_pdf=False, errors=["Row 1 failed"])
+    window._handle_generation_result(result)
+    window.stage_cards[5].clicked.emit(5)
+
+    assert window.archive_page.archive_output_button.isEnabled() is False
+
+
+def test_archive_page_prefills_root_and_keeps_run_name_empty_on_new_result(prepared_window):
+    window = prepared_window.window
+    temp_dir = prepared_window.files.root
+
+    _unlock_generate_stage(window)
+    result = _result_with_existing_outputs(Path(temp_dir), include_pdf=True)
+    window._handle_generation_result(result)
+    window.stage_cards[5].clicked.emit(5)
+
+    assert window.archive_page.archive_root_input.text() == str(temp_dir)
+    assert window.archive_page.archive_run_name_input.text() == ""
+
+
+def test_generate_page_prompts_before_overwriting_existing_outputs(prepared_window):
+    window = prepared_window.window
+
+    _unlock_generate_stage(window)
+    window.stage_cards[3].clicked.emit(3)
+
+    with patch.object(
+        window.generate_page.generator,
+        "existing_output_conflicts",
+        return_value=["/tmp/out/docx/ADA.docx"],
+    ), patch(
+        "gui.workflow.generate_page.QMessageBox.question",
+        return_value=QMessageBox.StandardButton.No,
+    ) as question_mock:
+        window.generate_page._start_generation()
+
+    question_mock.assert_called_once()
+    assert window.generate_page._thread is None
 
 
 def test_manage_templates_accepts_dialog_and_updates_session(prepared_window):

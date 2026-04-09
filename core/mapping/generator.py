@@ -103,6 +103,51 @@ class DocumentGenerator:
         errors.extend(self._validate_output_naming_schema(session.output_naming_schema, preview.columns))
         return errors
 
+    def existing_output_conflicts(self, session: ProjectSession) -> list[str]:
+        if not session.output_dir or not session.excel_path:
+            return []
+        if not Path(session.excel_path).exists():
+            return []
+
+        try:
+            dataframe = self.excel_service.read_dataframe(session.excel_path)
+        except Exception:
+            return []
+
+        output_root = Path(session.output_dir).resolve()
+        docx_dir = output_root / "docx"
+        pdf_dir = output_root / "pdf"
+        column_lookup = self.excel_service.build_column_lookup([str(column) for column in dataframe.columns])
+
+        used_output_basenames: dict[str, int] = {}
+        conflicts: list[str] = []
+        seen: set[str] = set()
+
+        for index, row in dataframe.iterrows():
+            output_path = self._build_docx_output_path(
+                session,
+                row,
+                index,
+                docx_dir,
+                column_lookup,
+                used_output_basenames,
+            )
+            if output_path.exists():
+                key = str(output_path)
+                if key not in seen:
+                    conflicts.append(key)
+                    seen.add(key)
+
+            if session.export_pdf:
+                pdf_path = pdf_dir / f"{output_path.stem}.pdf"
+                if pdf_path.exists():
+                    key = str(pdf_path)
+                    if key not in seen:
+                        conflicts.append(key)
+                        seen.add(key)
+
+        return conflicts
+
     def generate(
         self,
         session: ProjectSession,

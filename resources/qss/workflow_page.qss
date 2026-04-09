@@ -197,6 +197,14 @@ QLabel#resultsStatusHint {
     line-height: 1.5;
 }
 
+QLabel#archiveRootLabel,
+QLabel#archiveRunNameLabel,
+QLabel#archiveFormatLabel {
+    color: palette(window-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
 QLabel#summaryOutput,
 QLabel#summaryLabel {
     background: palette(base);
@@ -640,6 +648,34 @@ QPushButton#generateButton:hover {
 
 QPushButton#generateButton:pressed {
     background: palette(highlight);
+}
+
+QPushButton#archiveOutputButton {
+    min-height: 38px;
+    min-width: 148px;
+    background: palette(highlight);
+    border-color: palette(highlight);
+    color: palette(highlighted-text);
+    font-weight: 700;
+}
+
+QPushButton#archiveOutputButton:hover {
+    background: palette(link);
+    border-color: palette(link);
+}
+
+QPushButton#archiveOutputButton:pressed {
+    background: palette(highlight);
+}
+
+QPushButton#openArchiveButton,
+QPushButton#archiveRootBrowseButton {
+    min-height: 38px;
+    min-width: 106px;
+}
+
+QComboBox#archiveFormatCombo {
+    min-height: 38px;
 }
 
 QPushButton#workflowPrimaryButton:hover {

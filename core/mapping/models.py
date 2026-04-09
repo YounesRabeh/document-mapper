@@ -183,6 +183,7 @@ class ProjectSession:
     template_path: str = ""
     template_override_path: str = ""
     output_dir: str = ""
+    archive_root_dir: str = ""
     license_path: str = ""
     theme_mode: str = ""
     selected_template_type: str = ""
@@ -201,6 +202,7 @@ class ProjectSession:
         self.template_path = str(self.template_path or "").strip()
         self.template_override_path = str(self.template_override_path or "").strip()
         self.output_dir = str(self.output_dir or "").strip()
+        self.archive_root_dir = str(self.archive_root_dir or "").strip()
         self.license_path = str(self.license_path or "").strip()
         self.theme_mode = normalize_theme_mode(self.theme_mode)
         self.selected_template_type = normalize_template_type_name(self.selected_template_type)
@@ -265,6 +267,7 @@ class ProjectSession:
             "template_path": self.template_path,
             "template_override_path": self.template_override_path,
             "output_dir": self.output_dir,
+            "archive_root_dir": self.archive_root_dir,
             "license_path": self.license_path,
             "theme_mode": self.theme_mode,
             "selected_template_type": self.selected_template_type,
@@ -323,6 +326,7 @@ class ProjectSession:
             template_path=str(payload.get("template_path", "")).strip(),
             template_override_path=str(payload.get("template_override_path", "")).strip(),
             output_dir=str(payload.get("output_dir", "")).strip(),
+            archive_root_dir=str(payload.get("archive_root_dir", "")).strip(),
             license_path=str(payload.get("license_path", "")).strip(),
             theme_mode=payload.get("theme_mode", ""),
             selected_template_type=str(payload.get("selected_template_type", "")).strip(),

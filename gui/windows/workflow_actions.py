@@ -16,6 +16,7 @@ def refresh_pages(window):
     window.mapping_page.bind_session(window.session)
     window.generate_page.bind_session(window.session)
     window.results_page.bind_result(window.last_result, window.session)
+    window.archive_page.bind_result(window.last_result, window.session)
     window._refresh_workflow_state()
 
 
@@ -25,6 +26,7 @@ def persist_last_session(window):
     window._refresh_template_toolbar()
     window.generate_page.bind_session(window.session)
     window.results_page.bind_result(window.last_result, window.session)
+    window.archive_page.bind_result(window.last_result, window.session)
     window._refresh_workflow_state()
 
 
@@ -45,6 +47,7 @@ def goto_stage(window, index: int):
 def handle_generation_result(window, result):
     window.last_result = result
     window.results_page.bind_result(result, window.session)
+    window.archive_page.bind_result(result, window.session)
     window.goto_stage(4)
 
 
@@ -96,6 +99,8 @@ def handle_stage_changed(window, current_index: int):
         window.generate_page.bind_session(window.session)
     elif stage_number == 4:
         window.results_page.bind_result(window.last_result, window.session)
+    elif stage_number == 5:
+        window.archive_page.bind_result(window.last_result, window.session)
     update_template_toolbar_visibility(window)
     current_page = window.stage_manager.currentWidget()
     if hasattr(current_page, "scroll_to_top"):

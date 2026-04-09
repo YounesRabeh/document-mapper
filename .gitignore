@@ -50,6 +50,7 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+tests/archive/
 
 # Translations
 *.mo
@@ -145,6 +146,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+tests/archive/
 
 # Spyder project settings
 .spyderproject
