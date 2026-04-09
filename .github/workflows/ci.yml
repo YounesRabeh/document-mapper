@@ -20,6 +20,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Qt runtime system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libgl1 \
+            libglib2.0-0 \
+            libx11-6 \
+            libx11-xcb1 \
+            libxcb1 \
+            libxcb-cursor0 \
+            libxext6 \
+            libxrender1 \
+            libxkbcommon-x11-0
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -45,6 +60,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Qt runtime system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libegl1 \
+            libgl1 \
+            libglib2.0-0 \
+            libx11-6 \
+            libx11-xcb1 \
+            libxcb1 \
+            libxcb-cursor0 \
+            libxext6 \
+            libxrender1 \
+            libxkbcommon-x11-0
 
       - name: Setup Python
         uses: actions/setup-python@v5
