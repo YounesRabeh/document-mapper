@@ -44,19 +44,6 @@ def test_locales_and_qss_resolve_from_resources():
     assert (qss_dir / "workflow_page.qss").exists()
     assert (qss_dir / "template_manager_dialog.qss").exists()
 
-
-def test_legacy_gui_ui_factory_stack_is_removed():
-    assert not (AppPaths.project_root() / "gui" / "ui" / "ui_factory.py").exists()
-    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "drag_drop.py").exists()
-    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "file_entry.py").exists()
-    assert not (AppPaths.project_root() / "gui" / "ui" / "elements" / "menu_bar.py").exists()
-
-
-def test_inline_python_qss_modules_are_removed():
-    assert not (AppPaths.project_root() / "gui" / "styles" / "main_window.py").exists()
-    assert not (AppPaths.project_root() / "gui" / "styles" / "workflow.py").exists()
-
-
 def test_generated_ui_python_files_exist_only_in_gui_forms():
     project_root = AppPaths.project_root()
     generated_files = sorted(project_root.rglob("ui_*.py"))

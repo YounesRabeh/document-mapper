@@ -17,7 +17,7 @@ def main():
     app.setOrganizationDomain(config.get("APP_DOMAIN", ""))
     # 4️ Create and show the main window
     window = MainWindow(config)
-    window.show()
+    window.showMaximized()
     # 5️ Start the Qt event loop
     sys.exit(app.exec())
 
