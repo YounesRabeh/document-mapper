@@ -16,6 +16,8 @@ from gui.workflow.base import PANEL_MIN_HEIGHT, WorkflowPage
 
 
 class GenerationWorker(QObject):
+    """Background worker that runs document generation off the UI thread."""
+
     log_message = Signal(str)
     finished = Signal(object)
     failed = Signal(str)
@@ -26,6 +28,7 @@ class GenerationWorker(QObject):
         self.session = session
 
     def run(self):
+        """Execute generation and emit either finished or failed signals."""
         try:
             result = self.generator.generate(self.session, progress_callback=self.log_message.emit)
         except Exception as exc:  # noqa: BLE001
@@ -35,6 +38,8 @@ class GenerationWorker(QObject):
 
 
 class GeneratePage(WorkflowPage):
+    """Workflow page that validates input and executes document generation."""
+
     results_ready = Signal(object)
 
     def __init__(self, generator: DocumentGenerator, localization: LocalizationManager):
@@ -94,12 +99,13 @@ class GeneratePage(WorkflowPage):
         self.retranslate_ui()
 
     def refresh_from_session(self):
+        """Refresh summary/validation UI based on current session state."""
         errors = self._validation_messages()
         self.summary_output.setText(self._build_summary_markup(errors))
         self._refresh_visual_state(errors)
 
     def _start_generation(self):
-        errors = self.generator.validate_session(self.session)
+        errors = self.generator.validate_session_inputs(self.session)
         if errors:
             translated = [self.localization.translate_runtime_text(error) for error in errors]
             QMessageBox.warning(self, self.localization.t("dialog.cannot_generate.title"), "\n".join(translated))
@@ -208,6 +214,7 @@ class GeneratePage(WorkflowPage):
         self._thread = None
 
     def retranslate_page(self):
+        """Refresh translated placeholders and recompute summary state."""
         self.log_output.setPlaceholderText(self.localization.t("log.placeholder"))
         self.refresh_from_session()
 

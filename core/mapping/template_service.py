@@ -22,6 +22,8 @@ def _build_placeholder_pattern(delimiter: str) -> tuple[re.Pattern[str], str, st
 
 
 class TemplatePlaceholderService:
+    """Extract placeholders from .docx/.doc templates with backend fallbacks."""
+
     DOC_BACKEND_ERROR = (
         "Automatic .doc placeholder detection requires Spire.Doc or LibreOffice (soffice)."
     )
@@ -43,6 +45,7 @@ class TemplatePlaceholderService:
         template_path: str,
         delimiter: str = DEFAULT_PLACEHOLDER_DELIMITER,
     ) -> list[str]:
+        """Return unique placeholders detected in the template using the delimiter."""
         if not template_path:
             return []
 
@@ -79,6 +82,7 @@ class TemplatePlaceholderService:
         return placeholders
 
     def clear_cache(self, template_path: str | None = None):
+        """Clear cached placeholder results for one template or all templates."""
         if template_path:
             try:
                 cache_key = str(Path(template_path).expanduser().resolve())

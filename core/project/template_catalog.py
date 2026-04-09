@@ -12,7 +12,10 @@ from core.mapping.models import (
 
 
 class TemplateCatalogService:
+    """Utilities to keep template catalog/session selection state consistent."""
+
     def infer_project_dir_from_session(self, session: ProjectSession) -> Path | None:
+        """Infer project root from a managed selected template path."""
         selected_entry = session.selected_template_entry()
         if selected_entry is None or not selected_entry.is_managed or not selected_entry.relative_path:
             return None
@@ -37,6 +40,7 @@ class TemplateCatalogService:
         return project_dir.resolve()
 
     def normalize_template_selection(self, session: ProjectSession, project_dir: Path | None = None):
+        """Normalize selected type/template values and resolve effective template path."""
         session._ensure_template_catalog_consistency()
 
         available_type_names = {entry.name for entry in session.template_types}
@@ -67,6 +71,7 @@ class TemplateCatalogService:
         session.template_path = self.resolve_effective_template_path(session, project_dir)
 
     def prune_unavailable_templates(self, session: ProjectSession, project_dir: Path | None = None):
+        """Remove template entries whose source path is no longer available."""
         kept_entries: list[ProjectTemplateEntry] = []
 
         for entry in session.templates:
@@ -100,6 +105,7 @@ class TemplateCatalogService:
         self.normalize_template_selection(session, project_dir)
 
     def resolve_effective_template_path(self, session: ProjectSession, project_dir: Path | None = None) -> str:
+        """Resolve the active template path from override, managed, or source entry."""
         if session.template_override_path:
             return str(Path(session.template_override_path).expanduser().resolve())
 
@@ -114,6 +120,7 @@ class TemplateCatalogService:
         return ""
 
     def build_unsaved_copy(self, session: ProjectSession, project_dir: Path | None) -> ProjectSession:
+        """Create an export-ready copy with managed templates converted to source paths."""
         copied_session = session.clone()
         if project_dir is not None:
             for entry in copied_session.templates:
@@ -127,6 +134,7 @@ class TemplateCatalogService:
         return copied_session
 
     def store_template_override_in_project(self, session: ProjectSession):
+        """Convert the one-time template override into a catalog template entry."""
         if not session.template_override_path:
             return
 
@@ -162,6 +170,7 @@ class TemplateCatalogService:
         base_name: str,
         exclude_template_id: str = "",
     ) -> str:
+        """Return a unique display name within the given template type."""
         normalized = normalize_template_name(base_name) or "Template"
         existing = {
             entry.label.casefold()

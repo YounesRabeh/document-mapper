@@ -29,6 +29,8 @@ FILES_LIST_VERTICAL_PADDING = 12
 
 
 class ElidedLabel(QLabel):
+    """Label that preserves full text while rendering an elided view."""
+
     def __init__(self, text: str = "", parent: QWidget | None = None):
         super().__init__(parent)
         self._full_text = ""
@@ -36,10 +38,12 @@ class ElidedLabel(QLabel):
         self.setText(text)
 
     def setText(self, text: str):
+        """Store original text and render an elided representation."""
         self._full_text = str(text)
         super().setText(self._elided_text())
 
     def resizeEvent(self, event):
+        """Recompute elision when label width changes."""
         super().resizeEvent(event)
         super().setText(self._elided_text())
 
@@ -53,6 +57,8 @@ class ElidedLabel(QLabel):
 
 
 class ResultsFileEntry(QWidget):
+    """Single generated-file row with title and open button."""
+
     def __init__(self, *, file_name: str, open_label: str, path: str, on_open):
         super().__init__()
         self._path = path
@@ -88,6 +94,8 @@ class ResultsFileEntry(QWidget):
 
 
 class ResultsFilesPanel(QWidget):
+    """Reusable files list panel with optional header and count badge."""
+
     def __init__(
         self,
         *,
@@ -137,9 +145,11 @@ class ResultsFilesPanel(QWidget):
         self.set_header_visible(title_visible)
 
     def set_header_visible(self, visible: bool):
+        """Show or hide the panel header row."""
         self.header.setVisible(visible)
 
     def populate_entries(self, *, paths: list[str], open_label: str, on_open, empty_text: str):
+        """Populate list widget with file entries (or empty placeholder row)."""
         self.list_widget.clear()
         for path in paths:
             item = QListWidgetItem()
@@ -167,6 +177,8 @@ class ResultsFilesPanel(QWidget):
 
 
 class ResultsPage(WorkflowPage):
+    """Workflow page that presents run summary, generated files, and errors."""
+
     def __init__(self, localization: LocalizationManager):
         super().__init__(
             localization,
@@ -272,11 +284,13 @@ class ResultsPage(WorkflowPage):
         self.retranslate_ui()
 
     def bind_result(self, result: GenerationResult, session: ProjectSession):
+        """Bind latest generation result and related session context."""
         self.result = result
         self.session = session
         self.refresh_from_session()
 
     def refresh_from_session(self):
+        """Refresh summary panels, file lists, and errors for current result."""
         docx_paths = list(self.result.generated_docx_paths)
         pdf_paths = list(self.result.generated_pdf_paths)
         total_files = len(docx_paths) + len(pdf_paths)
@@ -487,4 +501,5 @@ class ResultsPage(WorkflowPage):
             open_path(self.result.log_path)
 
     def retranslate_page(self):
+        """Refresh translated results UI text and regenerate view state."""
         self.refresh_from_session()

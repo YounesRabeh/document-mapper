@@ -294,16 +294,19 @@ class ThemeManager(QObject):
 
     @property
     def last_system_theme(self):
+        """Return the most recently detected system theme (LIGHT/DARK)."""
         return self._last_system_theme
 
     @property
     def current_theme(self):
+        """Return the canonical theme mode (LIGHT, DARK, or AUTO)."""
         return self._current_theme
 
 # -----------------------
 # System Theme Detection
 # -----------------------
 def is_system_dark_mode() -> bool:
+    """Detect whether the operating system currently prefers a dark theme."""
     if IS_MACOS:
         return detect_macos_theme()
     if IS_WINDOWS:

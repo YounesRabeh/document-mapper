@@ -31,6 +31,8 @@ from gui.workflow.mapping_logic import MappingContextService
 
 
 class MappingPage(WorkflowPage):
+    """Workflow page for workbook columns, placeholders, and mapping table editing."""
+
     def __init__(
         self,
         excel_service: ExcelDataService,
@@ -117,6 +119,7 @@ class MappingPage(WorkflowPage):
         self.retranslate_ui()
 
     def refresh_from_session(self):
+        """Load session values into controls and refresh mapping context."""
         self._loading = True
         try:
             self.delimiter_input.setText(self.session.placeholder_delimiter)
@@ -499,6 +502,7 @@ class MappingPage(WorkflowPage):
             self.validation_output.setVisible(False)
 
     def retranslate_page(self):
+        """Refresh localized labels and rerun context-dependent status updates."""
         self._refresh_mapping_help_text()
         self.mapping_table.setHorizontalHeaderLabels(
             [
@@ -516,6 +520,7 @@ class MappingPage(WorkflowPage):
         return None
 
     def eventFilter(self, watched, event):
+        """Keep table row selection aligned with focused cell editor widgets."""
         if event.type() in (QEvent.FocusIn, QEvent.MouseButtonPress):
             self._select_row_for_editor(watched)
         return super().eventFilter(watched, event)

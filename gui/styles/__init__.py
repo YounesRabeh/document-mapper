@@ -16,6 +16,7 @@ def _combo_arrow_path() -> str:
 
 
 def load_stylesheet(name: str) -> str:
+    """Load a QSS file by logical name and inject runtime asset placeholders."""
     getter = getattr(Resources, "get_in_qss", None)
     if getter is not None:
         path = Path(getter(f"{name}.qss"))
@@ -26,6 +27,7 @@ def load_stylesheet(name: str) -> str:
 
 
 def apply_stylesheet(widget, name: str):
+    """Apply a named stylesheet to a widget."""
     widget.setStyleSheet(load_stylesheet(name))
 
 

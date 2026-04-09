@@ -1,6 +1,6 @@
 [app]
 name = "Document Mapper"
-version = "3.9"
+version = "4.0"
 description = "A desktop app for mapping DOCX files from Excel data."
 author = "Younes Rabeh"
 organization = "Younes Rabeh"
@@ -22,5 +22,4 @@ theme_mode = "AUTO"
 base = "resources" # Base resources directory [DO NOT CHANGE]
 qss = "resources/qss"
 icons = "resources/icons"
-images = "resources/images"
 locales = "resources/locales"

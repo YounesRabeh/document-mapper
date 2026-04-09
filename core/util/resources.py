@@ -24,7 +24,7 @@ class Resources:
     - Provides dynamic getter methods:
         - get_in_<resource>(filename_or_path): returns the absolute path to a resource.
         - get_all_in_<resource>(): returns all files for a given resource type.
-    - Automatically creates required directories in development mode.
+    - Automatically creates configured directories in development mode (except `images`).
     - Logs errors and warnings when resources are missing or misconfigured.
 
     Attributes:
@@ -116,6 +116,7 @@ class Resources:
 
     @classmethod
     def initialize(cls, cfg: Optional[dict] = None):
+        """Initialize resource directories/indexes and create dynamic getter methods."""
         if cfg is not None:
             cls._cfg = {
                 k.replace("RESOURCES_", "").lower(): v
@@ -140,7 +141,8 @@ class Resources:
             else:
                 p = Path(path)
                 abs_path = p if p.is_absolute() else base_path / p.name
-                abs_path.mkdir(parents=True, exist_ok=True)
+                if key != "images":
+                    abs_path.mkdir(parents=True, exist_ok=True)
 
             abs_path = abs_path.resolve()
             setattr(cls, key, str(abs_path))

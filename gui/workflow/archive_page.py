@@ -23,6 +23,8 @@ from gui.workflow.base import WorkflowPage
 
 
 class ArchivePage(WorkflowPage):
+    """Workflow page that manually archives the latest successful generation output."""
+
     def __init__(self, localization: LocalizationManager, archive_service: OutputArchiveService | None = None):
         super().__init__(
             localization,
@@ -113,6 +115,7 @@ class ArchivePage(WorkflowPage):
         self.retranslate_ui()
 
     def bind_result(self, result: GenerationResult, session: ProjectSession):
+        """Bind latest result/session and reset one-run archive state when result changes."""
         self.result = result
         self.session = session
 
@@ -127,6 +130,7 @@ class ArchivePage(WorkflowPage):
         self.refresh_from_session()
 
     def refresh_from_session(self):
+        """Refresh control enabled state and status text from current result/session."""
         total_files = len(self.result.generated_docx_paths) + len(self.result.generated_pdf_paths)
         error_count = len(self.result.errors)
         can_archive = total_files > 0 and error_count == 0
@@ -147,6 +151,7 @@ class ArchivePage(WorkflowPage):
             self.status_label.setText(self.localization.t("results.archive.ready"))
 
     def retranslate_page(self):
+        """Refresh translated labels and recompute view state."""
         self._refresh_format_combo()
         self.refresh_from_session()
 

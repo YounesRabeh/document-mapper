@@ -140,3 +140,47 @@ def test_generator_creates_pdfs_when_enabled(tmp_path):
     assert result.success_count == 1
     assert len(result.generated_pdf_paths) == 1
     assert Path(result.generated_pdf_paths[0]).exists()
+
+
+def test_generator_generate_reads_workbook_once_without_inspect(tmp_path):
+    dataframe = pd.DataFrame([{"NOME": "Ada"}])
+
+    class CountingExcelService(FakeExcelService):
+        def __init__(self, data):
+            super().__init__(data)
+            self.read_calls = 0
+            self.inspect_calls = 0
+
+        def inspect(self, _excel_path: str):
+            self.inspect_calls += 1
+            raise AssertionError("generate() should not call inspect()")
+
+        def read_dataframe(self, _excel_path: str) -> pd.DataFrame:
+            self.read_calls += 1
+            return self.dataframe.copy()
+
+    excel_service = CountingExcelService(dataframe)
+    generator = DocumentGenerator(excel_service=excel_service)
+    generator._load_spire_dependencies = fake_spire_dependencies  # type: ignore[method-assign]
+    generator._clean_docx_content = lambda _path: True  # type: ignore[method-assign]
+
+    template_path = tmp_path / "template.docx"
+    template_path.write_text("template", encoding="utf-8")
+    excel_path = tmp_path / "data.xlsx"
+    excel_path.write_text("placeholder", encoding="utf-8")
+    session = ProjectSession(
+        excel_path=str(excel_path),
+        template_path=str(template_path),
+        output_dir=str(tmp_path),
+        output_naming_schema="{NOME}_{TEMPLATE}",
+        placeholder_delimiter="<",
+        detected_placeholder_delimiter="<",
+        detected_placeholder_count=1,
+        mappings=[MappingEntry(placeholder="<NOME>", column_name="NOME")],
+    )
+
+    result = generator.generate(session)
+
+    assert result.success_count == 1
+    assert excel_service.read_calls == 1
+    assert excel_service.inspect_calls == 0

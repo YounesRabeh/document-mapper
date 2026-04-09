@@ -16,6 +16,8 @@ from gui.workflow.base import WorkflowPage
 
 
 class SetupPage(WorkflowPage):
+    """Workflow page for setup inputs (workbook, output, runtime options)."""
+
     def __init__(self, localization: LocalizationManager):
         super().__init__(
             localization,
@@ -88,6 +90,7 @@ class SetupPage(WorkflowPage):
             row["input"].textChanged.connect(self._sync_session)
 
     def refresh_from_session(self):
+        """Load session values into setup controls."""
         self._loading = True
         try:
             self.excel_input["input"].setText(self.session.excel_path)
@@ -146,4 +149,5 @@ class SetupPage(WorkflowPage):
             self._set_text_and_sync(self.output_input["input"], path)
 
     def retranslate_page(self):
+        """Setup page translations are driven by bindings; no extra work required."""
         pass

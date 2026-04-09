@@ -12,6 +12,7 @@ FORMS_DIR = ROOT / "gui" / "forms"
 
 
 def resolve_uic() -> str:
+    """Return the available PySide6 UI compiler executable path."""
     for candidate in ("pyside6-uic", "pyside6-uic6"):
         resolved = shutil.which(candidate)
         if resolved:
@@ -23,6 +24,7 @@ def resolve_uic() -> str:
 
 
 def discover_ui_files(selected: list[str]) -> list[Path]:
+    """Resolve requested .ui files or return all forms when no selection is provided."""
     all_files = sorted(FORMS_DIR.glob("*.ui"))
     if not selected:
         return all_files
@@ -47,10 +49,12 @@ def discover_ui_files(selected: list[str]) -> list[Path]:
 
 
 def output_path_for(ui_path: Path) -> Path:
+    """Return generated Python output path for a .ui file."""
     return ui_path.with_name(f"ui_{ui_path.stem}.py")
 
 
 def build_form(uic: str, ui_path: Path) -> Path:
+    """Compile one .ui file into its `ui_*.py` companion module."""
     output_path = output_path_for(ui_path)
     subprocess.run(
         [uic, str(ui_path), "-o", str(output_path)],
@@ -61,6 +65,7 @@ def build_form(uic: str, ui_path: Path) -> Path:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for selective UI form regeneration."""
     parser = argparse.ArgumentParser(
         description="Regenerate Python form classes from Qt Designer .ui files."
     )
@@ -73,6 +78,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    """CLI entrypoint for rebuilding Qt Designer forms."""
     args = parse_args()
     uic = resolve_uic()
     ui_files = discover_ui_files(args.forms)

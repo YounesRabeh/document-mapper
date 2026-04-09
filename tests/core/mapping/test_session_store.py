@@ -167,6 +167,55 @@ def test_last_session_round_trip_preserves_local_machine_paths(tmp_path):
     assert loaded.license_path == "/tmp/license.xml"
 
 
+def test_load_last_session_clears_fixture_seeded_template_data(tmp_path):
+    repo_root = tmp_path / "repo"
+    tests_root = repo_root / "tests"
+    fixture_template = tests_root / "fixtures" / "docx_template_test.docx"
+    fixture_excel = tests_root / "fixtures" / "xlsx_test.xlsx"
+    fixture_output = tests_root / "out"
+    fixture_archive = tests_root / "archive"
+
+    fixture_template.parent.mkdir(parents=True, exist_ok=True)
+    fixture_output.mkdir(parents=True, exist_ok=True)
+    fixture_archive.mkdir(parents=True, exist_ok=True)
+    fixture_template.write_text("template", encoding="utf-8")
+    fixture_excel.write_text("excel", encoding="utf-8")
+
+    template_entry = ProjectTemplateEntry(
+        display_name="docx_template_test",
+        type_name="test",
+        source_path=str(fixture_template),
+        is_managed=False,
+    )
+    session = ProjectSession(
+        excel_path=str(fixture_excel),
+        template_path=str(fixture_template),
+        output_dir=str(fixture_output),
+        archive_root_dir=str(fixture_archive),
+        theme_mode="DARK",
+        selected_template_type="test",
+        selected_template=template_entry.id,
+        template_types=[ProjectTemplateType("test")],
+        templates=[template_entry],
+    )
+
+    store = ProjectSessionStore(tmp_path / "state")
+    store.save_last_session(session)
+
+    with patch.object(AppPaths, "project_root", return_value=repo_root):
+        loaded = store.load_last_session()
+
+    assert loaded.excel_path == ""
+    assert loaded.template_path == ""
+    assert loaded.output_dir == ""
+    assert loaded.archive_root_dir == ""
+    assert loaded.selected_template_type == ""
+    assert loaded.selected_template == ""
+    assert loaded.template_types == []
+    assert loaded.templates == []
+    assert loaded.theme_mode == "DARK"
+
+
 def test_session_store_save_as_copies_existing_managed_templates_from_source_project(tmp_path):
     source_project_dir = tmp_path / "source-project"
     source_templates_dir = source_project_dir / "templates"

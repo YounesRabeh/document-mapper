@@ -14,6 +14,8 @@ ARCHIVE_FORMAT_ZIP = "zip"
 
 @dataclass(slots=True)
 class ArchiveCreationError(Exception):
+    """Domain error raised when archive validation or creation fails."""
+
     code: str
     details: str = ""
 
@@ -22,10 +24,14 @@ class ArchiveCreationError(Exception):
 
 
 class OutputArchiveService:
+    """Create folder/ZIP archives for generated outputs."""
+
     def available_formats(self) -> list[str]:
+        """Return archive formats supported by this runtime."""
         return [ARCHIVE_FORMAT_FOLDER, ARCHIVE_FORMAT_ZIP]
 
     def build_target_path(self, root_dir: str | Path, run_name: str, archive_format: str) -> Path:
+        """Resolve the final archive target path for a run and format."""
         archive_root = self._resolve_root_dir(root_dir)
         normalized_run_name = self._normalize_run_name(run_name)
         if not normalized_run_name:
@@ -46,6 +52,7 @@ class OutputArchiveService:
         *,
         overwrite: bool = False,
     ) -> Path:
+        """Create an output archive from a generation result and return its path."""
         entries = self._collect_entries(result)
         target_path = self.build_target_path(root_dir, run_name, archive_format)
 
@@ -72,6 +79,7 @@ class OutputArchiveService:
         *,
         overwrite: bool = False,
     ) -> Path:
+        """Shortcut to create a ZIP archive for a generation result."""
         return self.create_archive(
             result,
             root_dir,

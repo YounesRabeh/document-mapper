@@ -10,6 +10,7 @@ from core.util.app_paths import AppPaths
 
 
 def _load_translation_catalogs() -> dict[str, dict[str, str]]:
+    """Load locale catalogs from disk and guarantee every supported language key exists."""
     locales_dir = AppPaths.locales_dir()
     if locales_dir is None:
         return {"en": {}, "it": {}, "es": {}, "fr": {}, "de": {}, "ru": {}}
@@ -36,6 +37,8 @@ TRANSLATIONS = _load_translation_catalogs()
 
 
 class LocalizationManager(QObject):
+    """Provide translated UI/runtime strings and persist the selected language."""
+
     language_changed = Signal(str)
     supported_languages = ("en", "it", "es", "fr", "de", "ru")
 
@@ -52,9 +55,11 @@ class LocalizationManager(QObject):
 
     @property
     def current_language(self) -> str:
+        """Return the currently active language code."""
         return self._language
 
     def set_language(self, language: str):
+        """Set and persist the active language, then notify listeners."""
         normalized = self._normalize_language(language)
         if normalized == self._language:
             return
@@ -63,6 +68,7 @@ class LocalizationManager(QObject):
         self.language_changed.emit(normalized)
 
     def t(self, key: str, **kwargs) -> str:
+        """Translate a key using the active catalog with English fallback."""
         translations = TRANSLATIONS.get(self._language, TRANSLATIONS["en"])
         value = translations.get(key, TRANSLATIONS["en"].get(key, key))
         if kwargs:
@@ -70,6 +76,7 @@ class LocalizationManager(QObject):
         return value
 
     def translate_runtime_text(self, message: str) -> str:
+        """Translate known runtime validation/error messages emitted by core services."""
         if self._language == "en" or not message:
             return message
 

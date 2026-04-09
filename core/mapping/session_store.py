@@ -19,6 +19,8 @@ from core.util.app_paths import AppPaths
 
 
 class ProjectSessionStore:
+    """Persist and restore project sessions plus managed template files."""
+
     last_session_filename = "last_session.json"
     project_filename = "project.json"
     managed_templates_dirname = "templates"
@@ -35,6 +37,7 @@ class ProjectSessionStore:
 
     @property
     def last_session_path(self) -> Path:
+        """Return the canonical path used for last-session persistence."""
         return self.base_dir / self.last_session_filename
 
     def save(
@@ -43,6 +46,7 @@ class ProjectSessionStore:
         path: str | Path,
         source_project_dir: str | Path | None = None,
     ) -> Path:
+        """Save a session as a project manifest and materialize managed templates."""
         project_dir, project_json_path = self._resolve_project_destination(path)
         prepared_session = session.clone()
         self._materialize_project_templates(prepared_session, project_dir, source_project_dir)
@@ -51,6 +55,7 @@ class ProjectSessionStore:
         return project_json_path
 
     def load(self, path: str | Path) -> ProjectSession:
+        """Load a project session from a project directory or manifest path."""
         project_json_path, project_dir = self._resolve_project_source(path)
         session = self._load_project_json(project_json_path)
         session.template_path = self.resolve_effective_template_path(session, project_dir)
@@ -61,6 +66,7 @@ class ProjectSessionStore:
         config_path: str | Path = "config.json",
         setup_path: str | Path = "SETUP.json",
     ) -> ProjectSession:
+        """Load legacy mapping/setup JSON files and convert them to a session."""
         mapping_file = Path(config_path).expanduser().resolve()
         paths_file = Path(setup_path).expanduser().resolve()
 
@@ -112,13 +118,20 @@ class ProjectSessionStore:
         )
 
     def save_last_session(self, session: ProjectSession) -> Path:
+        """Persist the last opened session snapshot."""
         return self._write_last_session_json(session, self.last_session_path)
 
     def load_last_session(self) -> ProjectSession:
+        """Load the last session snapshot or return a default session."""
         if not self.last_session_path.exists():
             return ProjectSession()
         try:
-            return self._load_last_session_json(self.last_session_path)
+            session = self._load_last_session_json(self.last_session_path)
+            if self._looks_like_fixture_seed_session(session):
+                cleaned = ProjectSession(theme_mode=session.theme_mode)
+                self._write_last_session_json(cleaned, self.last_session_path)
+                return cleaned
+            return session
         except (json.JSONDecodeError, OSError, ValueError, TypeError) as exc:
             self._quarantine_invalid_last_session(exc)
             return ProjectSession()
@@ -264,6 +277,7 @@ class ProjectSessionStore:
         return candidate
 
     def resolve_effective_template_path(self, session: ProjectSession, project_dir: Path | None) -> str:
+        """Resolve the active template path for the provided session context."""
         return self._template_catalog.resolve_effective_template_path(session, project_dir)
 
     def _sanitize_template_filename(self, value: str) -> str:
@@ -271,6 +285,41 @@ class ProjectSessionStore:
         sanitized = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in sanitized)
         sanitized = sanitized.strip("._")
         return sanitized or "template"
+
+    def _looks_like_fixture_seed_session(self, session: ProjectSession) -> bool:
+        """Return True when a persisted session appears to be seeded from local test fixtures."""
+        type_names = {entry.name.casefold() for entry in session.template_types}
+        template_labels = {entry.label.casefold() for entry in session.templates}
+        if "test" not in type_names and not any("template_test" in label for label in template_labels):
+            return False
+
+        tests_root = (AppPaths.project_root() / "tests").resolve()
+        if not tests_root.exists():
+            return False
+
+        candidate_paths: list[str] = [
+            session.excel_path,
+            session.output_dir,
+            session.archive_root_dir,
+            session.template_path,
+            session.template_override_path,
+        ]
+        candidate_paths.extend(entry.source_path for entry in session.templates)
+
+        for candidate in candidate_paths:
+            if not candidate:
+                continue
+            if self._is_within_path(candidate, tests_root):
+                return True
+        return False
+
+    @staticmethod
+    def _is_within_path(candidate: str, root: Path) -> bool:
+        try:
+            candidate_path = Path(candidate).expanduser().resolve()
+        except OSError:
+            return False
+        return candidate_path.is_relative_to(root)
 
     def _migrate_legacy_last_session(self):
         if self.last_session_path.exists():

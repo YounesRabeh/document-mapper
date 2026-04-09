@@ -10,6 +10,7 @@ from tests.helpers.gui import populate_setup_page
 
 @pytest.fixture
 def sample_project_files(tmp_path):
+    """Create temporary workbook/template files used by GUI workflow tests."""
     workbook = tmp_path / "data.xlsx"
     template = tmp_path / "template.docx"
     workbook.write_text("placeholder", encoding="utf-8")
@@ -27,6 +28,7 @@ def sample_project_files(tmp_path):
 
 @pytest.fixture
 def prepared_window(main_window_factory, sample_project_files):
+    """Return a window pre-populated with setup data and helper handles."""
     window, fake_store, main_window_module = main_window_factory()
     populate_setup_page(window, sample_project_files.workbook, sample_project_files.template, sample_project_files.root)
     return SimpleNamespace(

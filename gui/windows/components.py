@@ -8,6 +8,8 @@ from gui.controllers import WorkflowStageState
 
 
 class SidebarStageCard(QFrame):
+    """Clickable sidebar card representing one workflow stage."""
+
     clicked = Signal(int)
 
     def __init__(self, stage_index: int, title_key: str, detail_key: str, localization: LocalizationManager):
@@ -57,11 +59,13 @@ class SidebarStageCard(QFrame):
         self.retranslate()
 
     def retranslate(self):
+        """Refresh visible labels using the active localization."""
         self.index_label.setText(f"{self.stage_index:02d}")
         self.title_label.setText(self.localization.t(self.title_key))
         self.detail_label.setText(self.localization.t(self.detail_key))
 
     def set_stage_state(self, state: WorkflowStageState):
+        """Apply stage flags and repolish widgets to reflect current state."""
         self._blocked = state.blocked
         self.setProperty("active", state.active)
         self.setProperty("completed", state.completed)
@@ -73,6 +77,7 @@ class SidebarStageCard(QFrame):
             widget.update()
 
     def mousePressEvent(self, event):
+        """Emit the stage click only when card is not blocked."""
         if event.button() == Qt.LeftButton and not self._blocked:
             self.clicked.emit(self.stage_index)
         super().mousePressEvent(event)

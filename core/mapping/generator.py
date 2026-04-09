@@ -46,6 +46,8 @@ UPPERCASE_TEXT_ALIASES = frozenset((*FIRST_NAME_ALIASES, *LAST_NAME_ALIASES))
 
 
 class DocumentGenerator:
+    """Validate sessions and generate DOCX/PDF outputs from workbook rows."""
+
     def __init__(
         self,
         excel_service: ExcelDataService | None = None,
@@ -54,7 +56,8 @@ class DocumentGenerator:
         self.excel_service = excel_service or ExcelDataService()
         self.process_runner = process_runner or subprocess.run
 
-    def validate_session(self, session: ProjectSession) -> list[str]:
+    def validate_session_inputs(self, session: ProjectSession) -> list[str]:
+        """Return fast validation errors that do not require reading the workbook."""
         errors: list[str] = []
 
         if not session.excel_path:
@@ -91,6 +94,11 @@ class DocumentGenerator:
         if not session.mappings:
             errors.append("Add at least one placeholder mapping.")
 
+        return errors
+
+    def validate_session(self, session: ProjectSession) -> list[str]:
+        """Return user-facing validation errors for the current project session."""
+        errors = self.validate_session_inputs(session)
         if errors:
             return errors
 
@@ -104,6 +112,7 @@ class DocumentGenerator:
         return errors
 
     def existing_output_conflicts(self, session: ProjectSession) -> list[str]:
+        """List output files that would be overwritten by a generation run."""
         if not session.output_dir or not session.excel_path:
             return []
         excel_path = Path(session.excel_path).expanduser().resolve()
@@ -151,7 +160,8 @@ class DocumentGenerator:
         session: ProjectSession,
         progress_callback: LogCallback | None = None,
     ) -> GenerationResult:
-        errors = self.validate_session(session)
+        """Run document generation and return paths, counts, log path, and row errors."""
+        errors = self.validate_session_inputs(session)
         log_path = self._resolve_log_path(session)
         self._initialize_log(log_path)
 
@@ -160,7 +170,21 @@ class DocumentGenerator:
                 self._write_log(log_path, f"ERROR | {error}", progress_callback)
             return GenerationResult(log_path=str(log_path), errors=errors)
 
-        dataframe = self.excel_service.read_dataframe(session.excel_path)
+        try:
+            dataframe = self.excel_service.read_dataframe(session.excel_path)
+        except Exception as exc:
+            error = f"Cannot read Excel workbook: {exc}"
+            self._write_log(log_path, f"ERROR | {error}", progress_callback)
+            return GenerationResult(log_path=str(log_path), errors=[error])
+
+        preview_columns = [str(column) for column in dataframe.columns]
+        errors = self.excel_service.validate_mappings(preview_columns, session.mappings)
+        errors.extend(self._validate_output_naming_schema(session.output_naming_schema, preview_columns))
+        if errors:
+            for error in errors:
+                self._write_log(log_path, f"ERROR | {error}", progress_callback)
+            return GenerationResult(log_path=str(log_path), errors=errors)
+
         total_rows = len(dataframe.index)
         self._write_log(log_path, f"INFO | Loaded {total_rows} rows from workbook.", progress_callback)
 
@@ -170,7 +194,7 @@ class DocumentGenerator:
         if session.export_pdf:
             pdf_dir.mkdir(parents=True, exist_ok=True)
 
-        column_lookup = self.excel_service.build_column_lookup([str(column) for column in dataframe.columns])
+        column_lookup = self.excel_service.build_column_lookup(preview_columns)
         generated_docx_paths: list[str] = []
         generated_pdf_paths: list[str] = []
         generation_errors: list[str] = []

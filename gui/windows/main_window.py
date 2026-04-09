@@ -198,26 +198,32 @@ class MainWindow(QMainWindow):
 
     @property
     def session(self) -> ProjectSession:
+        """Return the active project session bound to the window document."""
         return self.document.session
 
     @session.setter
     def session(self, value: ProjectSession):
+        """Replace the active project session on the window document."""
         self.document.session = value
 
     @property
     def current_project_path(self) -> str | None:
+        """Return the currently opened project path, if any."""
         return self.document.project_path
 
     @current_project_path.setter
     def current_project_path(self, value: str | None):
+        """Set the currently opened project path."""
         self.document.project_path = value
 
     @property
     def last_result(self) -> GenerationResult:
+        """Return the most recent generation result."""
         return self.document.last_result
 
     @last_result.setter
     def last_result(self, value: GenerationResult):
+        """Store the most recent generation result."""
         self.document.last_result = value
 
     def _create_menu_bar(self):
@@ -260,6 +266,7 @@ class MainWindow(QMainWindow):
         persist_last_session(self)
 
     def goto_stage(self, index: int):
+        """Navigate to a workflow stage if its prerequisites are satisfied."""
         return goto_stage(self, index)
 
     def _save_project(self):
@@ -393,6 +400,7 @@ class MainWindow(QMainWindow):
         return candidate if candidate in AppTheme.__members__ else ""
 
     def closeEvent(self, event):
+        """Persist/flush session state and apply close-confirmation behavior."""
         action = self._confirm_close_action()
         if action is None:
             event.ignore()

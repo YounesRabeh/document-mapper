@@ -7,6 +7,8 @@ from core.mapping.models import MappingEntry
 
 @dataclass(slots=True)
 class WorkbookColumnsResult:
+    """Workbook-column loading result with optional error payload."""
+
     columns: list[str] = field(default_factory=list)
     row_count: int = 0
     error: Exception | None = None
@@ -14,16 +16,21 @@ class WorkbookColumnsResult:
 
 @dataclass(slots=True)
 class PlaceholderDetectionResult:
+    """Template placeholder detection result with optional error payload."""
+
     placeholders: list[str] = field(default_factory=list)
     error: Exception | None = None
 
 
 class MappingContextService:
+    """Facade used by MappingPage to load columns/placeholders and merge mappings."""
+
     def __init__(self, excel_service, template_service):
         self.excel_service = excel_service
         self.template_service = template_service
 
     def load_workbook_columns(self, excel_path: str) -> WorkbookColumnsResult:
+        """Inspect workbook and return available columns/row count."""
         if not excel_path:
             return WorkbookColumnsResult()
         try:
@@ -33,6 +40,7 @@ class MappingContextService:
         return WorkbookColumnsResult(columns=list(preview.columns), row_count=preview.row_count)
 
     def detect_placeholders(self, template_path: str, delimiter: str) -> PlaceholderDetectionResult:
+        """Extract placeholders from template for the provided delimiter."""
         if not template_path or not delimiter:
             return PlaceholderDetectionResult()
         try:
@@ -43,6 +51,7 @@ class MappingContextService:
 
     @staticmethod
     def output_naming_tokens(columns: list[str]) -> list[str]:
+        """Return output naming token suggestions from workbook columns plus built-ins."""
         tokens = list(columns)
         tokens.extend(["ROW", "TEMPLATE"])
         return tokens
@@ -53,6 +62,7 @@ class MappingContextService:
         previous_detected_placeholders: set[str],
         current_detected_placeholders: list[str],
     ) -> list[MappingEntry]:
+        """Remove mappings tied only to placeholders no longer detected."""
         if not previous_detected_placeholders:
             return [MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name) for entry in mappings]
 
@@ -71,6 +81,7 @@ class MappingContextService:
         detected_placeholders: list[str],
         current_mappings: list[MappingEntry],
     ) -> tuple[list[MappingEntry], list[MappingEntry]]:
+        """Merge detected placeholders with manual rows and return UI+persisted rows."""
         manual_mappings = [
             MappingEntry(placeholder=entry.placeholder, column_name=entry.column_name)
             for entry in current_mappings

@@ -114,7 +114,9 @@ class EnvironmentSetup:
             # Default: enable persistence logging
             os.environ["PERSISTENCE_LOGGING"] = "True"
 
-        Logger.configure_from_env(self.project_root)
+        # In bundled mode use a writable user log directory instead of `_MEIPASS`.
+        logging_root = AppPaths.logs_dir() if not self.is_dev else self.project_root
+        Logger.configure_from_env(logging_root)
 
     def _load_toml(self) -> dict[str, Any] | None:
         """

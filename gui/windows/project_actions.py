@@ -4,10 +4,12 @@ from pathlib import Path
 
 
 def save_project(window, *, message_box_cls, app_paths_cls):
+    """Save the active project to the default internal project path."""
     return window._save_project_to_path(app_paths_cls.internal_project_dir(), message_box_cls=message_box_cls)
 
 
 def save_project_to_path(window, path: str | Path, *, message_box_cls):
+    """Persist the active project session to an explicit directory/path."""
     project_dir = Path(path).expanduser().resolve()
     source_project_dir = window._current_project_dir()
     session_to_save = window._prepare_session_for_save(project_dir)
@@ -39,6 +41,7 @@ def save_project_to_path(window, path: str | Path, *, message_box_cls):
     return True
 
 def prepare_session_for_save(window, project_dir: Path, *, message_box_cls):
+    """Prepare a session snapshot for save, handling one-time template override policy."""
     session_to_save = window.session.clone()
     if not session_to_save.template_override_path:
         window._sync_effective_template_path(session_to_save)
@@ -83,10 +86,12 @@ def prepare_session_for_save(window, project_dir: Path, *, message_box_cls):
 
 
 def current_project_dir(window):
+    """Return the current project directory associated with the document."""
     return window.document.project_dir
 
 
 def sync_effective_template_path(window, session=None):
+    """Normalize template selection and sync effective template path into session."""
     target_session = session or window.session
     window.template_catalog.normalize_template_selection(
         target_session,
@@ -95,6 +100,7 @@ def sync_effective_template_path(window, session=None):
 
 
 def refresh_template_toolbar(window):
+    """Refresh template toolbar combos/status from current session catalog state."""
     selected_type = window.session.selected_template_type
     type_names = [entry.name for entry in window.session.template_types]
     none_label = window.localization.t("common.none")
@@ -161,6 +167,7 @@ def refresh_template_toolbar(window):
 
 
 def handle_template_type_changed(window, _index: int):
+    """Handle template type combo changes and persist resulting session updates."""
     selected_type = str(window.template_type_combo.currentData() or "").strip()
     if selected_type == window.session.selected_template_type:
         return
@@ -174,6 +181,7 @@ def handle_template_type_changed(window, _index: int):
 
 
 def handle_template_selection_changed(window, _index: int):
+    """Handle template selection combo changes and persist session updates."""
     selected_template = str(window.template_combo.currentData() or "").strip()
     if selected_template == window.session.selected_template:
         return
@@ -184,6 +192,7 @@ def handle_template_selection_changed(window, _index: int):
 
 
 def manage_templates(window, *, dialog_cls, accepted_code):
+    """Open template manager dialog and apply edits when accepted."""
     dialog = dialog_cls(window.session, window.localization, window)
     if dialog.exec() != accepted_code:
         return
@@ -195,6 +204,7 @@ def manage_templates(window, *, dialog_cls, accepted_code):
 
 
 def show_about(window, *, message_box_cls):
+    """Show the About dialog with localized description and config metadata."""
     version = str(window.config.get("APP_VERSION", "")).strip()
     author = str(window.config.get("APP_AUTHOR", "")).strip()
 

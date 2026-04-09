@@ -8,6 +8,7 @@ from core.mapping.models import ProjectTemplateEntry, ProjectTemplateType, norma
 
 
 def assert_stage_state(window, stage_index: int, *, active=None, blocked=None, completed=None):
+    """Assert sidebar card state flags for a given workflow stage."""
     card = window.stage_cards[stage_index]
     if active is not None:
         assert bool(card.property("active")) is active
@@ -18,6 +19,7 @@ def assert_stage_state(window, stage_index: int, *, active=None, blocked=None, c
 
 
 def populate_setup_page(window, workbook: Path, template: Path, output_dir: Path):
+    """Populate setup/session fields so mapping/generation stages can be tested quickly."""
     window.setup_page.excel_input["input"].setText(str(workbook))
     window.setup_page.output_input["input"].setText(str(output_dir))
     window.setup_page._sync_session()
@@ -40,4 +42,5 @@ def populate_setup_page(window, workbook: Path, template: Path, output_dir: Path
 
 
 def mapping_combo(window, row: int, column: int) -> QComboBox:
+    """Return mapping table combo editor at the given row/column."""
     return window.mapping_page._get_cell_editor(row, column, QComboBox)

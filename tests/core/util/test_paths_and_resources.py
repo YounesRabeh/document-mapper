@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from core.config.environment_setup import EnvironmentSetup
+from core.util.app_icon import resolve_app_icon_path
 from core.util.app_paths import AppPaths
 from core.util.resources import Resources
 
@@ -24,7 +25,6 @@ def test_resources_resolve_from_project_root_not_cwd(tmp_path, monkeypatch):
             "RESOURCES_BASE": "resources",
             "RESOURCES_QSS": "resources/qss",
             "RESOURCES_ICONS": "resources/icons",
-            "RESOURCES_IMAGES": "resources/images",
         }
     )
     icon_path = Path(Resources.get_in_icons("sys/chevron_down.svg"))
@@ -68,3 +68,24 @@ def test_environment_setup_ignores_unrelated_uppercase_env_vars(tmp_path, monkey
 
     assert "DOCUMENT_MAPPER_TEST_RANDOM_DIR" not in config
     assert unrelated_dir.exists() is False
+
+
+def test_resources_initialize_does_not_auto_create_images_directory(tmp_path):
+    images_dir = tmp_path / "images-not-created"
+
+    Resources.initialize(
+        {
+            "RESOURCES_BASE": "resources",
+            "RESOURCES_IMAGES": str(images_dir),
+        }
+    )
+
+    assert images_dir.exists() is False
+
+
+def test_main_resolves_app_icon_from_resources_icons():
+    icon_path = resolve_app_icon_path()
+
+    assert icon_path is not None
+    assert icon_path.name == "document-mapper.ico"
+    assert icon_path.exists()

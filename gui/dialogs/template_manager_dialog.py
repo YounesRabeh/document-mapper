@@ -27,6 +27,8 @@ from gui.styles import apply_stylesheet
 
 
 class TemplateManagerDialog(QDialog):
+    """Dialog used to manage project template types and template entries."""
+
     def __init__(self, session: ProjectSession, localization: LocalizationManager, parent=None):
         super().__init__(parent)
         self.localization = localization
@@ -82,6 +84,7 @@ class TemplateManagerDialog(QDialog):
         self.save_button.setText(self.localization.t("button.save"))
 
     def edited_session(self) -> ProjectSession:
+        """Return a cloned session containing dialog edits."""
         return self.session.clone()
 
     def _refresh_type_list(self):

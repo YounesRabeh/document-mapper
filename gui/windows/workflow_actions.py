@@ -4,11 +4,13 @@ from core.util.logger import Logger
 
 
 def update_template_toolbar_visibility(window):
+    """Show template toolbar only on setup stage."""
     current_stage = window.stage_manager.currentIndex() + 1
     window.template_toolbar.setVisible(current_stage == 1)
 
 
 def refresh_pages(window):
+    """Rebind all workflow pages from current session/result state."""
     window._sync_effective_template_path()
     window._refresh_template_toolbar()
     update_template_toolbar_visibility(window)
@@ -21,6 +23,7 @@ def refresh_pages(window):
 
 
 def persist_last_session(window):
+    """Persist the current session snapshot and refresh dependent pages."""
     window._sync_effective_template_path()
     window._persist_last_session_async()
     window._refresh_template_toolbar()
@@ -31,6 +34,7 @@ def persist_last_session(window):
 
 
 def goto_stage(window, index: int):
+    """Navigate to a workflow stage if allowed by controller rules."""
     if index < 1 or index > window.stage_manager.count():
         return False
     if not window._can_navigate_to_stage(index):
@@ -45,6 +49,7 @@ def goto_stage(window, index: int):
 
 
 def handle_generation_result(window, result):
+    """Store generation result, update pages, and navigate to results stage."""
     window.last_result = result
     window.results_page.bind_result(result, window.session)
     window.archive_page.bind_result(result, window.session)
@@ -52,6 +57,7 @@ def handle_generation_result(window, result):
 
 
 def retranslate_ui(window):
+    """Refresh top-level UI text and stage cards using current localization."""
     window.setWindowTitle(window.localization.t("app.name"))
     window.sidebar_eyebrow.setText(window.localization.t("sidebar.eyebrow"))
     window.sidebar_title.setText(window.localization.t("sidebar.heading"))
@@ -90,6 +96,7 @@ def retranslate_ui(window):
 
 
 def handle_stage_changed(window, current_index: int):
+    """Apply stage change logic, including fallback when prerequisites fail."""
     stage_number = current_index + 1
     if not window._can_navigate_to_stage(stage_number):
         fallback_stage = window._resolve_fallback_stage()
@@ -118,6 +125,7 @@ def handle_stage_changed(window, current_index: int):
 
 
 def refresh_workflow_state(window):
+    """Recompute and apply stage-card visual states."""
     states = window.workflow_controller.compute_states(
         window.session,
         window.last_result,
@@ -129,6 +137,7 @@ def refresh_workflow_state(window):
 
 
 def can_navigate_to_stage(window, index: int) -> bool:
+    """Return whether a stage is currently reachable."""
     return window.workflow_controller.can_navigate_to_stage(
         index,
         window.session,
@@ -139,6 +148,7 @@ def can_navigate_to_stage(window, index: int) -> bool:
 
 
 def resolve_fallback_stage(window) -> int:
+    """Return best fallback stage when current stage becomes invalid."""
     return window.workflow_controller.resolve_fallback_stage(
         window._last_valid_stage,
         window.session,

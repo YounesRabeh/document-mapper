@@ -27,6 +27,22 @@ def _unlock_generate_stage(window):
     window.mapping_page.refresh_button.click()
 
 
+def test_fresh_start_has_empty_inputs_and_no_templates(main_window_factory):
+    window, _store, _main_window_module = main_window_factory()
+
+    assert window.setup_page.excel_input["input"].text() == ""
+    assert window.setup_page.output_input["input"].text() == ""
+    assert window.setup_page.template_override_input["input"].text() == ""
+    assert window.session.template_types == []
+    assert window.session.templates == []
+    assert window.session.selected_template_type == ""
+    assert window.session.selected_template == ""
+    assert window.template_type_combo.count() == 1
+    assert window.template_type_combo.currentData() == ""
+    assert window.template_combo.count() == 1
+    assert window.template_combo.currentData() == ""
+
+
 def _result_with_existing_outputs(
     root_dir: Path,
     *,

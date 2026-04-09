@@ -12,28 +12,37 @@ from core.mapping.models import GenerationResult, MappingEntry, ProjectSession
 
 
 class FakeExcelService:
+    """Test double for ExcelDataService returning predictable workbook data."""
+
     def __init__(self, dataframe: pd.DataFrame | None = None):
         self.dataframe = (
             dataframe if dataframe is not None else pd.DataFrame([{"NAME": "Ada", "LASTNAME": "Lovelace"}])
         )
 
     def inspect(self, _excel_path: str):
+        """Return preview metadata for the fake dataframe."""
         return SimpleNamespace(columns=[str(column) for column in self.dataframe.columns], row_count=len(self.dataframe.index))
 
     def read_dataframe(self, _excel_path: str) -> pd.DataFrame:
+        """Return a copy of the fake dataframe."""
         return self.dataframe.copy()
 
     def build_column_lookup(self, columns: list[str]) -> dict[str, str]:
+        """Build normalized lookup map from provided column names."""
         return {normalize_column_name(column): column for column in columns}
 
     def validate_mappings(self, columns: list[str], mappings: list[MappingEntry]) -> list[str]:
+        """Reuse real mapping validation logic for fake service tests."""
         return ExcelDataService().validate_mappings(columns, mappings)
 
     def clear_cache(self, _excel_path: str | None = None):
+        """No-op cache clear for fake service."""
         return None
 
 
 class FakeGenerator:
+    """Test double for DocumentGenerator with configurable result payload."""
+
     def __init__(self, _excel_service=None, result: GenerationResult | None = None):
         self.result = result or GenerationResult(
             total_rows=1,
@@ -45,6 +54,7 @@ class FakeGenerator:
         )
 
     def validate_session(self, session: ProjectSession) -> list[str]:
+        """Perform lightweight validation checks used by GUI tests."""
         errors: list[str] = []
         if not session.excel_path:
             errors.append("Select an Excel workbook.")
@@ -70,7 +80,13 @@ class FakeGenerator:
                 errors.append(f"Mapping row {index} is missing an Excel column.")
         return errors
 
+    def validate_session_inputs(self, session: ProjectSession) -> list[str]:
+        """Match DocumentGenerator fast pre-check API used by GeneratePage."""
+        return self.validate_session(session)
+
 class FakeSessionStore:
+    """In-memory session store fake used by window and persistence tests."""
+
     def __init__(self):
         self.session: ProjectSession | None = None
         self.loaded_session: ProjectSession | None = None
@@ -79,11 +95,13 @@ class FakeSessionStore:
         self.save_last_session_hook = None
 
     def load_last_session(self):
+        """Return cloned last session or a default empty session."""
         if self.last_session is not None:
             return self.last_session.clone()
         return ProjectSession()
 
     def save_last_session(self, session):
+        """Save last session snapshot in memory and optional hook."""
         if callable(self.save_last_session_hook):
             self.save_last_session_hook(session.clone())
         self.session = session.clone()
@@ -91,6 +109,7 @@ class FakeSessionStore:
         return Path(tempfile.gettempdir()) / "last_session.json"
 
     def save(self, session, path, source_project_dir=None):
+        """Persist project payload to a temporary JSON file for tests."""
         del source_project_dir
         self.session = session.clone()
         self.loaded_session = self.session.clone()
@@ -104,6 +123,7 @@ class FakeSessionStore:
         return project_json
 
     def load(self, _path):
+        """Load a cloned saved session and resolve effective template path."""
         if self.loaded_session is not None:
             session = ProjectSession.from_project_dict(self.loaded_session.to_project_dict())
         else:
@@ -112,6 +132,7 @@ class FakeSessionStore:
         return session
 
     def resolve_effective_template_path(self, session: ProjectSession, _project_dir):
+        """Resolve active template path using override/entry/session precedence."""
         if session.template_override_path:
             return session.template_override_path
         selected_entry = session.selected_template_entry()
@@ -124,29 +145,37 @@ class FakeSessionStore:
 
 
 class FakeLastSessionPersistenceService:
+    """Synchronous fake for async last-session persistence service."""
+
     def __init__(self, session_store):
         self._session_store = session_store
         self._latest_snapshot: ProjectSession | None = None
 
     def enqueue(self, snapshot: ProjectSession):
+        """Persist snapshot immediately in the backing fake store."""
         self._latest_snapshot = snapshot.clone()
         self._session_store.save_last_session(self._latest_snapshot.clone())
 
     def latest_snapshot(self) -> ProjectSession | None:
+        """Return the latest persisted snapshot clone."""
         if self._latest_snapshot is None:
             return None
         return self._latest_snapshot.clone()
 
     def flush(self, timeout: float | None = None) -> bool:
+        """Fake flush always succeeds immediately."""
         del timeout
         return True
 
     def flush_and_stop(self, timeout: float | None = None) -> bool:
+        """Fake flush+stop always succeeds immediately."""
         del timeout
         return True
 
 
 class FakeDocument:
+    """Minimal Spire.Document stand-in used by generator tests."""
+
     license_value = None
 
     def __init__(self):
@@ -154,21 +183,27 @@ class FakeDocument:
         self.template_path = None
 
     def LoadFromFile(self, path: str):
+        """Record template path used for generation."""
         self.template_path = path
 
     def Replace(self, placeholder: str, value: str, _whole_word: bool, _case_sensitive: bool):
+        """Record placeholder replacement calls."""
         self.replacements.append((placeholder, value))
 
     def SaveToFile(self, path: str, _file_format):
+        """Write a simple generated marker file."""
         Path(path).write_text("generated", encoding="utf-8")
 
     def Close(self):
+        """No-op close method for API compatibility."""
         return None
 
     @classmethod
     def SetLicense(cls, path: str):
+        """Record license path passed by generator logic."""
         cls.license_value = path
 
 
 def fake_spire_dependencies():
+    """Return fake Spire dependencies tuple used in patching."""
     return FakeDocument, SimpleNamespace(Docx2016="Docx2016")

@@ -21,11 +21,13 @@ DELIMITER_CLOSING_MAP = {
 
 
 def normalize_template_name(value: str) -> str:
+    """Return a cleaned template name without trailing .doc/.docx extension."""
     normalized = re.sub(r"\.(docx?)$", "", str(value).strip(), flags=re.IGNORECASE)
     return normalized.strip()
 
 
 def normalize_template_type_name(value: str) -> str:
+    """Normalize a template type label and remap legacy 'Imported' to default type."""
     normalized = re.sub(r"\s+", " ", str(value or "").strip())
     if normalized.casefold() == "imported":
         return DEFAULT_IMPORTED_TEMPLATE_TYPE
@@ -33,14 +35,17 @@ def normalize_template_type_name(value: str) -> str:
 
 
 def normalize_placeholder_delimiter(value: str) -> str:
+    """Normalize placeholder delimiter text."""
     return str(value or "").strip()
 
 
 def normalize_output_naming_schema(value: str) -> str:
+    """Normalize output naming schema text."""
     return str(value or "").strip()
 
 
 def normalize_theme_mode(value: Any) -> str:
+    """Normalize a theme value to an AppTheme member name or empty string."""
     if isinstance(value, AppTheme):
         return value.name
     candidate = str(value or "").strip().upper()
@@ -48,12 +53,14 @@ def normalize_theme_mode(value: Any) -> str:
 
 
 def derive_placeholder_boundaries(delimiter: str) -> tuple[str, str]:
+    """Build opening and closing delimiter strings for placeholder detection."""
     normalized = normalize_placeholder_delimiter(delimiter) or DEFAULT_PLACEHOLDER_DELIMITER
     closing = "".join(DELIMITER_CLOSING_MAP.get(char, char) for char in normalized)
     return normalized, closing
 
 
 def infer_placeholder_delimiter_from_mappings(mappings: list["MappingEntry"]) -> str:
+    """Infer the delimiter from existing mappings, falling back to the default."""
     for mapping in mappings:
         placeholder = mapping.placeholder.strip()
         if not placeholder or len(placeholder) < 3:
@@ -72,15 +79,19 @@ def infer_placeholder_delimiter_from_mappings(mappings: list["MappingEntry"]) ->
 
 
 def generate_template_entry_id() -> str:
+    """Generate a unique ID for a template entry."""
     return uuid4().hex
 
 
 @dataclass(slots=True)
 class MappingEntry:
+    """Single placeholder-to-column mapping row."""
+
     placeholder: str = ""
     column_name: str = ""
 
     def to_dict(self) -> dict[str, str]:
+        """Serialize the mapping entry to a JSON-safe dictionary."""
         return {
             "placeholder": self.placeholder,
             "column_name": self.column_name,
@@ -88,6 +99,7 @@ class MappingEntry:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "MappingEntry":
+        """Create a mapping entry from persisted data."""
         payload = data or {}
         return cls(
             placeholder=str(payload.get("placeholder", "")).strip(),
@@ -97,22 +109,28 @@ class MappingEntry:
 
 @dataclass(slots=True)
 class ProjectTemplateType:
+    """Template category shown in the template picker."""
+
     name: str = ""
 
     def __post_init__(self):
         self.name = normalize_template_type_name(self.name)
 
     def to_dict(self) -> dict[str, str]:
+        """Serialize the template type."""
         return {"name": self.name}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "ProjectTemplateType":
+        """Create a template type from persisted data."""
         payload = data or {}
         return cls(name=str(payload.get("name", "")).strip())
 
 
 @dataclass(slots=True)
 class ProjectTemplateEntry:
+    """Template metadata used by the project catalog."""
+
     id: str = field(default_factory=generate_template_entry_id)
     display_name: str = ""
     type_name: str = ""
@@ -129,6 +147,7 @@ class ProjectTemplateEntry:
         self.is_managed = bool(self.is_managed)
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the template entry with full runtime fields."""
         return {
             "id": self.id,
             "display_name": self.display_name,
@@ -139,6 +158,7 @@ class ProjectTemplateEntry:
         }
 
     def to_project_dict(self) -> dict[str, Any]:
+        """Serialize the template entry for project manifests."""
         return {
             "id": self.id,
             "display_name": self.display_name,
@@ -149,6 +169,7 @@ class ProjectTemplateEntry:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "ProjectTemplateEntry":
+        """Create a template entry from persisted runtime data."""
         payload = data or {}
         return cls(
             id=str(payload.get("id", "")).strip() or generate_template_entry_id(),
@@ -161,6 +182,7 @@ class ProjectTemplateEntry:
 
     @classmethod
     def from_project_dict(cls, data: dict[str, Any] | None) -> "ProjectTemplateEntry":
+        """Create a template entry from project-manifest data."""
         entry = cls.from_dict(data)
         if entry.is_managed and entry.relative_path:
             entry.source_path = ""
@@ -168,6 +190,7 @@ class ProjectTemplateEntry:
 
     @property
     def label(self) -> str:
+        """Return the user-visible label for this template entry."""
         if self.display_name:
             return self.display_name
         if self.relative_path:
@@ -179,6 +202,8 @@ class ProjectTemplateEntry:
 
 @dataclass(slots=True)
 class ProjectSession:
+    """In-memory state for the full mapping/generation workflow."""
+
     excel_path: str = ""
     template_path: str = ""
     template_override_path: str = ""
@@ -224,14 +249,17 @@ class ProjectSession:
 
     @property
     def placeholder_start(self) -> str:
+        """Return the configured placeholder opening boundary."""
         return derive_placeholder_boundaries(self.placeholder_delimiter)[0]
 
     @property
     def placeholder_end(self) -> str:
+        """Return the configured placeholder closing boundary."""
         return derive_placeholder_boundaries(self.placeholder_delimiter)[1]
 
     @property
     def active_template_name(self) -> str:
+        """Return the active template name resolved from override/catalog/path."""
         if self.template_override_path:
             return normalize_template_name(Path(self.template_override_path).name)
         template_entry = self.selected_template_entry()
@@ -242,23 +270,28 @@ class ProjectSession:
         return ""
 
     def selected_template_entry(self) -> ProjectTemplateEntry | None:
+        """Return the currently selected template entry, if any."""
         if not self.selected_template:
             return None
         return next((entry for entry in self.templates if entry.id == self.selected_template), None)
 
     def templates_for_selected_type(self) -> list[ProjectTemplateEntry]:
+        """Return templates available for the currently selected type."""
         if not self.selected_template_type:
             return []
         return [entry for entry in self.templates if entry.type_name == self.selected_template_type]
 
     def templates_for_type(self, type_name: str) -> list[ProjectTemplateEntry]:
+        """Return templates available for a specific type name."""
         normalized = normalize_template_type_name(type_name)
         return [entry for entry in self.templates if entry.type_name == normalized]
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize the session for generic persistence."""
         return self._to_payload(project_mode=False)
 
     def to_project_dict(self) -> dict[str, Any]:
+        """Serialize the session for project manifest persistence."""
         return self._to_payload(project_mode=True)
 
     def _to_payload(self, *, project_mode: bool) -> dict[str, Any]:
@@ -288,13 +321,16 @@ class ProjectSession:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "ProjectSession":
+        """Create a session from generic persisted payload."""
         return cls._from_payload(data, project_mode=False)
 
     def clone(self) -> "ProjectSession":
+        """Return a deep copy of the session via serialization."""
         return ProjectSession.from_dict(self.to_dict())
 
     @classmethod
     def from_project_dict(cls, data: dict[str, Any] | None) -> "ProjectSession":
+        """Create a session from a project-manifest payload."""
         return cls._from_payload(data, project_mode=True)
 
     @classmethod
@@ -446,6 +482,8 @@ class ProjectSession:
 
 @dataclass(slots=True)
 class GenerationResult:
+    """Outcome of a generation run, including output paths and row errors."""
+
     total_rows: int = 0
     success_count: int = 0
     generated_docx_paths: list[str] = field(default_factory=list)
@@ -456,5 +494,7 @@ class GenerationResult:
 
 @dataclass(slots=True)
 class ExcelPreview:
+    """Lightweight workbook preview with columns and row count."""
+
     columns: list[str] = field(default_factory=list)
     row_count: int = 0

@@ -1,11 +1,29 @@
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
-from PyInstaller.building.build_main import Analysis, PYZ, EXE, COLLECT
-import toml
 import ast
 
+from PyInstaller.building.build_main import Analysis, EXE, PYZ
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+
 # --- Paths ---
-project_root = Path(__file__).resolve().parent
+_spec_path = globals().get("SPECPATH")
+if _spec_path:
+    project_root = Path(_spec_path).resolve()
+else:
+    project_root = Path.cwd().resolve()
+icon_candidates = [
+    project_root / "resources" / "icons" / "document-mapper.ico",
+]
+exe_icon = next((str(path) for path in icon_candidates if path.exists()), None)
+if exe_icon:
+    print(f"[INFO] Using app icon: {exe_icon}")
+else:
+    print("[WARN] App icon not found in resources/icons; build will use default icon.")
 
 config_path = project_root / "config.toml"
 if not config_path.exists():
@@ -14,8 +32,10 @@ if not config_path.exists():
 # --- Load resources from config.toml ---
 resources_cfg = {}
 if config_path.exists():
-    cfg = toml.load(config_path)
+    with open(config_path, "rb") as handle:
+        cfg = tomllib.load(handle)
     resources_cfg = cfg.get("resources", {})
+
 
 # --- Detect PySide6 modules used ---
 def detect_pyside_modules(source_dir: Path):
@@ -37,11 +57,11 @@ def detect_pyside_modules(source_dir: Path):
                         used.add(root)
     return sorted(used)
 
+
 used_modules = detect_pyside_modules(project_root)
 print(f"[INFO] Detected PySide6 modules: {used_modules}")
 
-hiddenimports = []
-hiddenimports += [
+hiddenimports = [
     "spire.doc",
     "spire.doc.common",
     "openpyxl",
@@ -55,7 +75,7 @@ datas = [
 # Add ONLY the specific resource subfolders from config (not the base folder)
 for key, path in resources_cfg.items():
     if key == "base":
-        continue  # Skip base to avoid duplication
+        continue
 
     abs_path = project_root / path
     if abs_path.exists() and abs_path.is_dir():
@@ -72,7 +92,7 @@ for mod in used_modules:
 
 # --- Analysis phase ---
 a = Analysis(
-    ['main.py'],
+    ["main.py"],
     pathex=[str(project_root)],
     binaries=[],
     datas=datas,
@@ -86,28 +106,19 @@ a = Analysis(
 # --- Bundle Python code ---
 pyz = PYZ(a.pure, a.zipped_data)
 
-# --- Create the executable ---
+# --- Build one-file executable ---
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name='document-mapper',
+    name="document-mapper",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     console=False,
-    onefile=True
-)
-
-# --- Collect everything into a single dist folder ---
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    name='document-mapper',
+    icon=exe_icon,
 )

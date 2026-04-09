@@ -9,14 +9,18 @@ from core.mapping.models import ExcelPreview, MappingEntry
 
 
 def normalize_column_name(value: str) -> str:
+    """Normalize a workbook column name for case-insensitive lookups."""
     return re.sub(r"\s+", " ", str(value).strip()).upper()
 
 
 class ExcelDataService:
+    """Read Excel data, cache sheet previews, and validate mapping rows."""
+
     def __init__(self):
         self._preview_cache: dict[str, tuple[tuple[int, int], ExcelPreview]] = {}
 
     def inspect(self, excel_path: str) -> ExcelPreview:
+        """Return column names and row count for the workbook, using cache when possible."""
         path = self._resolve_path(excel_path)
         cache_key = str(path)
         signature = self._build_signature(path)
@@ -34,10 +38,12 @@ class ExcelDataService:
         return ExcelPreview(columns=list(preview.columns), row_count=preview.row_count)
 
     def read_dataframe(self, excel_path: str) -> pd.DataFrame:
+        """Load the first worksheet into a pandas DataFrame."""
         path = self._resolve_path(excel_path)
         return pd.read_excel(path, header=0)
 
     def clear_cache(self, excel_path: str | None = None):
+        """Clear cached previews for one workbook or for all cached workbooks."""
         if excel_path:
             try:
                 cache_key = str(Path(excel_path).expanduser().resolve())
@@ -48,6 +54,7 @@ class ExcelDataService:
         self._preview_cache.clear()
 
     def build_column_lookup(self, columns: list[str]) -> dict[str, str]:
+        """Build a normalized-to-original column name lookup table."""
         lookup: dict[str, str] = {}
         for column in columns:
             normalized = normalize_column_name(column)
@@ -56,6 +63,7 @@ class ExcelDataService:
         return lookup
 
     def validate_mappings(self, columns: list[str], mappings: list[MappingEntry]) -> list[str]:
+        """Validate placeholder mappings against required fields and workbook columns."""
         errors: list[str] = []
         lookup = self.build_column_lookup(columns)
 

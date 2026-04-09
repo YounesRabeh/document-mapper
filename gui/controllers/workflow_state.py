@@ -7,17 +7,22 @@ from core.mapping.models import GenerationResult, ProjectSession
 
 @dataclass(slots=True)
 class WorkflowStageState:
+    """UI state flags for a single workflow stage card."""
+
     active: bool = False
     completed: bool = False
     blocked: bool = False
 
 
 class WorkflowStateController:
+    """Compute stage availability/completion from session and generation state."""
+
     def __init__(self, generator):
         self.generator = generator
 
     @staticmethod
     def has_mapping_prerequisites(session: ProjectSession) -> bool:
+        """Return True when setup data is sufficient to unlock mapping stage."""
         return bool(session.excel_path and session.output_dir and session.template_path)
 
     def compute_states(
@@ -27,6 +32,7 @@ class WorkflowStateController:
         current_stage: int,
         stage_count: int,
     ) -> dict[int, WorkflowStageState]:
+        """Build per-stage UI state for the workflow sidebar."""
         current_stage = max(1, min(current_stage, stage_count or 1))
         mapping_available = self.has_mapping_prerequisites(session)
         generate_available = not self.generator.validate_session(session)
@@ -55,6 +61,7 @@ class WorkflowStateController:
         current_stage: int,
         stage_count: int,
     ) -> bool:
+        """Return True when the requested stage is not blocked by prerequisites."""
         if stage < 1 or stage > stage_count:
             return False
         return not self.compute_states(session, last_result, current_stage, stage_count)[stage].blocked
@@ -67,6 +74,7 @@ class WorkflowStateController:
         current_stage: int,
         stage_count: int,
     ) -> int:
+        """Choose the safest stage to return to when current stage becomes invalid."""
         if self.can_navigate_to_stage(last_valid_stage, session, last_result, current_stage, stage_count):
             return last_valid_stage
         for stage in range(stage_count, 0, -1):
@@ -76,6 +84,7 @@ class WorkflowStateController:
 
     @staticmethod
     def has_generation_results(result: GenerationResult) -> bool:
+        """Return True when any generation output/error metadata is present."""
         return any(
             (
                 result.total_rows,

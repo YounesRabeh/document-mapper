@@ -21,17 +21,20 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 @pytest.fixture(scope="session")
 def qapp():
+    """Provide a shared Qt application instance for GUI tests."""
     app = QApplication.instance() or QApplication([])
     return app
 
 
 @pytest.fixture(scope="session")
 def fixture_dir() -> Path:
+    """Return the root directory containing test fixtures."""
     return Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
 def window_config() -> dict[str, object]:
+    """Return base app/window configuration used by MainWindow tests."""
     return {
         "APP_NAME": "Document Mapper Test",
         "APP_ORGANIZATION": "Document Mapper Tests",
@@ -47,6 +50,7 @@ def window_config() -> dict[str, object]:
 
 @pytest.fixture
 def clear_test_settings(window_config):
+    """Clear persisted QSettings before and after each test using window config."""
     settings = QSettings(window_config["APP_ORGANIZATION"], window_config["APP_NAME"])
     settings.clear()
     yield
@@ -55,6 +59,7 @@ def clear_test_settings(window_config):
 
 @pytest.fixture
 def main_window_factory(qapp, window_config, clear_test_settings, tmp_path):
+    """Create an isolated MainWindow factory with patched core dependencies."""
     from gui.windows import main_window as main_window_module
 
     resources: list[tuple[object, ExitStack]] = []

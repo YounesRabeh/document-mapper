@@ -20,6 +20,7 @@ class LastSessionPersistenceService:
         self._last_error: Exception | None = None
 
     def enqueue(self, snapshot: ProjectSession):
+        """Queue the latest snapshot for asynchronous persistence."""
         cloned = snapshot.clone()
         with self._condition:
             if self._stop_requested:
@@ -31,6 +32,7 @@ class LastSessionPersistenceService:
             self._condition.notify_all()
 
     def latest_snapshot(self) -> ProjectSession | None:
+        """Return the most recent queued or persisted snapshot clone."""
         with self._condition:
             if self._pending_snapshot is not None:
                 return self._pending_snapshot.clone()
@@ -39,6 +41,7 @@ class LastSessionPersistenceService:
             return None
 
     def flush(self, timeout: float | None = None) -> bool:
+        """Block until pending writes complete or timeout expires."""
         deadline = None if timeout is None else time.monotonic() + timeout
         with self._condition:
             while self._pending_snapshot is not None or self._writing:
@@ -49,6 +52,7 @@ class LastSessionPersistenceService:
             return self._last_error is None
 
     def flush_and_stop(self, timeout: float | None = None) -> bool:
+        """Request worker shutdown and wait for pending writes to finish."""
         deadline = None if timeout is None else time.monotonic() + timeout
         with self._condition:
             self._stop_requested = True

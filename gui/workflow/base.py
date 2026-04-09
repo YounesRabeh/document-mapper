@@ -28,6 +28,8 @@ SIDE_PANEL_MIN_WIDTH = 260
 
 
 class TokenSuggestingLineEdit(QLineEdit):
+    """Line edit that suggests/insert output schema tokens while typing '{'."""
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self._token_options: list[str] = []
@@ -43,6 +45,7 @@ class TokenSuggestingLineEdit(QLineEdit):
         self.textEdited.connect(self._update_token_popup)
 
     def set_token_options(self, options: list[str]):
+        """Set unique token suggestions shown by the completer popup."""
         unique_options: list[str] = []
         seen: set[str] = set()
         for option in options:
@@ -60,9 +63,11 @@ class TokenSuggestingLineEdit(QLineEdit):
             self.token_completer.popup().hide()
 
     def available_tokens(self) -> list[str]:
+        """Return currently configured token suggestions."""
         return list(self._token_options)
 
     def insert_token(self, token: str):
+        """Replace current token fragment with selected token suggestion."""
         token_value = str(token or "").strip()
         if not token_value:
             return
@@ -83,6 +88,7 @@ class TokenSuggestingLineEdit(QLineEdit):
         self.token_completer.popup().hide()
 
     def focusOutEvent(self, event):
+        """Hide suggestion popup when focus leaves the editor."""
         self.token_completer.popup().hide()
         super().focusOutEvent(event)
 
@@ -122,6 +128,8 @@ class TokenSuggestingLineEdit(QLineEdit):
 
 
 class WorkflowPage(QWidget):
+    """Base page scaffold shared by setup/mapping/generate/results/archive screens."""
+
     next_requested = Signal()
     prev_requested = Signal()
     session_changed = Signal()
@@ -187,6 +195,7 @@ class WorkflowPage(QWidget):
         self.localization.language_changed.connect(self.retranslate_ui)
 
     def bind_session(self, session: ProjectSession):
+        """Bind session state into the page and refresh its widgets."""
         self.session = session
         self.refresh_from_session()
         self.scroll_to_top()
@@ -222,15 +231,19 @@ class WorkflowPage(QWidget):
         return label
 
     def refresh_from_session(self):
+        """Refresh page controls from the bound session."""
         pass
 
     def retranslate_page(self):
+        """Refresh page-specific translated text."""
         pass
 
     def scroll_to_top(self):
+        """Scroll page content to top on next UI cycle."""
         QTimer.singleShot(0, lambda: self.scroll_area.verticalScrollBar().setValue(0))
 
     def retranslate_ui(self, *_args):
+        """Apply all registered translation bindings and page-specific translations."""
         for widget, role, key in self._translation_bindings:
             self._apply_translation(widget, role, key)
         self.retranslate_page()
