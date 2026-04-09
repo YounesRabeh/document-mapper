@@ -130,7 +130,12 @@ QFrame#sidebarStageCard[completed="true"]:hover {
 }
 
 QFrame#sidebarStageCard[active="true"] {
-    background: palette(base);
+    background: palette(alternate-base);
+    border-color: palette(highlight);
+}
+
+QFrame#sidebarStageCard[active="true"]:hover {
+    background: palette(alternate-base);
     border-color: palette(highlight);
 }
 
@@ -182,8 +187,11 @@ QFrame#sidebarStageCard:hover QLabel#sidebarStageDetail {
     color: palette(window-text);
 }
 
-QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageTitle,
 QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageDetail {
+    color: palette(text);
+}
+
+QFrame#sidebarStageCard[active="true"] QLabel#sidebarStageTitle {
     color: palette(window-text);
 }
 
