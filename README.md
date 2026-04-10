@@ -4,7 +4,7 @@ A desktop application for generating `.docx` documents from Excel data with expl
 
 <table>
   <tr>
-    <td width="280" valign="top">
+    <td width="280" valign="center">
       <img src=".github/document-mapper-icon.png" alt="Document Mapper" width="260" />
     </td>
     <td valign="top">
