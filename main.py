@@ -4,19 +4,24 @@ from pathlib import Path
 from PySide6.QtWidgets import QApplication
 
 from core.config.configuration import Config
-from core.util.app_icon import apply_app_icon_setup
+from core.util.app_icon import apply_app_icon_setup, configure_qt_application_identity
 from gui.windows import MainWindow
+
 
 def main():
     """Main entry point for the application."""
     # 1️ Load configuration first
     config = Config.get()
+    app_name = config.get("APP_NAME", "Document Mapper")
+    organization_name = config.get("APP_ORGANIZATION", "Document Mapper")
+    organization_domain = config.get("APP_DOMAIN", "")
+    configure_qt_application_identity(
+        app_name=app_name,
+        organization_name=organization_name,
+        organization_domain=organization_domain,
+    )
     # 2️ Initialize the QApplication
     app = QApplication(sys.argv)
-    app_name = config.get("APP_NAME", "Document Mapper")
-    app.setApplicationName(app_name)
-    app.setOrganizationName(config.get("APP_ORGANIZATION", "Document Mapper"))
-    app.setOrganizationDomain(config.get("APP_DOMAIN", ""))
     icon = apply_app_icon_setup(
         app,
         app_name=app_name,

@@ -1,6 +1,6 @@
 [app]
 name = "Document Mapper"
-version = "4.0"
+version = "4.1"
 description = "A desktop app for mapping DOCX files from Excel data."
 author = "Younes Rabeh"
 organization = "Younes Rabeh"
