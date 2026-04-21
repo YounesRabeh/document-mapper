@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QDialog, QMessageBox
 
 from core.mapping.models import (
     GenerationResult,
@@ -490,6 +490,35 @@ def test_close_event_flushes_pending_last_session_snapshot(main_window_factory):
 
     assert fake_store.session is not None
     assert fake_store.session.theme_mode == window.session.theme_mode
+
+
+def test_close_event_requests_generate_page_shutdown(main_window_factory):
+    window, _fake_store, _main_window_module = main_window_factory()
+
+    with patch.object(window, "_confirm_close_action", return_value="discard"), patch.object(
+        window.generate_page,
+        "shutdown",
+        return_value=True,
+    ) as shutdown_mock:
+        window.close()
+
+    shutdown_mock.assert_called_once_with(window.GENERATION_SHUTDOWN_TIMEOUT_MILLISECONDS)
+
+
+def test_close_event_marks_force_process_exit_when_generation_does_not_stop(main_window_factory):
+    window, _fake_store, _main_window_module = main_window_factory()
+    app = QApplication.instance()
+    assert app is not None
+    app.setProperty(window.FORCE_PROCESS_EXIT_PROPERTY, False)
+
+    with patch.object(window, "_confirm_close_action", return_value="discard"), patch.object(
+        window.generate_page,
+        "shutdown",
+        return_value=False,
+    ):
+        window.close()
+
+    assert bool(app.property(window.FORCE_PROCESS_EXIT_PROPERTY)) is True
 
 
 def test_about_popup_includes_version_and_author(prepared_window):

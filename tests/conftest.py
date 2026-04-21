@@ -72,6 +72,9 @@ def main_window_factory(qapp, window_config, clear_test_settings, tmp_path):
         excel_service: FakeExcelService | None = None,
         generator_factory=None,
     ):
+        app = QApplication.instance()
+        if app is not None:
+            app.setProperty("document_mapper.force_process_exit", False)
         session_store = fake_store or FakeSessionStore()
         excel = excel_service or FakeExcelService()
         generator_side_effect = generator_factory or (lambda _excel: FakeGenerator())

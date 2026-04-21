@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QActionGroup
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QMainWindow,
     QMessageBox,
@@ -56,6 +57,8 @@ class MainWindow(QMainWindow):
     """Main window for the template-based document merge workflow."""
     THEME_PERSIST_DEBOUNCE_MS = 300
     LAST_SESSION_FLUSH_TIMEOUT_SECONDS = 2.0
+    GENERATION_SHUTDOWN_TIMEOUT_MILLISECONDS = 2000
+    FORCE_PROCESS_EXIT_PROPERTY = "document_mapper.force_process_exit"
 
     def __init__(self, config: dict):
         super().__init__()
@@ -410,6 +413,11 @@ class MainWindow(QMainWindow):
             return
         if self._theme_persist_timer.isActive():
             self._theme_persist_timer.stop()
+        generation_stopped = self.generate_page.shutdown(self.GENERATION_SHUTDOWN_TIMEOUT_MILLISECONDS)
+        if not generation_stopped:
+            app = QApplication.instance()
+            if app is not None:
+                app.setProperty(self.FORCE_PROCESS_EXIT_PROPERTY, True)
         if action == "discard":
             baseline_session = self.document.saved_session() or ProjectSession(
                 theme_mode=self.default_theme_mode

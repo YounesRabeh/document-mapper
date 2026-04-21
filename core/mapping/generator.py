@@ -22,6 +22,7 @@ from core.util.app_paths import AppPaths
 from core.util.logger import Logger
 
 LogCallback = Callable[[str], None]
+CancelCallback = Callable[[], bool]
 OUTPUT_SCHEMA_TOKEN_PATTERN = re.compile(r"\{([^{}]+)\}")
 OUTPUT_SCHEMA_BUILTINS = {
     "ROW",
@@ -43,6 +44,10 @@ DATE_ALIASES = frozenset(
     )
 )
 UPPERCASE_TEXT_ALIASES = frozenset((*FIRST_NAME_ALIASES, *LAST_NAME_ALIASES))
+
+
+class GenerationCancelledError(RuntimeError):
+    """Raised when document generation is cancelled during shutdown."""
 
 
 class DocumentGenerator:
@@ -159,11 +164,14 @@ class DocumentGenerator:
         self,
         session: ProjectSession,
         progress_callback: LogCallback | None = None,
+        cancel_requested: CancelCallback | None = None,
     ) -> GenerationResult:
         """Run document generation and return paths, counts, log path, and row errors."""
         errors = self.validate_session_inputs(session)
         log_path = self._resolve_log_path(session)
         self._initialize_log(log_path)
+
+        self._raise_if_cancelled(cancel_requested)
 
         if errors:
             for error in errors:
@@ -204,6 +212,7 @@ class DocumentGenerator:
         licensed = self._activate_license(document_cls, session.license_path, log_path, progress_callback)
 
         for index, row in dataframe.iterrows():
+            self._raise_if_cancelled(cancel_requested)
             try:
                 output_path = self._build_docx_output_path(
                     session,
@@ -240,6 +249,7 @@ class DocumentGenerator:
                 self._write_log(log_path, f"ERROR | {error}", progress_callback)
 
         if session.export_pdf and generated_docx_paths:
+            self._raise_if_cancelled(cancel_requested)
             generated_pdf_paths = self._batch_convert_docx_to_pdf(
                 generated_docx_paths,
                 pdf_dir,
@@ -262,6 +272,11 @@ class DocumentGenerator:
             log_path=str(log_path),
             errors=generation_errors,
         )
+
+    @staticmethod
+    def _raise_if_cancelled(cancel_requested: CancelCallback | None):
+        if callable(cancel_requested) and cancel_requested():
+            raise GenerationCancelledError("Generation cancelled.")
 
     def _load_spire_dependencies(self):
         try:

@@ -1,4 +1,6 @@
+import os
 import sys
+import threading
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
@@ -6,6 +8,24 @@ from PySide6.QtWidgets import QApplication
 from core.config.configuration import Config
 from core.util.app_icon import apply_app_icon_setup, configure_qt_application_identity
 from gui.windows import MainWindow
+
+
+def _has_live_non_daemon_threads() -> bool:
+    """Return True when background Python threads would keep the process alive."""
+    main_thread = threading.main_thread()
+    for thread in threading.enumerate():
+        if thread is main_thread:
+            continue
+        if thread.is_alive() and not thread.daemon:
+            return True
+    return False
+
+
+def _should_force_process_exit(app: QApplication) -> bool:
+    """Force process exit when shutdown left background work behind."""
+    if bool(app.property(MainWindow.FORCE_PROCESS_EXIT_PROPERTY)):
+        return True
+    return _has_live_non_daemon_threads()
 
 
 def main():
@@ -34,7 +54,10 @@ def main():
         window.setWindowIcon(icon)
     window.showMaximized()
     # 5️ Start the Qt event loop
-    sys.exit(app.exec())
+    exit_code = app.exec()
+    if _should_force_process_exit(app):
+        os._exit(int(exit_code))
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -3,12 +3,13 @@ from __future__ import annotations
 from html import escape
 from pathlib import Path
 import shutil
+import threading
 
 from PySide6.QtCore import QObject, QThread, Signal, Qt
 from PySide6.QtGui import QPalette, QTextCursor
 from PySide6.QtWidgets import QMessageBox, QSizePolicy, QTextEdit, QWidget
 
-from core.mapping.generator import DocumentGenerator
+from core.mapping.generator import DocumentGenerator, GenerationCancelledError
 from core.mapping.models import DEFAULT_OUTPUT_NAMING_SCHEMA, GenerationResult, ProjectSession
 from core.manager.localization_manager import LocalizationManager
 from gui.forms import Ui_GeneratePageForm
@@ -21,16 +22,33 @@ class GenerationWorker(QObject):
     log_message = Signal(str)
     finished = Signal(object)
     failed = Signal(str)
+    cancelled = Signal()
 
     def __init__(self, generator: DocumentGenerator, session: ProjectSession):
         super().__init__()
         self.generator = generator
         self.session = session
+        self._cancel_requested = threading.Event()
+
+    def request_cancel(self):
+        """Request cooperative cancellation for the in-flight generation task."""
+        self._cancel_requested.set()
+
+    def is_cancel_requested(self) -> bool:
+        """Return whether cancellation has been requested."""
+        return self._cancel_requested.is_set()
 
     def run(self):
         """Execute generation and emit either finished or failed signals."""
         try:
-            result = self.generator.generate(self.session, progress_callback=self.log_message.emit)
+            result = self.generator.generate(
+                self.session,
+                progress_callback=self.log_message.emit,
+                cancel_requested=self.is_cancel_requested,
+            )
+        except GenerationCancelledError:
+            self.cancelled.emit()
+            return
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(str(exc))
             return
@@ -52,6 +70,7 @@ class GeneratePage(WorkflowPage):
         self._thread: QThread | None = None
         self._worker: GenerationWorker | None = None
         self._has_generated_in_app_session = False
+        self._shutdown_in_progress = False
 
         self.ui = Ui_GeneratePageForm()
         self.form_root = QWidget()
@@ -139,9 +158,11 @@ class GeneratePage(WorkflowPage):
         self._worker.log_message.connect(self._append_log_entry)
         self._worker.finished.connect(self._handle_finished)
         self._worker.failed.connect(self._handle_failed)
+        self._worker.cancelled.connect(self._handle_cancelled)
         self._worker.finished.connect(self._thread.quit)
         self._worker.failed.connect(self._thread.quit)
-        self._thread.finished.connect(self._thread.deleteLater)
+        self._worker.cancelled.connect(self._thread.quit)
+        self._thread.finished.connect(self._finalize_thread_cleanup)
         self._thread.start()
         self.refresh_from_session()
 
@@ -190,28 +211,57 @@ class GeneratePage(WorkflowPage):
         if result.success_count > 0 or result.generated_docx_paths or result.generated_pdf_paths:
             self._has_generated_in_app_session = True
         self.generate_button.setEnabled(True)
-        self.results_ready.emit(result)
-        self._cleanup_thread()
-        self.refresh_from_session()
+        if not self._shutdown_in_progress:
+            self.results_ready.emit(result)
+            self.refresh_from_session()
 
     def _handle_failed(self, error_message: str):
         self._append_log_entry(
             self.localization.t("log.generation_failed", error=self.localization.translate_runtime_text(error_message))
         )
         self.generate_button.setEnabled(True)
-        QMessageBox.critical(
-            self,
-            self.localization.t("dialog.generation_failed.title"),
-            self.localization.translate_runtime_text(error_message),
-        )
-        self._cleanup_thread()
-        self.refresh_from_session()
+        if not self._shutdown_in_progress:
+            QMessageBox.critical(
+                self,
+                self.localization.t("dialog.generation_failed.title"),
+                self.localization.translate_runtime_text(error_message),
+            )
+            self.refresh_from_session()
 
-    def _cleanup_thread(self):
-        if self._worker is not None:
-            self._worker.deleteLater()
+    def _handle_cancelled(self):
+        self.generate_button.setEnabled(True)
+        if not self._shutdown_in_progress:
+            self._append_log_entry("INFO | Generation cancelled.")
+            self.refresh_from_session()
+
+    def _finalize_thread_cleanup(self):
+        was_shutting_down = self._shutdown_in_progress
+        worker = self._worker
+        thread = self._thread
         self._worker = None
         self._thread = None
+        self._shutdown_in_progress = False
+        if worker is not None:
+            worker.deleteLater()
+        if thread is not None:
+            thread.deleteLater()
+        if not was_shutting_down:
+            self.refresh_from_session()
+
+    def shutdown(self, timeout_ms: int) -> bool:
+        """Cancel in-flight generation and wait briefly for the worker thread to stop."""
+        if self._thread is None:
+            return True
+        self._shutdown_in_progress = True
+        self.generate_button.setEnabled(False)
+        if self._worker is not None:
+            self._worker.request_cancel()
+        self._thread.quit()
+        stopped = self._thread.wait(max(0, timeout_ms))
+        if stopped:
+            self._finalize_thread_cleanup()
+            self.generate_button.setEnabled(True)
+        return stopped
 
     def retranslate_page(self):
         """Refresh translated placeholders and recompute summary state."""

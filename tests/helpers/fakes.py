@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pandas as pd
 
 from core.mapping.excel_service import ExcelDataService, normalize_column_name
+from core.mapping.generator import GenerationCancelledError
 from core.mapping.models import GenerationResult, MappingEntry, ProjectSession
 
 
@@ -83,6 +84,15 @@ class FakeGenerator:
     def validate_session_inputs(self, session: ProjectSession) -> list[str]:
         """Match DocumentGenerator fast pre-check API used by GeneratePage."""
         return self.validate_session(session)
+
+    def generate(self, _session: ProjectSession, progress_callback=None, cancel_requested=None) -> GenerationResult:
+        """Return the configured result while honoring the runtime generator API."""
+        if callable(cancel_requested) and cancel_requested():
+            raise GenerationCancelledError("Generation cancelled.")
+        if callable(progress_callback):
+            progress_callback("INFO | Fake generation finished.")
+        return self.result
+
 
 class FakeSessionStore:
     """In-memory session store fake used by window and persistence tests."""
